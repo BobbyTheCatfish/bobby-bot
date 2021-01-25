@@ -1,0 +1,44 @@
+{
+    "color": "#00c8ff",
+    "db": {
+      "model": "utils/dbModels.js",
+      "db": "DB ADDRESS",
+      "settings": {
+        "useNewUrlParser": true,
+        "useUnifiedTopology": true,
+        "useCreateIndex": true,
+        "useFindAndModify": false,
+        "user": "DB USERNAME",
+        "pass": "DB PASSWORD"
+      }
+    },
+    "error": {
+      "id": "ERROR WEBHOOK ID (first part of URL)",
+      "token": "ERROR WEBHOOK TOKEN (second part of URL)"
+    },
+    "events": [
+      "channelCreate",
+      "disconnect",
+      "error",
+      "guildBanAdd",
+      "guildMemberAdd",
+      "guildMemberRemove",
+      "guildMemberUpdate",
+      "message",
+      "messageReactionAdd",
+      "messageReactionRemove",
+      "messageUpdate",
+      "presenceUpdate",
+      "raw",
+      "voiceStateUpdate"
+    ],
+    "ownerId": "YOUR ID",
+    "prefix": "!",
+    "streamApplications": "",
+    "token": "BOT TOKEN HERE",
+    "email": {
+      "user": "BOT EMAIL ADDRESS",
+      "pass": "BOT EMAIL PASSWORD"
+    }
+}
+

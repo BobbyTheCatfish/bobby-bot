@@ -1,0 +1,13 @@
+.vs/
+node_modules/
+database/
+config/config.json
+backup_commands/
+jsons/*.json
+commands/dms.js
+commands/eval.js
+commands/thalesGameNights.js
+.DS_Store
+utils/dbModels.js
+*.code-workspace
+*-.js
