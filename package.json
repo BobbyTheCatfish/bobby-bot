@@ -13,7 +13,7 @@
     "@types/better-sqlite3": "^5.4.0",
     "apiai": "^4.0.3",
     "augurbot": "^2.1.2",
-    "axios": "^0.20.0",
+    "axios": "^0.21.1",
     "body-parser": "^1.19.0",
     "cwebp": "^2.0.5",
     "discord.js": "^12.2.0",
