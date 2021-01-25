@@ -373,6 +373,26 @@ React with one of the following emojis to get the corresponding role
   },
   otherPerms: (msg) => Module.config.ownerId === (msg.author.id)
 })
-
+.addEvent('ready',async()=>{
+    const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
+    for(x of Module.client.guilds.cache.array())
+    {
+        const foundGuild = await GuildConfig.findOne({guildId: x.id})
+        try {
+            if(!foundGuild)await GuildConfig.create({guildId: x.id})
+        } catch (error) {
+            u.errorHandler(msg, error)
+        }
+    }
+})
+.addEvent('guildCreate', async guild =>{
+    const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
+    const foundGuild = await GuildConfig.findOne({guildId: guild.id})
+    try{
+        if(!foundGuild) await GuildConfig.create({guildId: message.guild.id})
+    } catch (error){
+        u.errorHandler(msg, error)
+    }
+})
 
 module.exports = Module
