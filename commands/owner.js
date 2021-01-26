@@ -6,6 +6,28 @@ const Augur = require('augurbot'),
     fs = require('fs')
 const Module = new Augur.Module();
 
+const runCommand = (msg, cmd)=>{
+
+    u.clean(msg);
+    let stdout = [];
+    let stderr = [];
+
+    cmd.stdout.on("data", data => {
+    stdout.push(data);
+    });
+
+    cmd.stderr.on("data", data => {
+    stderr.push(data);
+    });
+
+    cmd.on("close", code => {
+    if (code == 0)
+        msg.channel.send(stdout.join("\n") + "\n\nCompleted with code: " + code).then(u.clean);
+    else
+        msg.channel.send(`ERROR CODE ${code}:\n${stderr.join("\n")}`).then(u.clean);
+    });
+}
+
 Module.addCommand({name: "pingeveryone",
     category: "Owner",
     hidden: true,
@@ -249,87 +271,46 @@ Module.addCommand({name: "pingeveryone",
             }
     })
     //github stuff
+    .addCommand({name: 'add',
+        category: 'Owner',
+        ownerOnly: true,
+        description: 'Add files to the repo (step 1)',
+        hidden: true,
+        process: async (msg) => {
+            let spawn = require('child_process').spawn
+            runCommand(msg, spawn('git', ['add','.'], {cwd: process.cwd()}))
+        }
+    })
+    .addCommand({name: 'commit',
+        category: 'Owner',
+        ownerOnly: true,
+        description: 'Commit files to the repo (step 2)',
+        hidden: true,
+        process: async (msg, suffix) => {
+            if(!suffix) msg.channel.send("I need a commit message")
+            let spawn = require('child_process').spawn
+            runCommand(msg, spawn('git', ['commit',`-m`,`"${suffix}"`], {cwd: process.cwd()}))
+        }
+    })
     .addCommand({name: "push",
         category: 'Owner',
-        description: "Push bot updates to the git",
+        ownerOnly: true,
+        description: "Push bot updates to the git (step 3)",
         hidden: true,
         process: async (msg, suffix) =>{
-            if(!suffix) return msg.channel.send("You need a commit message")
             let spawn = require('child_process').spawn
-
-            u.clean(msg)
-            let cmd1 = spawn('git', ['add', '.'])
-            let cmd2 = spawn('git', ['commit', `-m "${suffix}"`])
-            let cmd3 = spawn('git', ['push'])
-
-            let stdout = [];
-            let stderr = [];
-            cmd1.stdout.on('data', data =>{
-                stdout.push(data);
-            });
-            cmd1.stderr.on("data", data => {
-                stderr.push(data);
-            });
-            cmd1.on("close", code => {
-                if (code == 0) msg.channel.send(stdout.join("\n") + "\n\nCompleted with code: " + code).then(u.clean);
-                else msg.channel.send(`ERROR CODE ${code}:\n${stderr.join("\n")}`).then(u.clean);
-            });
-            stdout = [];
-            stderr = [];
-            cmd2.stdout.on('data', data =>{
-                stdout.push(data);
-            });
-            cmd2.stderr.on("data", data => {
-                stderr.push(data);
-            });
-            cmd2.on("close", code => {
-                if (code == 0) msg.channel.send(stdout.join("\n") + "\n\nCompleted with code: " + code).then(u.clean);
-                else msg.channel.send(`ERROR CODE ${code}:\n${stderr.join("\n")}`).then(u.clean);
-            });
-            
-            stdout = [];
-            stderr = [];
-            cmd3.stdout.on('data', data =>{
-                stdout.push(data);
-            });
-            cmd3.stderr.on("data", data => {
-                stderr.push(data);
-            });
-            cmd3.on("close", code => {
-                if (code == 0) msg.channel.send(stdout.join("\n") + "\n\nCompleted with code: " + code).then(u.clean);
-                else msg.channel.send(`ERROR CODE ${code}:\n${stderr.join("\n")}`).then(u.clean);
-            });
+            runCommand(msg, spawn('git', ['push'], {cwd: process.cwd()}))
         }
     })
     .addCommand({name: "pull",
-    category: "Bot Admin",
-    description: "Pull bot updates from git",
-    hidden: true,
-    process: (msg) => {
-        let spawn = require("child_process").spawn;
-
-        u.clean(msg);
-
-        let cmd = spawn("git", ["pull"], {cwd: process.cwd()});
-        let stdout = [];
-        let stderr = [];
-
-        cmd.stdout.on("data", data => {
-        stdout.push(data);
-        });
-
-        cmd.stderr.on("data", data => {
-        stderr.push(data);
-        });
-
-        cmd.on("close", code => {
-        if (code == 0)
-            msg.channel.send(stdout.join("\n") + "\n\nCompleted with code: " + code).then(u.clean);
-        else
-            msg.channel.send(`ERROR CODE ${code}:\n${stderr.join("\n")}`).then(u.clean);
-        });
-    },
-    otherPerms: (msg) => (Module.config.ownerId === (msg.author.id))
+        category: "Owner",
+        ownerOnly: true,
+        description: "Pull bot updates from git",
+        hidden: true,
+        process: (msg) => {
+            let spawn = require("child_process").spawn;
+            runCommand(msg, spawn('git', ['pull'], {cwd: process.cwd()}))
+        },
     })
 
     .addCommand({name: "reload",
