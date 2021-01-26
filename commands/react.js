@@ -26,6 +26,16 @@ Module.addEvent('message', async (message) =>{
                         }
                         else return message.reply("You need to `@mention` a user with that tag!").then(u.clean);
                     }
+                    let temp, match
+                    let regex = /\<([^)]+)\>/
+                    if(match = regex.exec(replaceContent)){
+                        temp = match[1]
+                        if(temp.split('|')[1]){
+                            let parts = []
+                            for (y of temp.split('|')) parts.push(y)
+                            replaceContent = replaceContent.replace(match[0], parts[Math.floor(Math.random() * parts.length)])
+                        }
+                    }
                 }
                 if(read.text && read.file) return message.channel.send(replaceContent, {files: [read.file]})
                 if(read.text) return message.channel.send(replaceContent)

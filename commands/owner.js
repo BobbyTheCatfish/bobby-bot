@@ -228,6 +228,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "send",
         category: "Owner",
         ownerOnly: true,
+        description: "Sends stuff to a specific channel",
         process: async (msg, suffix) =>{
             if(!suffix) return msg.channel.send("what are you thinking, dummy? give me some args")
             let id = suffix.split(' ')[0]
@@ -235,7 +236,7 @@ Module.addCommand({name: "pingeveryone",
             if(!id || id.replace(/[0-9]/g, '').length > 0) return msg.channel.send("need id")
             if(!content) return msg.channel.send("need content")
             if(!msg.client.users.cache.get(id)) return msg.channel.send('bad id')
-            if(msg.attachments.size > 0) content = (suffix, {files: [msg.attachments.first().url]})
+            if(msg.attachments.size > 0) content = (content, {files: [msg.attachments.first().url]})
             msg.client.users.cache.get(id).send(content)
         }
     })
@@ -243,6 +244,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "servers",
         category: "Owner",
         ownerOnly: true,
+        description: "Gets the number of servers the bot is in",
         process: async (msg, suffix) =>{
             let getGuilds = msg.client.guilds.cache?.map(g => `${g.name}`).join("\n");
             let embed = u.embed()
@@ -256,20 +258,22 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "commands",
         category: "Owner",
         ownerOnly: true,
+        description: "Number of commands",
         process: async (msg, suffix) =>{
             msg.channel.send(`There are \`${msg.client.commands.size}\` commands`)
         }
     })
 
-    //spam pings for when you really need it
     .addCommand({name: 'spam',
         ownerOnly: true,
+        description: 'spam pings for when you really need it',
         process: async (msg, args) =>{
             setInterval(() => {
                 msg.channel.send(`<@${args || '307641454606680064'}>`)
             }, 3000);
             }
     })
+    
     //github stuff
     .addCommand({name: 'add',
         category: 'Owner',
@@ -289,7 +293,7 @@ Module.addCommand({name: "pingeveryone",
         process: async (msg, suffix) => {
             if(!suffix) msg.channel.send("I need a commit message")
             let spawn = require('child_process').spawn
-            runCommand(msg, spawn('git', ['commit',`-m`,`"${suffix}"`], {cwd: process.cwd()}))
+            runCommand(msg, spawn('git', ['commit',`-m`,`${suffix}`], {cwd: process.cwd()}))
         }
     })
     .addCommand({name: "push",
@@ -314,45 +318,47 @@ Module.addCommand({name: "pingeveryone",
     })
 
     .addCommand({name: "reload",
-    category: "Bot Admin",
-    hidden: true,
-    syntax: "[file1.js] [file2.js]",
-    description: "Reload command files.",
-    info: "Use the command without a suffix to reload all command files.\n\nUse the command with the module name (including the `.js`) to reload a specific file.",
-    process: (msg, suffix) => {
-        u.clean(msg);
-        let path = require("path");
-        let files = (suffix ? suffix.split(" ") : fs.readdirSync(path.resolve(__dirname)).filter(file => file.endsWith(".js")));
+        category: "Bot Admin",
+        hidden: true,
+        ownerOnly: true,
+        syntax: "[file1.js] [file2.js]",
+        description: "Reload command files.",
+        info: "Use the command without a suffix to reload all command files.\n\nUse the command with the module name (including the `.js`) to reload a specific file.",
+        process: (msg, suffix) => {
+            u.clean(msg);
+            let path = require("path");
+            let files = (suffix ? suffix.split(" ") : fs.readdirSync(path.resolve(__dirname)).filter(file => file.endsWith(".js")));
 
-        for (const file of files) {
-        try {
-            msg.client.moduleHandler.reload(path.resolve(__dirname, file));
-        } catch(error) { msg.client.errorHandler(error, msg); }
-        }
-        msg.react("👌");
-    },
-    otherPerms: (msg) => Module.config.ownerId === (msg.author.id)
+            for (const file of files) {
+            try {
+                msg.client.moduleHandler.reload(path.resolve(__dirname, file));
+            } catch(error) { msg.client.errorHandler(error, msg); }
+            }
+            msg.react("👌");
+        },
     })
     .addCommand({name: "reloadlib",
-    category: "Bot Admin",
-    hidden: true,
-    syntax: "[file1.js] [file2.js]",
-    description: "Reload local library files.",
-    process: (msg, suffix) => {
-        u.clean(msg);
-        msg.react("👌");
-        if (suffix) {
-        const path = require("path");
-        let files = suffix.split(" ").filter(f => f.endsWith(".js"));
-        for (let file of files) {
-            delete require.cache[require.resolve(path.dirname(require.main.filename), file)];
-        }
-        } else {
-        msg.reply("You need to tell me which libraries to reload!").then(u.clean);
-        }
-    },
-    otherPerms: (msg) => Module.config.ownerId === (msg.author.id)
+        category: "Bot Admin",
+        hidden: true,
+        ownerOnly: true,
+        syntax: "[file1.js] [file2.js]",
+        description: "Reload local library files.",
+        process: (msg, suffix) => {
+            u.clean(msg);
+            msg.react("👌");
+            if (suffix) {
+            const path = require("path");
+            let files = suffix.split(" ").filter(f => f.endsWith(".js"));
+            for (let file of files) {
+                delete require.cache[require.resolve(path.dirname(require.main.filename), file)];
+            }
+            } else {
+            msg.reply("You need to tell me which libraries to reload!").then(u.clean);
+            }
+        },
     })
+    
+    //Add DBs on ready and create
     .addEvent('ready',async()=>{
         const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
         for(x of Module.client.guilds.cache.array())
@@ -365,14 +371,14 @@ Module.addCommand({name: "pingeveryone",
             }
         }
     })
-.addEvent('guildCreate', async guild =>{
-    const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
-    const foundGuild = await GuildConfig.findOne({guildId: guild.id})
-    try{
-        if(!foundGuild) await GuildConfig.create({guildId: message.guild.id})
-    } catch (error){
-        u.errorHandler(msg, error)
-    }
-})
+    .addEvent('guildCreate', async guild =>{
+        const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
+        const foundGuild = await GuildConfig.findOne({guildId: guild.id})
+        try{
+            if(!foundGuild) await GuildConfig.create({guildId: message.guild.id})
+        } catch (error){
+            u.errorHandler(msg, error)
+        }
+    })
 
 module.exports = Module
