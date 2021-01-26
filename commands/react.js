@@ -17,18 +17,19 @@ Module.addEvent('message', async (message) =>{
             else{
                 let replaceContent
                 if(read.text){
-                    replaceContent = read.text.replace(/<@author>/ig, message.author).replace(/<@authorname>/ig, message.member.displayName)
+                    replaceContent = read.text.replace(/<@author>/ig, `<@${message.author.id}>`).replace(/<@authorname>/ig, message.member.displayName)
                     if ((/(<@target>)|(<@targetname>)/i).test(replaceContent)) {
     
                         if (message.mentions.members.size > 0) {
                             let target = message.mentions.members.first()
-                            replaceContent = replaceContent.replace(/<@target>/ig, target.toString()).replace(/<@targetname>/ig, target.displayName);
+                            replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, target.displayName);
                         }
                         else return message.reply("You need to `@mention` a user with that tag!").then(u.clean);
                     }
                     let temp, match
                     let regex = /\<([^)]+)\>/
                     if(match = regex.exec(replaceContent)){
+                        console.log('a')
                         temp = match[1]
                         if(temp.split('|')[1]){
                             let parts = []
