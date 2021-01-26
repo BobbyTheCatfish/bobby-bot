@@ -372,9 +372,10 @@ Module.addCommand({name: "ban",
         return msg.channel.send(`Changed the prefix to \`${read}\``).then(u.clean)
     }
 })
-.addEvent('messageReactionAdd', async (reaction, member) =>{
+.addEvent('messageReactionAdd', async (reaction, user) =>{
     try {
         if(!reaction.message.guild) return
+        let member = reaction.message.guild.members.cache.get(user.id)
         if(['📌','📍','🧷'].includes(reaction.emoji.name) && member.hasPermission('MANAGE_MESSAGES') && reaction.message.pinnable) {
         let messages = await message.channel.messages.fetchPinned().catch(u.noop);
         if(messages.size == 50) return msg.channel.send("You've reached the max number of pins for this channel. Please unpin something else if you want to pin this.")

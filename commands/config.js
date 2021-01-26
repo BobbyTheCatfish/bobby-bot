@@ -80,6 +80,10 @@ Module.addCommand({name: 'config',
                 })
             })
         }
+        let starPrompt = async(msg) =>{
+            let existingBoards = await Module.db.guildconfig.getStarBoards(msg.guild.id)
+            let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? existingBoards.join('\n') : 'There are no starboards currently set up')
+        }
         let mainMenu = async msg => {
             let embed = u.embed().setTitle('What do you want to configure?').setDescription('Options:\nChannels\nStarboards\nDone')
             msg.channel.send({embed}).then(async m=>{
