@@ -29,13 +29,8 @@ Module.addEvent('message', async (message) =>{
                     let temp, match
                     let regex = /\<([^)]+)\>/
                     if(match = regex.exec(replaceContent)){
-                        console.log('a')
-                        temp = match[1]
-                        if(temp.split('|')[1]){
-                            let parts = []
-                            for (y of temp.split('|')) parts.push(y)
-                            replaceContent = replaceContent.replace(match[0], parts[Math.floor(Math.random() * parts.length)])
-                        }
+                        temp = match[1].split('|')
+                        if(temp[1]) replaceContent = replaceContent.replace(match[0], temp[Math.floor(Math.random() * temp.length)])
                     }
                 }
                 if(read.text && read.file) return message.channel.send(replaceContent, {files: [read.file]})
