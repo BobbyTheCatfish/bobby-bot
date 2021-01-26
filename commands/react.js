@@ -17,7 +17,12 @@ Module.addEvent('message', async (message) =>{
             else{
                 let replaceContent
                 if(read.text){
-                    replaceContent = read.text.replace(/<@author>/ig, `<@${message.author.id}>`).replace(/<@authorname>/ig, message.member.displayName)
+                    let temp, match, regex = /\<([^)]+)\>/
+                    if(match = regex.exec(read.text)){
+                        temp = match[1].split('|')
+                        if(temp[1]) replaceContent = read.text.replace(match[0], temp[Math.floor(Math.random() * temp.length)])
+                    }
+                    replaceContent = (replaceContent ? replaceContent : read.text).replace(/<@author>/ig, `<@${message.author.id}>`).replace(/<@authorname>/ig, message.member.displayName)
                     if ((/(<@target>)|(<@targetname>)/i).test(replaceContent)) {
     
                         if (message.mentions.members.size > 0) {
@@ -25,12 +30,6 @@ Module.addEvent('message', async (message) =>{
                             replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, target.displayName);
                         }
                         else return message.reply("You need to `@mention` a user with that tag!").then(u.clean);
-                    }
-                    let temp, match
-                    let regex = /\<([^)]+)\>/
-                    if(match = regex.exec(replaceContent)){
-                        temp = match[1].split('|')
-                        if(temp[1]) replaceContent = replaceContent.replace(match[0], temp[Math.floor(Math.random() * temp.length)])
                     }
                 }
                 if(read.text && read.file) return message.channel.send(replaceContent, {files: [read.file]})
