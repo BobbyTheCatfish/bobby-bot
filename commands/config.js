@@ -1,7 +1,8 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Module = new Augur.Module(),
-    mongoose = require('mongoose')
+    mongoose = require('mongoose'),
+    {onlyEmoji} = require('emoji-aware')
 
 Module.addCommand({name: 'config',
     ownerOnly: true,
@@ -82,7 +83,105 @@ Module.addCommand({name: 'config',
         }
         let starPrompt = async(msg) =>{
             let existingBoards = await Module.db.guildconfig.getStarBoards(msg.guild.id)
-            let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? existingBoards.join('\n') : 'There are no starboards currently set up')
+            let  createBoard = async msg =>{
+                let channelPrompt = async msg =>{
+                    let embed =  u.embed().setTitle('What channel should I send messages to?').setDescription('Type in the format of #channel-name')
+                    msg.channel.send({embed}).then(async m =>{
+                        await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let channel = msg.guild.channels.cache.get(collected.first().content.replace(/[^0-9]/g, ''))
+                            if(!channel){
+                                msg.channel.send("I couldn't find that channel. Please try again.")
+                                await channelPrompt(msg)
+                            }
+                            else await reactions(msg, channel.id, [])
+                        })
+                    })
+                }
+
+                let reactions = async (msg, channel, reactionz = []) =>{
+                    let embed = u.embed().setTitle("What reactions should trigger the board?").setDescription("Defaults are ⭐ and 🌟.\n🌟 will always send to the main starboard if a mod reacts with it\n\nType `done` when you're done")
+                    msg.channel.send({embed}).then(async m =>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content
+                            if(content.toLowerCase() == 'done'){
+                                if(reactionz.length == 0) reactionz = ['⭐','🌟']
+                                await singleChannel(msg, channel, reactionz)
+                            }
+                            else{
+                                let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content)
+                                let unicodeEmote = onlyEmoji(content)
+                                if(!unicodeEmote && !findEmoji){
+                                    msg.channel.send("I couldn't find that emoji!")
+                                    await reactions(msg, channel, reactionz)
+                                }
+                                else{
+                                    if(findEmoji) reactionz.push(content)
+                                    else if(unicodeEmote) reactionz.push(unicodeEmote)
+                                    await reactions(msg,channel,reactionz)
+                                }
+                            }
+                        })
+                    })
+                    
+                }
+
+                let singleChannel = async (msg, channel, reactions) =>{
+                    let embed = u.embed().setTitle("Should this board only be able to be triggered from a certain channel?").setDescription("Type in the format of #channel-name. Type `none` for none ")
+                    msg.channel.send({embed}).then(async m =>{
+                        await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content
+                            let channel2 = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
+                            if(content.toLowerCase() == 'none') await toStar(msg, channel, reactions, '')
+                            else if(!channel2){
+                                msg.channel.send("I couldn't find that channel. Please try again.")
+                                await singleChannel(msg, channel, reactions)
+                            }
+                            else await toStar(msg, channel, reactions, channel2.id)
+                        })
+                    })
+                }
+
+                let toStar = async (msg, channel, reactions, singleChannel) =>{
+                    let embed = u.embed().setTitle(`How many reactions are needed to be sent to ${msg.guild.channels.cache.get(channel)?.name}?`).setDescription("The default is 5. Reacting with 🌟 while having the Manage Server permission will automatically put this on the channel.")
+                    msg.channel.send({embed}).then(async m=>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content
+                            if(content.replace(/[0-9]/g, '') != ''){
+                                msg.channel.send("That's not a valid number.")
+                                await toStar(msg, channel, reactions, singleChannel)
+                            }
+                            else if(await Module.db.guildconfig.saveStarBoard(msg.guild.id, channel, reactions, singleChannel, content) != null){
+                                let embed = u.embed().setTitle(`${msg.guild.channels.cache.get(channel).name} is now a starboard!`).setFooter(reactions.join(' '))
+                                if(singleChannel)embed.setDescription(`Only messages in ${msg.guild.channels.cache.get(singleChannel)} will appear on this starboard.`)
+                                msg.channel.send({embed})
+                            }
+                            else return msg.channel.send("I had a problem saving the starboard.")
+                            
+                        })
+                    })
+                }
+                await channelPrompt(msg)
+            }
+            let manageBoard = async msg =>{
+
+            }
+            let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e => e.channel).join('>\n<#')}>` : 'There are no starboards currently set up')
+            msg.channel.send({embed}).then(async m =>{
+                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                .then(async collected =>{
+                    let content = collected.first().content
+                    if(content.toLowerCase() == 'create') await createBoard(msg)
+                    else if(content.toLowerCase() == 'manage') await manageBoard(msg)
+                    else{
+                        msg.channel.send("That's not one of the options. Please try again.")
+                        await starPrompt(msg)
+                    }
+                })
+            })
         }
         let mainMenu = async msg => {
             let embed = u.embed().setTitle('What do you want to configure?').setDescription('Options:\nChannels\nStarboards\nDone')

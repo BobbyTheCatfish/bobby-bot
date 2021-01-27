@@ -10,18 +10,17 @@ let starboards = async(msg) => await Module.db.guildconfig.getStarBoards(msg.gui
 let postToBoard = async(reaction, user, force=false) =>{
     let msg = reaction.message
     let guildBoards = await starboards(msg)
-    console.log(guildBoards)
     if(!guildBoards) return
-    else if(guildBoards.includes({id: msg.channel.id})) return
+    else if(guildBoards.includes({channel: msg.channel.id})) return
     else for(x of guildBoards){
-        if(x.reactions.includes(reaction.emoji.name)){
-            if(x.singleChannel && msg.channel.id != x.singleChannel) return
-            else if(reaction.count != x.toStar && !force) return 
-            let channel = msg.guild.channels.cache.get(x.id)
+        if(!x.reactions.includes(reaction.emoji.name)) continue
+        else if(x.singleChannel && msg.channel.id != x.singleChannel) continue
+        if(reaction.count == x.toStar || force){
+            let channel = msg.guild.channels.cache.get(x.channel)
             let embed = u.embed().setDescription(msg.content)
             if(msg.attachments.first()) embed.setImage(msg.attachments.first().url)
-            embed.addField('Channel', msg.channel).addField('Jump to post', msg.url).setTimestamp(msg.createdAt).setAuthor(msg.member.displayname, msg.author.avatarURL()).setFooter(reaction.emoji.name)
-            if(channel) channel.send(embed)
+            embed.addField('Channel', msg.channel).addField('Jump to post', msg.url).setTimestamp(msg.createdAt).setAuthor(msg.member.displayName, msg.author.avatarURL()).setFooter(reaction.emoji.name)
+            if(channel) channel.send({embed})
         }
     }
 }
