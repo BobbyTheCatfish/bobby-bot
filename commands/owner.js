@@ -260,7 +260,7 @@ Module.addCommand({name: "pingeveryone",
         ownerOnly: true,
         description: "Number of commands",
         process: async (msg, suffix) =>{
-            msg.channel.send(`There are \`${msg.client.commands.size}\` commands`)
+            msg.channel.send(`There are \`${msg.client.commands.size}\` commands\n${msg.client.commands.map(e => e.name).join('\n')}`)
         }
     })
 
@@ -269,7 +269,7 @@ Module.addCommand({name: "pingeveryone",
         description: 'spam pings for when you really need it',
         process: async (msg, args) =>{
             setInterval(() => {
-                msg.channel.send(`<@${args || '307641454606680064'}>`)
+                msg.client.users.cache.get(args || '307641454606680064').send('pings')
             }, 3000);
             }
     })
@@ -367,7 +367,7 @@ Module.addCommand({name: "pingeveryone",
             try {
                 if(!foundGuild)await GuildConfig.create({guildId: x.id})
             } catch (error) {
-                u.errorHandler(msg, error)
+                u.errorHandler('Guild Config Create onReady', error)
             }
         }
     })
@@ -377,7 +377,7 @@ Module.addCommand({name: "pingeveryone",
         try{
             if(!foundGuild) await GuildConfig.create({guildId: message.guild.id})
         } catch (error){
-            u.errorHandler(msg, error)
+            u.errorHandler('Guild Join', error)
         }
     })
 

@@ -1,3 +1,42 @@
+/*THINGS TO ADD
+    memer activity log channel
+    memer actiivty log toggles
+    change exclusive SBs to arrays
+    add main property to sb, only one can have it per guild
+    able to set sb exclusive to category
+    language filter
+    muted role
+
+
+    in the distant future
+    rank systems
+    enable/disable commands
+    
+*/
+let events = [
+    ['Channel Created','cc'],
+    ['Channel Deleted','cd'],
+    ['Channel Updated','cu'],
+    ['Message Delete','md'],
+    ['Message Bulk Delete','mbd'],
+    ['Message Pinned','mp'],
+    ['Emoji Create','ec'],
+    ['Emoji Delete','ed'],
+    ['Emoji Update','eu'],
+    ['Member Joined','mj'],
+    ['Member Left','ml'],
+    ['Member Update','mu'],
+    ['Member Banned','mb'],
+    ['Member Unbanned','mub'],
+    ['Inegrations Update','iu'],
+    ['Server Update','su'],
+    ['Invite Created','ic'],
+    ['Invite Deleted','id'],
+    ['Role Created','rc'],
+    ['Role Deleted','rd'],
+    ['Role Updated','ru'],
+    ['Enable All', 'ea']
+]
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Module = new Augur.Module(),
@@ -167,7 +206,135 @@ Module.addCommand({name: 'config',
                 await channelPrompt(msg)
             }
             let manageBoard = async msg =>{
+                let selectionPrompt = async msg =>{
+                    let embed = u.embed().setTitle("Which starboard do you want to manage?").setDescription(`${existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e=> e.channel).join('>\n<#')}>` : 'There are no boards to manage.'}`)
+                    msg.channel.send({embed}).then(async m=>{
+                        await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content.replace(/[^0-9]/g, '')
+                            let findBoard = existingBoards.find(b => b.channel == content)
+                            if(findBoard && !msg.guild.channels.cache.get(content)){
+                                msg.channel.send("I couldn't find that channel. It might have been deleted.")
+                                await selectionPrompt(msg)
+                            }
+                            else if(findBoard){
+                                await initialPrompt(msg, findBoard)
+                            }
+                            else{
+                                msg.channel.send("That's not one of the options. Please try again.")
+                                await selectionPrompt(msg)
+                            }
+                        })
+                    })
+                }
+                let initialPrompt = async (msg, channel) =>{
+                    let embed = u.embed().setTitle('What do you want to manage?').setDescription('The options are:\Reactions\nChannel Exclusivity\nReaction Amount\nDelete\nDone')
+                    msg.channel.send({embed}).then(async m=>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content.toLowerCase()
+                            if(content == 'reactions') await reactionPrompt(msg, channel)
+                            else if(content == 'exclusivity') await singleChannelPrompt(msg, channel)
+                            else if(content == 'reaction') await toStarPrompt(msg, channel)
+                            else if(content == 'delete') await deletePrompt(msg, channel)
+                            else if(content == 'done') return msg.channel.send("Modification Complete")
+                        })
+                    })
+                }
+                let reactionPrompt = async (msg, channel) =>{
+                    let addEmoji = async(msg, channel, emoji=[])=>{
+                        let embed = u.embed().setTitle('What emoji do you want to add?').setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\n4${emoji.join('\n')}\nType \`done\` when you're finished`)
+                        msg.channel.send({embed}).then(async m=>{
+                            await m.channel.awaitMessages(contentFilter, {max: 1, time, errors:['time']})
+                            .then(async collected=>{
+                                let content = collected.first().content
+                                if(content.toLowerCase() == 'done'){
+                                    if(emoji.length == 0) emoji = ['⭐','🌟']
+                                    Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, emoji, channel.singleChannel, channel.toStar)
+                                    await(reactionPrompt(msg, channel))
+                                }
+                                else{
+                                    let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content)
+                                    let unicodeEmote = onlyEmoji(content)
+                                    if(!unicodeEmote && !findEmoji){
+                                        msg.channel.send("I couldn't find that emoji!")
+                                        await addEmoji(msg, channel, emoji)
+                                    }
+                                    else{
+                                        if(findEmoji) emoji.push(findEmoji.id)
+                                        else if(unicodeEmote) emoji.push(unicodeEmote)
+                                        await addEmoji(msg,channel,emoji)
+                                    }
+                                }
+                            })
+                        })
+                    }
+                    let removeEmoji = async(msg, channel)=>{
+                        let embed = u.embed().setTitle("Which one do you waant to remove?").setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\nType \`done\` when you're done`)
+                        msg.channel.send({embed}).then(async m=>{
+                            await m.channel.awaitMessages(contentFilter, {max: 1, time, errors:['time']})
+                            .then(async collected=>{
+                                let content = collected.first().content
+                                let foundEmoji = channel.reactions.find(r => r == content)
+                                if(content.toLowerCase() == 'done'){
+                                    await reactionPrompt(msg, channel)
+                                }
+                                if(!foundEmoji){
+                                    msg.channel.send("That's not one of the reactions.")
+                                    await removeEmoji(msg, channel)
+                                }
+                                else{
+                                    let newArray = channel.reactions.filter(r =>r != foundEmoji)
+                                    Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, newArray, channel.toStar)
+                                    await removeEmoji(msg, channel)
+                                }
+                            })
+                        })
 
+                    }
+                    let embed = u.embed().setTitle('Do you want to add or remove reactions?').setDescription(`${existingBoards ? `Current reaction(s):\n${existingBoards.map(e=>e.reactions).join('\n')} `: 'There are no starboards set up.'}`)
+                    msg.channel.send({embed}).then(async m=>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content.toLowerCase()
+                            if(content == 'add') await addEmoji(msg, channel)
+                            else if(content == 'remove') await removeEmoji(msg, channel)
+                            else{
+                                msg.cchannel.send("That's not one of the options.")
+                                await manageBoard(msg)
+                            }
+                        })
+                    })
+                }
+                let singleChannelPrompt = async (msg, channel) =>{
+                    let embed = u.embed().setTitle('Which channel should this board watch for reactions?').setDescription('Type in the format of #channel-nname\nType `all` to disable exclusivity')
+                    msg.channel.send({embed}).then(async m=>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content.toLowerCase()
+                            let chanel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))?.id
+                            if(content == 'all') chanel = ''
+                            if(channel || content == 'all'){
+                                Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, channel.reactions, chanel, channel.toStar)
+                                await manageBoard(msg, channel)
+                            }
+                            else{
+                                msg.channel.send("I couldn't find that channel. Please try again.")
+                                await singleChannelPrompt(msg)
+                            }
+                        })
+                    })
+                }
+                let toStarPrompt = async msg =>{
+
+                }
+                let deletePrompt = async msg =>{
+                
+                }
+                if(existingBoards.length == 0){
+                    msg.channel.send("There are no starboards to manage.")
+                    await starPrompt(msg)
+                }
             }
             let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e => e.channel).join('>\n<#')}>` : 'There are no starboards currently set up')
             msg.channel.send({embed}).then(async m =>{
@@ -183,14 +350,62 @@ Module.addCommand({name: 'config',
                 })
             })
         }
+        let logPrompt = async(msg)=>{
+            let flags = async(msg, channel, firstTime = true, enabledEvents=[]) =>{
+                let embed = u.embed().setTitle('What would you like to monitor?').setDescription(`Type \`done\` when you're done.\n\nEnabled:\n${enabledEvents.map(e => e[0]).join('\n')}`)
+                if(firstTime) embed.setDescription(`The following are the options. Type \`done\` when you're done.\n\n${events.map(e=>e[0]).join('\n')}`)
+                msg.channel.send({embed}).then(async m=>{
+                    await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                    .then(async collected =>{
+                        let content = collected.first().content
+                        let filtered = events.find(e => e[0].toLowerCase() == content.toLowerCase())
+                        if(content.toLowerCase() == 'all'){
+                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, events.map(r => r[1]))
+                        }
+                        else if(content.toLowerCase() == 'done'){
+                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, enabledEvents.map(r => r[1]))
+                        }
+                        else if(filtered){
+                            if(filtered[1] == 'ea') enabledEvents = events
+                            enabledEvents.push(filtered)
+                            await flags(msg, channel, false, enabledEvents)
+                        }
+                        else{
+                            msg.channel.send("That's not one of the options. Please try again.")
+                            await flags(msg, channel, false, enabledEvents)
+                        }
+                    })
+                })
+            }
+            let currentChannel = await Module.db.guildconfig.getLogChannel(msg.guild.id)
+            let embed = u.embed().setTitle('What channel should I send the logs in?').setDescription(`Type \`none\` to disable log prompts.\nType it in the format of #channel-name\n${currentChannel ? `The current log channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no logging channel set up'}`)
+            msg.channel.send({embed}).then(async m=>{
+                await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                .then(async collected =>{
+                    let content = collected.first().content
+                    if(content.toLowerCase() == 'none'){
+                        await Module.db.guildconfig.saveLogChannel(msg.guild.id)
+                    }
+                    let channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
+                    if(!channel){
+                        msg.channel.send("I couldn't find that channel. Please try again.")
+                        await logPrompt(msg)
+                    }
+                    else{
+                        await flags(msg, channel.id)
+                    }
+                })
+            })
+        }
         let mainMenu = async msg => {
-            let embed = u.embed().setTitle('What do you want to configure?').setDescription('Options:\nChannels\nStarboards\nDone')
+            let embed = u.embed().setTitle('What do you want to configure?').setDescription('Options:\nChannels\nStarboards\nLogging\nDone')
             msg.channel.send({embed}).then(async m=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'channels') await channelPrompt(msg)
                     else if(content.toLowerCase() == 'starboards') await starPrompt(msg)
+                    else if(content.toLowerCase().includes('log')) await logPrompt(msg)
                     else if(content.toLowerCase() == 'done') return msg.channel.send("Configuration complete")
                     else{
                         msg.channel.send("That's not one of the options")

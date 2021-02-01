@@ -290,7 +290,7 @@ const Utils = {
             .addField("Command", msg.cleanContent || "`undefined`", true);
         } else if (typeof msg === "string") {
           console.error(msg);
-          embed.addField("Message", msg);
+          embed.addField("Message", msg.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));
         }
     
         console.trace(error);
@@ -298,7 +298,7 @@ const Utils = {
         let stack = (error.stack ? error.stack : error.toString());
         if (stack.length > 1024) stack = stack.slice(0, 1000);
     
-        embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Desktop\//g, ''));
+        embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));
         errorLog.send(embed);
       },
       //errorLog

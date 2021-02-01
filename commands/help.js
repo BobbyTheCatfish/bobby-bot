@@ -11,10 +11,9 @@ const Module = new Augur.Module()
     u.clean(msg);
 
     let prefix = Module.config.prefix;
-    let commands = Module.client.commands.filter(c => c.permissions(msg) && c.enabled);
+    let commands = Module.client.commands.filter(c => c.otherPerms(msg) && c.enabled);
 
     let embed = u.embed()
-    .setURL("https://my.ldsgamers.com/commands")
     .setThumbnail(msg.client.user.displayAvatarURL({size: 128}));
 
     if (!suffix) { // FULL HELP
