@@ -179,11 +179,11 @@ const Augur = require('augurbot'),
         }
     })
     .addEvent('messageDeleteBulk', async messages =>{
-        if(messages[0].guild){
-            let enabled = await flags(messages[0].guild)
+        if(messages.first().guild){
+            let enabled = await flags(messages.first().guild)
             if(enabled?.includes('mbd')){
-                let embed = u.embed().setTitle(`Messages were bulk deleted in \`#${messages[0].channel.name}\``).setColor(med);
-                (await logChannel(message.guild)).send({embed})
+                let embed = u.embed().setTitle(`Messages were bulk deleted in \`#${messages.first().channel.name}\``).setColor(med);
+                (await logChannel(messages.first().guild)).send({embed})
             }
         }
     })
