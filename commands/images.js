@@ -343,7 +343,6 @@ Module.addCommand({name: "amongus",
     category: "Images",
     process: async (message, args) =>{
         let deg = parseInt(args, 10) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
-        if(args.startsWith('-' && parseInt(args, 10))) deg = 0 - deg
         let processed = false;
         let messages = await message.channel.messages.fetch({ limit: 100 });
         for (const [messageId, message] of messages)
@@ -354,7 +353,7 @@ Module.addCommand({name: "amongus",
                 processed = true;
                 try{await Jimp.read(target)}catch(e){continue}
                 const image = await Jimp.read(target)
-                image.rotate(deg)
+                image.rotate(-deg)
                 image.autocrop({cropOnlyFrames: false, tolerance: 0, leaveBorder: 3})
                 await message.channel.send(`\`Rotated ${deg}°\``,{files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
                 break
