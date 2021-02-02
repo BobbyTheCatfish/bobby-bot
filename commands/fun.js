@@ -114,9 +114,9 @@ You can contact BobbbyTheCatfish#4215 in this server: https://discord.gg/wj7VVPA
         .setTitle('About BobbyTheCatfish')
         .setDescription(`***In the voice of my creator*** \n Hey! I'm BobbyTheCatfish, a streamer and YouTube creator based in NC. I'm currently reviewing Persona 5 the Animation, so make sure to check that out!`)
         .setColor('#00ff04')
-        .setThumbnail('https://i.imgur.com/L6fPUCu.png')
+        .setThumbnail(message.client.users.cache.get(Module.config.ownerId).avatarURL())
         .setURL('https://www.youtube.com/channel/UCw8DLllFiJOmevgDznFiQZw')
-        message.channel.send({embed: myInfo})
+        message.channel.send({embed})
     }
 })
 .addCommand({name: "mewhen",
