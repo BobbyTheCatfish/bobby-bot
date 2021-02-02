@@ -118,15 +118,15 @@ const Augur = require('augurbot'),
     .addEvent('guildMemberUpdate', async(oldMember, newMember)=>{
         let enabled = await flags(oldMember.guild)
         if(enabled?.includes('mu')){
-            let embed = u.embed().setTitle(`\`${oldMember.user.name}\` was updated`)
+            let embed = u.embed().setTitle(`\`${oldMember.user.tag}\` was updated`).setColor(med)
             if(oldMember.nickname != newMember.nickname) embed.addField(`Nickname`,`Was: ${oldMember.nickname ? oldMember.nickname : 'None'}\nIs: ${newMember.nickname?newMember.nickname:'None'}`).setColor(med)
             if(oldMember.roles.cache != newMember.roles.cache){
-                let removed = oldMember.roles.cache.filter(r=>!newMember.roles.cache.array().includes(r))
-                let added = newMember.roles.cache.filter(r=>!oldMember.roles.cache.array().includes(r))
-                if(added.size > 0) embed.addField(`Roles Added`,`${added.join('\n')}`)
-                if(removed.size > 0) embed.addField(`Roels Removed`, `${removed.join('\n')}`)
+                let removed = oldMember.roles.cache.filter(r=> !newMember.roles.cache.array().includes(r)).map(r => `<@&${r.id}>`)
+                let added = newMember.roles.cache.filter(r => !oldMember.roles.cache.array().includes(r)).map(r => `<@&${r.id}>`)
+                if(added.length > 0) embed.addField(`Roles Added`,`${added.join('\n')}`)
+                if(removed.length > 0) embed.addField(`Roles Removed`, `${removed.join('\n')}`)
             }
-            if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed})
+            if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed, disableMentions: 'all'})
         }
     })
     .addEvent('guilddUpdate', async (oldGuild, newGuild)=>{
