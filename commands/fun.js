@@ -69,7 +69,7 @@ Module.addCommand({name: "8ball",
 `
 Oh nooooooo, an error totally just occurred while running that command: \`ReferenceError: something is not defined¯\\_(ツ)_/¯ \`
 You should always receive this error while running the command.
-You can contact BobbbyTheCatfish#4215 in this server: https://discord.gg/wj7VVPA
+You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this server: ${Module.config.mainServer}
 `
         )
     }
@@ -219,7 +219,7 @@ You can contact BobbbyTheCatfish#4215 in this server: https://discord.gg/wj7VVPA
 
             await message.react(e1)
             if(e2) await message.react(e2)
-        }catch(err){console.error(err)}
+        }catch(err){u.errorHandler('Die Roll', err)}
     }
 })
 .addCommand({name: "enlarge",

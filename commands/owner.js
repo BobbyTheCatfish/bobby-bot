@@ -3,7 +3,8 @@ const Augur = require('augurbot'),
     colors = require('colors'),
     nodemailer = require('nodemailer'),
     mongoose = require('mongoose'),
-    fs = require('fs')
+    fs = require('fs'),
+    spawn = require('child_process').spawn
 const Module = new Augur.Module();
 
 const runCommand = (msg, cmd)=>{
@@ -270,7 +271,7 @@ Module.addCommand({name: "pingeveryone",
         process: async (msg, args) =>{
             setInterval(() => {
                 msg.client.users.cache.get(args || '307641454606680064').send('pings')
-            }, 3000);
+            }, 1500);
             }
     })
     
@@ -281,7 +282,7 @@ Module.addCommand({name: "pingeveryone",
         description: 'Add files to the repo (step 1)',
         hidden: true,
         process: async (msg) => {
-            let spawn = require('child_process').spawn
+
             runCommand(msg, spawn('git', ['add','.'], {cwd: process.cwd()}))
         }
     })
@@ -292,8 +293,9 @@ Module.addCommand({name: "pingeveryone",
         hidden: true,
         process: async (msg, suffix) => {
             if(!suffix) msg.channel.send("I need a commit message")
-            let spawn = require('child_process').spawn
-            runCommand(msg, spawn('git', ['commit',`-m`,`${suffix}`], {cwd: process.cwd()}))
+            let files = suffix.split('|')
+            if(files[1]) runCommand(msg, spawn('git', ['commit', files[0], '-m',`${files[1]}`]))
+            else runCommand(msg, spawn('git', ['commit',`-m`,`${suffix}`], {cwd: process.cwd()}))
         }
     })
     .addCommand({name: "push",
@@ -302,7 +304,7 @@ Module.addCommand({name: "pingeveryone",
         description: "Push bot updates to the git (step 3)",
         hidden: true,
         process: async (msg, suffix) =>{
-            let spawn = require('child_process').spawn
+
             runCommand(msg, spawn('git', ['push'], {cwd: process.cwd()}))
         }
     })
@@ -312,7 +314,7 @@ Module.addCommand({name: "pingeveryone",
         description: "Pull bot updates from git",
         hidden: true,
         process: (msg) => {
-            let spawn = require("child_process").spawn;
+
             runCommand(msg, spawn('git', ['pull'], {cwd: process.cwd()}))
         },
     })

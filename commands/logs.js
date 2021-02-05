@@ -204,7 +204,7 @@ const Augur = require('augurbot'),
     .addEvent('roleUpdate', async (oldRole, newRole)=>{
         let enabled = await flags(oldRole.guild)
         if(enabled?.includes('ru')){
-            let embed = u.embed().setTitle(`The \`${role.name}\` role was modified`).setColor(med)
+            let embed = u.embed().setTitle(`The \`${oldRole.name}\` role was modified`).setColor(med)
             if(oldRole.hexColor != newRole.hexColor) embed.addField(`Color`,`Was: ${oldRole.hexColor}\nIs: ${newRole.hexColor}`).setColor(newRole.hexColor)
             if(oldRole.hoist != newRole.hoist) embed.addField(`Hoist`, `Was: ${oldRole.hoist}\nIs: ${newRole.hoist}`)
             if(oldRole.permissions != newRole.permissions)embed.addField(`Permissions`, `No information`)

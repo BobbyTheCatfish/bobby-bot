@@ -361,9 +361,11 @@ Module.addCommand({name: 'config',
                         let filtered = events.find(e => e[0].toLowerCase() == content.toLowerCase())
                         if(content.toLowerCase() == 'all'){
                             Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, events.map(r => r[1]))
+                            await mainMenu(msg)
                         }
                         else if(content.toLowerCase() == 'done'){
                             Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, enabledEvents.map(r => r[1]))
+                            await mainMenu(msg)
                         }
                         else if(filtered){
                             if(filtered[1] == 'ea') enabledEvents = events
@@ -406,6 +408,7 @@ Module.addCommand({name: 'config',
                     if(content.toLowerCase() == 'channels') await channelPrompt(msg)
                     else if(content.toLowerCase() == 'starboards') await starPrompt(msg)
                     else if(content.toLowerCase().includes('log')) await logPrompt(msg)
+                    else if(content.toLowerCase() == 'roles') await rolePrompt(msg)
                     else if(content.toLowerCase() == 'done') return msg.channel.send("Configuration complete")
                     else{
                         msg.channel.send("That's not one of the options")

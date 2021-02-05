@@ -11,7 +11,7 @@ const Module = new Augur.Module()
     u.clean(msg);
 
     let prefix = Module.config.prefix;
-    let commands = Module.client.commands.filter(c => c.otherPerms(msg) && c.enabled);
+    let commands = Module.client.commands.filter(c => c.otherPerms(msg) && (msg.guild ? msg.member.hasPermission(c.permissions):true) && c.enabled && !c.hidden && (c.ownerOnly ? msg.author.id == Module.config.ownerId : true) && (c.guildOnly ? msg.guild : true) && (c.dmOnly ? !msg.guild : true));
 
     let embed = u.embed()
     .setThumbnail(msg.client.user.displayAvatarURL({size: 128}));
@@ -73,7 +73,7 @@ const Module = new Augur.Module()
           return;
         }
       } else {
-        msg.reply("I don't have a command by that name.").then(u.clean);
+        msg.reply("I don't have a command by that name. If it's a tag, you can do !tags").then(u.clean);
       }
     }
   }

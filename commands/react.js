@@ -1,14 +1,13 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    colors = require('colors'),
-    mongoose = require('mongoose')
+    colors = require('colors')
 
 const Module = new Augur.Module();
 
 Module.addEvent('message', async (message) =>{
     let parsed = await u.parse(message)
     if(parsed && message.guild){
-        let read = (await Module.db.tags.getTag(message.guild.id, parsed.command))
+        let read = (await Module.db.tags.getTag(message.guild.id, parsed.command.toLowerCase()))
         if(await Module.db.tags.globalStatus(message.guild.id)) read = await Module.db.globalTags.getTag(parsed.command)
         if(read){
             if(message.client.commands.has(read.name) && await Module.db.tags.globalStatus(message.guild.id)){
@@ -48,10 +47,10 @@ Module.addEvent('message', async (message) =>{
             if(message.client.commands.has(args.split(' ')[0].toLowerCase())){
                 return message.channel.send(`You can't replace commands with global tags enabled`)
             }
-            let tag = await Module.db.globalTags.getTag(args.split(' ')[0])
-            if(!tag || tag.user == message.author.id || (tag.guildId == message.guild.id && message.author.hasPermission('ADMINISTRATOR'))){
+            let tag = await Module.db.globalTags.getTag(args.toLowerCase().split(' ')[0])
+            if(!tag || tag.user == message.author.id || (tag.guildId == message.guild.id && message.member.hasPermission('ADMINISTRATOR'))){
                 if(!args.split(' ')[1] && message.attachments.size == 0){
-                    await Module.db.globalTags.removeTag(message.author.id, args.split(' ')[0])
+                    await Module.db.globalTags.removeTag(args.split(' ')[0].toLowerCase())
                     return await message.react('🗑️')
                 }
                 else{
@@ -83,21 +82,21 @@ Module.addEvent('message', async (message) =>{
     process: async(message,args)=>{
         let tags = await Module.db.tags.getAllTags(message.guild.id)
         if(args.toLowerCase() == 'global' && ((message.member && message.member.hasPermission('ADMINISTRATOR')|| message.author.id == Module.config.ownerId))){
-            let list = []
+        let list = []
             if(!await Module.db.tags.globalStatus(message.guild.id))
             {
                 if(tags){
                     for (let t of tags.tags){
                         let tag = await Module.db.globalTags.getTag(t.name)
                         if(tag) list.push(t.name)
-                    }
+                    }}
                     let promptEmbed = u.embed().setTitle('Are you sure you want to go global?').setDescription(list.length > 0 ? `All but the following tags will be brought over: \n${list.join('\n')}`:`All of your tags will be brought over.`)
                     let confirmEmbed = u.embed().setTitle("You've gone global!").setDescription("You now have access to all the other global server's tags!")
                     let cancelEmbed = u.embed().setTitle("Canceled").setDescription("You didn't go global, and the tags weren't erased")
                     let decision = await u.confirmEmbed(message,promptEmbed,confirmEmbed,cancelEmbed)
                     if(decision == true) return await Module.db.tags.setGlobal(message.guild.id, message.guild.owner.id)
                     else return
-                }
+                
                 //console.log(list)
                 
             }
@@ -111,11 +110,15 @@ Module.addEvent('message', async (message) =>{
                 else return
             }
         }
-        if(!tags) return message.channel.send('Looks like this server doesn\'t have any tags.')
-        let list = []
-        tags.tags.forEach(t => {
-            list.push(t.name)
-        });
+        else if(await Module.db.tags.globalStatus){
+            let gtags = await Module.db.globalTags.getAllTags()
+            let map = gtags.map(t => t.name)
+            message.author.send(`The following are all the global tags:\n${map.join('\n')}`)
+            await message.react('👌')
+        }
+        else if(!tags) return message.channel.send('Looks like this server doesn\'t have any tags.')
+        let list = tags.tags.map(t=>t.name)
+        if(await Module.db.tags.globalStatus(message.guild.id)) list.push()
         return message.channel.send(list.join('\n'))
     }
 })
