@@ -114,7 +114,7 @@ Module.addEvent('message', async (message) =>{
             let gtags = await Module.db.globalTags.getAllTags()
             let map = gtags.map(t => t.name)
             message.author.send(`The following are all the global tags:\n${map.join('\n')}`)
-            await message.react('👌')
+            return await message.react('👌')
         }
         else if(!tags) return message.channel.send('Looks like this server doesn\'t have any tags.')
         let list = tags.tags.map(t=>t.name)
