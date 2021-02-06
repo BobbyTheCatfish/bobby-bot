@@ -11,7 +11,7 @@ Module.addEvent('message', async (message) =>{
         if(await Module.db.tags.globalStatus(message.guild.id)) read = await Module.db.globalTags.getTag(parsed.command)
         if(read){
             if(message.client.commands.has(read.name) && await Module.db.tags.globalStatus(message.guild.id)){
-                await Module.db.globalTags.removeTag(message.guild.id, read.name)
+                await Module.db.globalTags.removeTag(read.name)
             }
             else{
                 let replaceContent
