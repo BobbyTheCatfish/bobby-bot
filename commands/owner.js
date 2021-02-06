@@ -362,22 +362,20 @@ Module.addCommand({name: "pingeveryone",
     
     //Add DBs on ready and create
     .addEvent('ready',async()=>{
-        const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
         for(x of Module.client.guilds.cache.array())
         {
-            const foundGuild = await GuildConfig.findOne({guildId: x.id})
+            const foundGuild = await Module.db.guildconfig.getConfig(x.id)
             try {
-                if(!foundGuild)await GuildConfig.create({guildId: x.id})
+                if(!foundGuild)await Module.db.guildconfig.createConfig(x.id)
             } catch (error) {
                 u.errorHandler('Guild Config Create onReady', error)
             }
         }
     })
     .addEvent('guildCreate', async guild =>{
-        const GuildConfig = mongoose.models.GuildConfig || mongoose.model('GuildConfig', GCS)
-        const foundGuild = await GuildConfig.findOne({guildId: guild.id})
+        const foundGuild = await Module.db.guildconfig.getConfig(guild.id)
         try{
-            if(!foundGuild) await GuildConfig.create({guildId: message.guild.id})
+            if(!foundGuild) await Module.db.guildconfig.createConfig(guild.id)
         } catch (error){
             u.errorHandler('Guild Join', error)
         }
