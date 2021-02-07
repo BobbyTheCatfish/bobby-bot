@@ -1,8 +1,8 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors'),
-    request = require('request')
-
+    request = require('request'),
+    {fillWithEmoji} = require('discord-emoji-canvas')
 const Module = new Augur.Module();
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
@@ -52,15 +52,6 @@ Module.addCommand({name: "8ball",
             if (pf.scan(word.toLowerCase()).length == 0) return message.channel.send("I've always wondered what __**" + word + "**__ stood for...");
             else word = [];
         }
-    }
-})
-.addCommand({name:"enlarge",
-    aliases: ['e', 'big', 'large', 'embiggen'],
-    process: async (message, args) =>{
-        let test = /<(a?):\w+:(\d+)>/i;
-        let id = test.exec(args);
-        if (id) try{message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`]});}catch(e){return message.channel.send("I couldn't enlarge that emoji.")}
-        else return message.channel.send("You need to specify a valid emoji! Note that I don't work with Discord's default emojis.")
     }
 })
 .addCommand({name: "errormsg",
@@ -228,7 +219,10 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
         let test = /<(a?):\w+:(\d+)>/i;
         let id = test.exec(args);
         if (id) try{return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`]});}catch(e){return message.channel.send("I couldn't enlarge that emoji.")}
-        else return message.channel.send("You need to specify a valid emoji! Note that I don't work with Discord's default emojis.")
+        else if(await fillWithEmoji(args)){
+            message.channel.send({files: [await fillWithEmoji(args)]})
+        }
+        else return message.channel.send("You need to specify a valid emoji!")
     }
 })
 .addCommand({name: "shop",
