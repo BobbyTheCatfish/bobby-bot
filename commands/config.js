@@ -40,7 +40,6 @@ let events = [
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Module = new Augur.Module(),
-    mongoose = require('mongoose'),
     {onlyEmoji} = require('emoji-aware')
 
 Module.addCommand({name: 'config',

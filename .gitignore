@@ -8,6 +8,5 @@ commands/dms.js
 commands/eval.js
 commands/thalesGameNights.js
 .DS_Store
-utils/dbModels.js
 *.code-workspace
 *-.js

@@ -1,6 +1,5 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    mongoose = require('mongoose')
     colors = require('colors')
 
 const Module = new Augur.Module();

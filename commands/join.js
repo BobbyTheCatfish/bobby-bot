@@ -1,7 +1,6 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    Module = new Augur.Module(),
-    mongoose = require('mongoose')
+    Module = new Augur.Module()
 
 //Join message
 Module.addEvent('guildMemberAdd', async member => {
