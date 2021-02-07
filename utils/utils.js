@@ -28,7 +28,6 @@ const Utils = {
         }
         
     },
-
     confirmEmbed: async function(message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('Your request timed out'), time = 6000)
     {
             let msg = await message.channel.send({embed: promptEmbed, disableMentions: "all"})
@@ -52,10 +51,16 @@ const Utils = {
               return null;
             }
     },
-
+    discordEmoji: async function(text){
+        const emojiUnicode = require('emoji-unicode')
+        const Jimp = require('jimp')
+        if (!emojiUnicode(text) ||!text || text.match(/<?(a:|:)\w*:(\d{17}|\d{18})>/)) return null;
+        let image = await Jimp.read(`https://twemoji.maxcdn.com/v/latest/72x72/${emojiUnicode(text)}.png`)
+        image.resize(200,200);
+        return await image.getBufferAsync(Jimp.MIME_PNG)
+    },
     embed: (data) => new Discord.MessageEmbed(data).setColor(config.color).setTimestamp(),
     
-
     escape: (text, options = {}) => Discord.escapeMarkdown(text, options),
 
     escapeText: (txt) => txt.replace(/(\*|_|`|~|\\|\|)/g, '\\$1'),
@@ -92,7 +97,6 @@ const Utils = {
 
         return foundUser;
     },
-
     getMention: async function(message, parse=false, getMember = true) {
         try
         {
@@ -128,8 +132,7 @@ const Utils = {
                 }
             }
         }catch(error) {return null;}
-      },
-
+    },
     noop: () => {},
 
     time: ()=> {
@@ -143,7 +146,6 @@ const Utils = {
         let give = `${m}/${d}/${y} @ ${h}:${m}:${s}`
         return `[${give}] `.magenta
     },
-
     paginator: async function(message, pager, elements, page = 0, perPage = 1)
     {
         try
@@ -185,7 +187,6 @@ const Utils = {
             } else await message.channel.send({embed: pager(elements, page, message)});
         } catch(e) { Utils.alertError(e, message); }
     },
-
     parse: async function(msg) {
         try {
           let prefix = await Utils.prefix(msg);
@@ -220,7 +221,6 @@ const Utils = {
         const path = require("path");
         return path.resolve(path.dirname(require.main.filename), ...segments);
     },
-
     properCase: (txt) => txt.split(" ").map(word => (word[0].toUpperCase() + word.substr(1).toLowerCase())).join(" "),
     
     rand: (array) => array[Math.floor(Math.random() * array.length)],
@@ -270,10 +270,7 @@ const Utils = {
             return message.guild.channels.cache.get(config.channels.botspam);
         }
         else return message.channel;
-    },
-
-    
-    
+    },    
     errorHandler: function(error, msg = null) {
         if (!error) return;
         console.error(Date());

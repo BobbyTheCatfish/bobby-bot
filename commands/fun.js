@@ -1,8 +1,7 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors'),
-    request = require('request'),
-    {fillWithEmoji} = require('discord-emoji-canvas')
+    request = require('request')
 const Module = new Augur.Module();
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
@@ -219,9 +218,8 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
         let test = /<(a?):\w+:(\d+)>/i;
         let id = test.exec(args);
         if (id) try{return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`]});}catch(e){return message.channel.send("I couldn't enlarge that emoji.")}
-        else if(await fillWithEmoji(args)){
-            message.channel.send({files: [await fillWithEmoji(args)]})
-        }
+        id = await u.discordEmoji(args)
+        if(id) return message.channel.send({files: [id]})
         else return message.channel.send("You need to specify a valid emoji!")
     }
 })
