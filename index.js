@@ -5,7 +5,7 @@ const {AugurClient} = require('augurbot'),
   mongoose = require('mongoose')
   client = new AugurClient(config,{
     clientOptions:{
-      disableMentions: "",
+      disableMentions: "everyone",
       partials: ["REACTION"],
     },
     commands: "./commands",
