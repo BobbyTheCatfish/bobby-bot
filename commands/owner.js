@@ -2,7 +2,6 @@ const Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors'),
     nodemailer = require('nodemailer'),
-    mongoose = require('mongoose'),
     fs = require('fs'),
     spawn = require('child_process').spawn
 const Module = new Augur.Module();
@@ -261,7 +260,7 @@ Module.addCommand({name: "pingeveryone",
         ownerOnly: true,
         description: "Number of commands",
         process: async (msg, suffix) =>{
-            msg.channel.send(`There are \`${msg.client.commands.size}\` commands\n${msg.client.commands.map(e => e.name).join('\n')}`)
+            msg.channel.send(`There are \`${msg.client.commands.size}\` commands${(suffix.toLowerCase() == 'list') ? `\n${msg.client.commands.map(e => e.name).join('\n')}` : ''}`)
         }
     })
 
@@ -362,6 +361,7 @@ Module.addCommand({name: "pingeveryone",
     
     //Add DBs on ready and create
     .addEvent('ready',async()=>{
+        Module.client.user.setActivity("Bobbby's screams coming from the basement because i'm torturing him 🙂🎉",{type: "LISTENING"})
         for(x of Module.client.guilds.cache.array())
         {
             const foundGuild = await Module.db.guildconfig.getConfig(x.id)
