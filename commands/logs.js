@@ -1,9 +1,12 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    Module = new Augur.Module(),
-    mongoose = require('mongoose')
+    Module = new Augur.Module()
     const flags = async(guild) => await Module.db.guildconfig.getLogFlags(guild.id)
     const logChannel = async (guild)=> Module.client.channels.cache.get(await Module.db.guildconfig.getLogChannel(guild.id))
+    let cu = ['n','p','po','pl','po','ns','s','t','b']
+    let gu = ['afkc','afkt','ba','dmn','d','ds','ecf','i','mfa','n','p','psc','pt','puc','r','rc','s','sc','vu','vl','v','wc','we']
+    let gmu = ['n','r']
+    let ru = ['c','h','pe','po']
     let low = '#0fe300', med = '#e3d000', high = '#ff0000' 
     Module.addEvent('channelCreate', async channel =>{
         if(channel.guild){
@@ -129,7 +132,7 @@ const Augur = require('augurbot'),
             if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed, disableMentions: 'all'})
         }
     })
-    .addEvent('guilddUpdate', async (oldGuild, newGuild)=>{
+    .addEvent('guildUpdate', async (oldGuild, newGuild)=>{
         let enabled = await flags(oldGuild)
         if(enabled?.includes('su')){
             let embed = u.embed().setTitle(`The server was modified`).setColor(high)
@@ -164,18 +167,25 @@ const Augur = require('augurbot'),
         if(invite.guild){
             let enabled = await flags(invite.guild)
             if(enabled?.includes('ic')){
-                let embed = u.embed().setTitle(`An invite was created: \`${invite}\``).setColor(low);
+                let embed = u.embed().setTitle(`An invite was created: \`${invite}\``).setColor(low).addField('Created by', invite.inviter.tag)
+                if(invite.temporary){
+                    if(invite.maxUses > 0) embed.addField('Max Uses',invite.maxUses)
+                    if(invite.maxAge > 0) embed.addField('Expires',invite.expiresAt)
+                }
+                if(invite.targetUser) embed.addField('Target User', invite.targetUser.tag)
+
                 (await logChannel(invite.guild)).send({embed})
             }
         }
     })
     .addEvent('inviteDelete', async invite =>{
         if(invite.guild){
-            let enabled = await flags(invite.guild)
+            if(invite.expiresAt > new Date())
+            {let enabled = await flags(invite.guild)
             if(enabled?.includes('id')){
                 let embed = u.embed().setTitle(`An invite was deleted: \`${invite}\``).setColor(med);
                 (await logChannel(invite.guild)).send({embed})
-            }
+            }}
         }
     })
     .addEvent('messageDeleteBulk', async messages =>{
