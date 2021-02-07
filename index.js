@@ -19,14 +19,6 @@ const {AugurClient} = require('augurbot'),
   // LAST DITCH ERROR HANDLING
   process.on("unhandledRejection", (error, p) => p.catch(e => u.errorHandler(e, "Unhandled Rejection")));
   process.on("uncaughtException", (error) => u.errorHandler(error, "Uncaught Exception"));
-  
-
-mongoose.connect('mongodb://localhost:27017/djsdash',{
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
-  });
 
 
 
