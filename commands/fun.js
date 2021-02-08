@@ -39,14 +39,15 @@ Module.addCommand({name: "8ball",
 .addCommand({name: "acronym",
     category: "Images",
     process: async(message, args)=>{
+        let length = Math.floor(Math.random() * 3) + 3
+        if(args && !isNaN(args)) length = args
         let alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y", "Z"];
-        let len = Math.floor(Math.random() * 3) + 3;
         let profanityFilter = require("profanity-matcher");
         let pf = new profanityFilter();
         let word = [];
 
         while (word.length == 0){
-            for (var i = 0; i < len; i++) word.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+            for (var i = 0; i < length; i++) word.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
             word = word.join("");
             if (pf.scan(word.toLowerCase()).length == 0) return message.channel.send("I've always wondered what __**" + word + "**__ stood for...");
             else word = [];
@@ -60,7 +61,7 @@ Module.addCommand({name: "8ball",
 Oh nooooooo, an error totally just occurred while running that command: \`ReferenceError: something is not defined¯\\_(ツ)_/¯ \`
 You should always receive this error while running the command.
 You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this server: ${Module.config.mainServer}
-`
+Alternatively, you can submit an issue on my github: ${Module.config.git}`
         )
     }
 })
@@ -102,11 +103,24 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
     process: async (message, args) =>{
         let embed = u.embed()
         .setTitle('About BobbyTheCatfish')
-        .setDescription(`***In the voice of my creator*** \n Hey! I'm BobbyTheCatfish, a streamer and YouTube creator based in NC. I'm currently reviewing Persona 5 the Animation, so make sure to check that out!`)
+        .setDescription(`***in the voice of my creator***\nHi! I'm BobbyTheCatfish. I've been building Bobby Bot as a side project to learn some coding skills. My 'main' focus is my YouTube channel, which is linked in this command, so take a look and maybe even subscribe!`)
         .setColor('#00ff04')
         .setThumbnail(message.client.users.cache.get(Module.config.ownerId).avatarURL())
         .setURL('https://www.youtube.com/channel/UCw8DLllFiJOmevgDznFiQZw')
         message.channel.send({embed})
+    }
+})
+.addCommand({name: "personal",
+    process: async (msg, suffix) =>{
+        const Jimp = require('jimp')
+        let image = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/808446253737181244/personal.png')
+        let target = await Jimp.read((msg.mentions.members.first() ? msg.mentions.members.first().user : msg.author).displayAvatarURL({format: 'png', size: 512}))
+        let mask = await Jimp.read('media/flexmask.png')
+        mask.resize(350,350)
+        target.resize(350, 350)
+        target.mask(mask)
+        image.blit(target, 1050, 75)
+        return await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
     }
 })
 .addCommand({name: "mewhen",
@@ -224,8 +238,8 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
         for(x of args.split('\n')){
             if(x.endsWith(' ')) rows.push(x.slice(0, -1))
             else rows.push(x)
-            if(x.split(' ').length > cols) cols = x.split(' ').length
         }
+        for(x of rows) if(x.split(' ').length > cols) cols = x.split(' ').length
         if(rows.length * cols.length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
         let o = 1, a = 0 //o=y, a=x
@@ -234,7 +248,7 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
                 let id = test.exec(x)
                 if(id){
                     let image
-                    try{await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}`);break}
+                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}`);break}
                     image.resize(150, 150)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
