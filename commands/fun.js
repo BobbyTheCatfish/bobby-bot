@@ -226,14 +226,15 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
             else rows.push(x)
             if(x.split(' ').length > cols) cols = x.split(' ').length
         }
+        if(rows.length * cols.length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
         let o = 1, a = 0 //o=y, a=x
         for (y of rows) {
             for(x of y.split(' ')){
                 let id = test.exec(x)
-                console.log(x)
                 if(id){
-                    let image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)
+                    let image
+                    try{await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}`);break}
                     image.resize(150, 150)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
