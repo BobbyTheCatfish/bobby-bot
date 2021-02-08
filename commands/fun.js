@@ -1,7 +1,7 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors'),
-    request = require('request')
+    axios = require('axios')
 const Module = new Augur.Module();
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
@@ -216,19 +216,36 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
     aliases:['e','embiggen'],
     process: async (message, args) =>{
         const unicode = require('emoji-unicode')
-        
+        const Jimp = require('jimp')
+        const svgToImg = require('svg-to-img')
+        const request = require('request')
         let test = /<(a?):\w+:(\d+)>/i;
-        let id = test.exec(args);
-        if (id) try{return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`]});}catch(e){return message.channel.send("I couldn't enlarge that emoji.")}
-        else if(unicode(args)){
-            const svgToImg = require('svg-to-img')
-            const request = require('request')
-            request(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(args)}.svg`, async function(err, response, body){
-                const image = await svgToImg.from(body).toPng()
-                return message.channel.send({files: [image]})
-            })
+        let rows = args.split('\n')
+        let cols = 1
+        for(x of args.split('\n')) if(x.split(' ').length > cols) cols = x.split(' ').length
+            let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
+            let o = 1, a = 0 //o=y, a=x
+            for (y of rows) {
+                for(x of y.split(' ')){
+                    let id = test.exec(x)
+                    console.log(x)
+                    if(id){
+                        let image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)
+                        image.resize(150, 150)
+                        canvas.blit(image, 150 * a, 150 * (o-1))
+                    }
+                    else{
+                        let requested
+                        try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ fe0f/g, '').replace(/ /g, '-')}.svg`)}catch{message.channel.send(`I couldn't enlarge the emoij ${x}.`);break}
+                        let toPng = await svgToImg.from(requested.data).toPng()
+                        let image = await Jimp.read(toPng)
+                        canvas.blit(image, 150 * a, 150 * (o-1))
+                    }
+                    a++
+                    if(a == y.split(' ').length && o == rows.length) return await message.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
+                    if(a == y.split(' ').length){a=0;o++}   
+            }
         }
-        else return message.channel.send("You need to specify a valid emoji!")
     }
 })
 .addCommand({name: "shop",
