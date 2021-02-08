@@ -10,9 +10,7 @@ Module.addEvent('message', async (message) =>{
         let read = (await Module.db.tags.getTag(message.guild.id, parsed.command.toLowerCase()))
         if(await Module.db.tags.globalStatus(message.guild.id)) read = await Module.db.globalTags.getTag(parsed.command)
         if(read){
-            if(message.client.commands.has(read.name) && await Module.db.tags.globalStatus(message.guild.id)){
-                await Module.db.globalTags.removeTag(read.name)
-            }
+            if(message.client.commands.has(read.name) && await Module.db.tags.globalStatus(message.guild.id)) await Module.db.globalTags.removeTag(read.name)
             else{
                 let replaceContent
                 if(read.text){
@@ -23,30 +21,25 @@ Module.addEvent('message', async (message) =>{
                     }
                     replaceContent = (replaceContent ? replaceContent : read.text).replace(/<@author>/ig, `<@${message.author.id}>`).replace(/<@authorname>/ig, message.member.displayName)
                     if ((/(<@target>)|(<@targetname>)/i).test(replaceContent)) {
-    
-                        if (message.mentions.members.size > 0) {
-                            let target = message.mentions.members.first()
-                            replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, target.displayName);
-                        }
+                        if (message.mentions.members.first()) replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, message.mentions.members.first().displayName);
                         else return message.reply("You need to `@mention` a user with that tag!").then(u.clean);
                     }
                 }
                 if(read.text && read.file) return message.channel.send(replaceContent, {files: [read.file]})
-                if(read.text) return message.channel.send(replaceContent)
-                if(read.file) return message.channel.send({files: [read.file]})
+                else if(read.text) return message.channel.send(replaceContent)
+                else if(read.file) return message.channel.send({files: [read.file]})
             }
         }
     }
-    
 })
+
 .addCommand({name: 'tag',
-    otherPerms: (msg) =>  msg.guild && (msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId),
+    guildOnly: true,
+    otherPerms: (msg) =>  msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId,
     process: async(message, args) =>{
         if(await Module.db.tags.globalStatus(message.guild.id)){
             if(!args) return message.channel.send("What tag do you want to create/modify?")
-            if(message.client.commands.has(args.split(' ')[0].toLowerCase())){
-                return message.channel.send(`You can't replace commands with global tags enabled`)
-            }
+            if(message.client.commands.has(args.split(' ')[0].toLowerCase())) return message.channel.send(`You can't replace commands with global tags enabled`)
             let tag = await Module.db.globalTags.getTag(args.toLowerCase().split(' ')[0])
             if(!tag || tag.user == message.author.id || (tag.guildId == message.guild.id && message.member.hasPermission('ADMINISTRATOR'))){
                 if(!args.split(' ')[1] && message.attachments.size == 0){
@@ -79,6 +72,7 @@ Module.addEvent('message', async (message) =>{
     }
 })
 .addCommand({name: 'tags',
+    guildOnly: true,
     process: async(message,args)=>{
         let tags = await Module.db.tags.getAllTags(message.guild.id)
         if(args.toLowerCase() == 'global' && ((message.member && message.member.hasPermission('ADMINISTRATOR')|| message.author.id == Module.config.ownerId))){
@@ -95,13 +89,9 @@ Module.addEvent('message', async (message) =>{
                     let cancelEmbed = u.embed().setTitle("Canceled").setDescription("You didn't go global, and the tags weren't erased")
                     let decision = await u.confirmEmbed(message,promptEmbed,confirmEmbed,cancelEmbed)
                     if(decision == true) return await Module.db.tags.setGlobal(message.guild.id, message.guild.owner.id)
-                    else return
-                
-                //console.log(list)
-                
+                    else return                
             }
             else{
-                
                 let promptEmbed = u.embed().setTitle("Are you sure you want to disable global tags?")
                 let confirmEmbed = u.embed().setTitle("Global tags disabled")
                 let cancelEmbed = u.embed().setTitle("Canceled")
