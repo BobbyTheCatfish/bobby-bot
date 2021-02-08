@@ -215,11 +215,19 @@ You can contact ${msg.client.users.cache.get(Module.config.ownerId).tag} in this
 .addCommand({name: "enlarge",
     aliases:['e','embiggen'],
     process: async (message, args) =>{
+        const unicode = require('emoji-unicode')
+        
         let test = /<(a?):\w+:(\d+)>/i;
         let id = test.exec(args);
         if (id) try{return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`]});}catch(e){return message.channel.send("I couldn't enlarge that emoji.")}
-        id = await u.discordEmoji(args)
-        if(id) return message.channel.send({files: [id]})
+        else if(unicode(args)){
+            const svgToImg = require('svg-to-img')
+            const request = require('request')
+            request(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(args)}.svg`, async function(err, response, body){
+                const image = await svgToImg.from(body).toPng()
+                return message.channel.send({files: [image]})
+            })
+        }
         else return message.channel.send("You need to specify a valid emoji!")
     }
 })

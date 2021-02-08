@@ -51,14 +51,7 @@ const Utils = {
               return null;
             }
     },
-    discordEmoji: async function(text){
-        const emojiUnicode = require('emoji-unicode')
-        const Jimp = require('jimp')
-        if (!emojiUnicode(text) ||!text || text.match(/<?(a:|:)\w*:(\d{17}|\d{18})>/)) return null;
-        let image = await Jimp.read(`https://twemoji.maxcdn.com/v/latest/72x72/${emojiUnicode(text)}.png`)
-        image.resize(200,200);
-        return await image.getBufferAsync(Jimp.MIME_PNG)
-    },
+
     embed: (data) => new Discord.MessageEmbed(data).setColor(config.color).setTimestamp(),
     
     escape: (text, options = {}) => Discord.escapeMarkdown(text, options),
