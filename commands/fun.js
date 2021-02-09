@@ -236,8 +236,11 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
         let rows = []
         let cols = 1
         for(x of args.split('\n')){
-            if(x.endsWith(' ')) rows.push(x.slice(0, -1))
-            else rows.push(x)
+            let j = []
+            for(y of x.split(' ')){
+                if(y != '' && y != ' ') j.push(y)
+            }
+            rows.push(j.join(' '))
         }
         for(x of rows) if(x.split(' ').length > cols) cols = x.split(' ').length
         if(rows.length * cols.length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
@@ -246,7 +249,11 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
         for (y of rows) {
             for(x of y.split(' ')){
                 let id = test.exec(x)
-                if(id){
+                if(x == '[]'){
+                    let image = new Jimp(150, 150, 0x00000000)
+                    canvas.blit(image, 150 * a, 150 * (o-1))
+                }
+                else if(id){
                     let image
                     try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}`);break}
                     image.resize(150, 150)
