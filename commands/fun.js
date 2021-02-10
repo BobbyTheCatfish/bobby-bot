@@ -129,8 +129,10 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
         let final = []
         if(!args) return message.channel.send("You need to provide some context!")
         words.forEach(k => {
-            if(k == 'i') k = 'they'
+            if(k == 'i' || k == 'we') k = 'they'
             else if(k == 'am') k = 'are'
+            else if(k == "i'm" || k == "we're") k = "they're"
+            else if(k == "i've" || k == "we've") k = "they've"
             else if(k=='my' || k=='our') k = 'their'
             else if(k=='mine' || k=='ours') k = 'theirs'
             else if(k=='me') k = 'them'
@@ -210,7 +212,7 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
             if((numSides < 2 || numSides > 99) && !args.toLowerCase().includes('d')) return message.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
             else if(args.toLowerCase().includes('d')){
                 let many = args.toLowerCase().split('d')
-                if(many[2] || isNaN(many[0]) || many[1] ? isNaN(many[1]) : isNaN(many[0])) return message.channel.send("To use multiple dice, do `2d2`, replacing 2 with the number you want.")
+                if(many[2] || isNaN(many[0]) || many[1] ? isNaN(many[1]) : isNaN(many[0])) return message.channel.send("To use multiple dice, do `2d20`, replacing 2 with the number you want.")
                 numDies=args.split('d')[0] || 1
                 numSides=args.split('d')[1] || 6
             }
@@ -246,6 +248,10 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
         if(rows.length * cols.length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
         let o = 1, a = 0 //o=y, a=x
+        if(rows.length == 1 && cols == 1){
+            let id = test.exec(args)
+            if(id && id[1]) return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
+        }
         for (y of rows) {
             for(x of y.split(' ')){
                 let id = test.exec(x)
@@ -255,13 +261,13 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
                 }
                 else if(id){
                     let image
-                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}`);break}
+                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}.`);break}
                     image.resize(150, 150)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
                 else{
                     let requested
-                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ fe0f/g, '').replace(/ /g, '-')}.svg`)}catch{message.channel.send(`I couldn't enlarge the emoij ${x}.`);break}
+                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ fe0f/g, '').replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{essage.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
                     let toPng = await svgToImg.from(requested.data).toPng()
                     let image = await Jimp.read(toPng)
                     canvas.blit(image, 150 * a, 150 * (o-1))
