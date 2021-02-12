@@ -263,13 +263,14 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
                     image.resize(150, 150)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
-                else{
+                else if(unicode(x)){
                     let requested
                     try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{essage.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
                     let toPng = await svgToImg.from(requested.data).toPng()
                     let image = await Jimp.read(toPng)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
+                else{message.channel.send(`${x} isn't a valid emjoji.`); break}
                 a++
                 if(a == y.split(' ').length && o == rows.length) return await message.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
                 if(a == y.split(' ').length){a=0;o++}   
