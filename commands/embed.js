@@ -43,17 +43,20 @@ Module.addCommand({name: 'embed',
             let urlPrompt = async(msg, embed, promptEmbed)=>{
                 promptEmbed.setTitle('What should the title URL be?')
                 await msg.author.send({embed: promptEmbed}).then(async m =>{
-                    await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
-                    .then(async collected =>{
-                        let url = collected.first().content
-                        if(url.toLowerCase() == 'none') url = ''
-                        else if(!u.validUrl(url) || (!url.startsWith('http') && !url.startsWith('https'))){
-                            msg.author.send(`That isn't a link! Try again or type \`none\` for none.`)
-                            await urlPrompt(msg, embed, promptEmbed)
-                        }
-                        let newEmbed = embed.setURL(url)
-                        await prompt(msg, newEmbed)
-                    })
+                    let resend = async(msg, embed, promptEmbed) =>{
+                        await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let url = collected.first().content
+                            if(url.toLowerCase() == 'none') url = ''
+                            else if(!u.validUrl(url) || (!url.startsWith('http') && !url.startsWith('https'))){
+                                msg.author.send(`That isn't a link! Try again or type \`none\` for none.`)
+                                await resend(msg, embed, promptEmbed)
+                            }
+                            let newEmbed = embed.setURL(url)
+                            await prompt(msg, newEmbed)
+                        })
+                    }
+                    await resend(msg, embed, promptEmbed)
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the title be?').setDescription('Type `none` for none')
@@ -136,43 +139,48 @@ Module.addCommand({name: 'embed',
             }
             let promptEmbed = u.embed().setTitle("Which field do you want to delete?").setDescription("Please specify the field name. If there are multiple with the same name, all with the name will be deleted.").addFields(embed.fields)
             msg.author.send({embed: promptEmbed}).then(async m =>{
-                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
-                .then(async collected =>{
-                    let selected = collected.first().content.toLowerCase()
-                    let toRemove = embed.fields.filter(f => f.name.toLowerCase() == selected)
-                    if(!toRemove){
-                        msg.author.send("That's not one of the fields. Please try again")
-                        await deleteFieldPrompt(msg, embed)
-                    }
-                    await confirmation(msg, embed, toRemove)
-                    
-                })
+                let resend = async (msg, embed) =>{
+                    await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                    .then(async collected =>{
+                        let selected = collected.first().content.toLowerCase()
+                        let toRemove = embed.fields.filter(f => f.name.toLowerCase() == selected)
+                        if(!toRemove){
+                            msg.author.send("That's not one of the fields. Please try again")
+                            await resend(msg, embed)
+                        }
+                        else await confirmation(msg, embed, toRemove)
+                    })
+                }
+                await resend(msg, embed)
             })
         }
         let footerPrompt = async(msg, embed)=>{
             icon = async(msg, embed, title, promptEmbed)=>{
                 promptEmbed.setTitle('What should the footer icon be?').setDescription('Type `none` for none. You can use a file or link')
                 msg.author.send({embed: promptEmbed}).then(async m =>{
-                    await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
-                    .then(async collected =>{
-                        let content = collected.first().content
-                        if(content){
-                            if(content == 'none'){
-                                let newEmbed = embed.setFooter(title, '')
+                    let resend = async(msg, embed, title, promptEmbed) =>{
+                        await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let content = collected.first().content
+                            if(content){
+                                if(content == 'none'){
+                                    let newEmbed = embed.setFooter(title, '')
+                                    await prompt(msg, newEmbed)
+                                }
+                                if(!u.validUrl(content)){
+                                    msg.author.send("That's not a valid link!")
+                                    await icon(msg, embed, title, promptEmbed)
+                                }
+                            }
+                            else if(collected.first().attachments.size > 0){
+                                console.log(collected.first().attachments)
+                                let newEmbed = embed.setFooter(title, collected.first().attachments.first().url)
                                 await prompt(msg, newEmbed)
                             }
-                            if(!u.validUrl(content)){
-                                msg.author.send("That's not a valid link!")
-                                await icon(msg, embed, title, promptEmbed)
-                            }
-                        }
-                        else if(collected.first().attachments.size > 0){
-                            console.log(collected.first().attachments)
-                            let newEmbed = embed.setFooter(title, collected.first().attachments.first().url)
-                            await prompt(msg, newEmbed)
-                        }
-                        else await icon(msg, embed, title, promptEmbed)
-                    })
+                            else await icon(msg, embed, title, promptEmbed)
+                        })
+                    }
+                    await resend(msg, embed, title, promptEmbed)
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the footer text be?').setDescription('Type `none` for none')
@@ -203,38 +211,43 @@ Module.addCommand({name: 'embed',
         }
         let authorPrompt = async(msg, embed)=>{
             authorIcon = async(msg, embed, name, promptEmbed)=>{
-                let icon
                 promptEmbed.setTitle("What should the author icon be?").setDescription("Type `none` for none. You can use a link or a file.")
                 msg.author.send({embed: promptEmbed}).then(async (m)=>{
-                    await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
-                    .then(async collected =>{
-                        let icon = collected.first().content
-                        if(icon){
-                            if(icon.toLowerCase() == 'none') icon = ''
-                        }
-                        else if(collected.first().attachments.first()) icon = collected.first().attachments.first().url
-                        if(icon && !icon.toLowerCase().startsWith('http')){
-                            msg.author.send("That's not a valid image URL")
-                            await authorIcon(msg, embed, name, promptEmbed)
-                        }
-                        await authorUrl(msg, embed, name, icon, promptEmbed)
-                    })
+                    let resend = async(msg ,embed, name, promptEmbed)=>{
+                        await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let icon = collected.first().content
+                            if(icon){
+                                if(icon.toLowerCase() == 'none') icon = ''
+                            }
+                            else if(collected.first().attachments.first()) icon = collected.first().attachments.first().url
+                            if(icon && !icon.toLowerCase().startsWith('http')){
+                                msg.author.send("That's not a valid image URL")
+                                await resend(msg, embed, name, promptEmbed)
+                            }
+                            await authorUrl(msg, embed, name, icon, promptEmbed)
+                        })
+                    }
+                    await resend(msg, embed, name, promptEmbed)
                 })
             }
             authorUrl = async(msg, embed, name, icon, promptEmbed) =>{
                 promptEmbed.setTitle("What should the author URL be?")
                 msg.author.send({embed: promptEmbed}).then(async m=>{
-                    m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
-                    .then(async collected =>{
-                        let url = collected.first().content
-                        if(url.toLowerCase() == 'none') url = ''
-                        if(url && !url.toLowerCase().startsWith('http')){
-                            msg.author.send("That's not a valid link.")
-                            await authorUrl(msg, embed, name, icon, promptEmbed)
-                        }
-                        let newEmbed = embed.setAuthor(name, icon, url)
-                        await prompt(msg, newEmbed)
-                    })
+                    let resend = async(msg, embed, name, icon, promptEmbed) =>{
+                        m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                        .then(async collected =>{
+                            let url = collected.first().content
+                            if(url.toLowerCase() == 'none') url = ''
+                            if(url && !url.toLowerCase().startsWith('http')){
+                                msg.author.send("That's not a valid link.")
+                                await resend(msg, embed, name, icon, promptEmbed)
+                            }
+                            let newEmbed = embed.setAuthor(name, icon, url)
+                            await prompt(msg, newEmbed)
+                        })
+                    }
+                    await resend(msg ,embed, name, icon, promptEmbed)
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the author name be?').setDescription('Type `none` for none')
@@ -253,41 +266,49 @@ Module.addCommand({name: 'embed',
         let imagePrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What do you want to set as the image?').setDescription('Type `none` for none')
             msg.author.send({embed: promptEmbed}).then(async m=>{
-                await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
-                .then(async collected =>{
-                    let image = collected.first().content
-                    if(collected.first().content == 'none'){
-                        let newEmbed = embed.setImage()
-                        await prompt(msg, newEmbed)
-                    }
-                    if(!image) image = collected.first().attachments.first()?.url
-                    if(!u.validUrl(image)){
-                        msg.author.send("That's not a valid image!")
-                        await imagePrompt(msg, embed)
-                    }
-                    let newEmbed = embed.setImage(image)
-                    await prompt(msg, newEmbed)
-                })
+                let resend = async(msg, embed) =>{
+                    await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
+                    .then(async collected =>{
+                        let image = collected.first().content
+                        if(collected.first().content == 'none'){
+                            let newEmbed = embed.setImage()
+                            await prompt(msg, newEmbed)
+                        }
+                        if(!image) image = collected.first().attachments.first()?.url
+                        if(!u.validUrl(image)){
+                            msg.author.send("That's not a valid image!")
+                            await imagePrompt(msg, embed)
+                        }
+                        else{
+                            let newEmbed = embed.setImage(image)
+                            await prompt(msg, newEmbed)
+                        }
+                    })
+                }
+                await resend(msg, embed)
             })
         }
         let thumbnailPrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What do you want to set as the thumbail?').setDescription('Type `none` for none')
             msg.author.send({embed: promptEmbed}).then(async m=>{
-                await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
-                .then(async collected =>{
-                    let icon = collected.first().content
-                    if(collected.first().content == 'none'){
-                        let newEmbed = embed.setThumbnail()
+                let resend = async(msg, embed)=>{
+                    await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
+                    .then(async collected =>{
+                        let icon = collected.first().content
+                        if(collected.first().content == 'none'){
+                            let newEmbed = embed.setThumbnail()
+                            await prompt(msg, newEmbed)
+                        }
+                        if(!icon) icon = collected.first().attachments.first()?.url
+                        if(!u.validUrl(icon)){
+                            msg.author.send("That's not a valid image!")
+                            await resend(msg, embed)
+                        }
+                        let newEmbed = embed.setThumbnail(icon)
                         await prompt(msg, newEmbed)
-                    }
-                    if(!icon) icon = collected.first().attachments.first()?.url
-                    if(!u.validUrl(icon)){
-                        msg.author.send("That's not a valid image!")
-                        await thumbnailPrompt(msg, embed)
-                    }
-                    let newEmbed = embed.setThumbnail(icon)
-                    await prompt(msg, newEmbed)
-                })
+                    })
+                }
+                await resend(msg, embed)
             })
         }
         let colorPrompt = async(msg, embed)=>{
@@ -311,30 +332,40 @@ Module.addCommand({name: 'embed',
         let sendEmbed = async(msg, embed) =>{
             let promptEmbed = u.embed().setTitle('What channel do you want me to send the embed to?').setDescription('Type the ID or name')
             msg.author.send({embed: promptEmbed}).then(async(m)=>{
-                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
-                .then(async collected =>{
-                    let content = collected.first().content
-                    let channel = await msg.guild.channels.cache.filter(b => b.type != 'category').find(c => c.name.toLowerCase() == content.toLowerCase().replace(/ /g, '-').replace(/#/g, '') || c.id == content)
-                    if(!channel){                    
-                        msg.author.send("I couldn't find that channel. Try again.")
-                        await sendEmbed(msg, embed)
-                    }
-                    else if(channel.length > 1){
-                        promptEmbed.setTitle('Looks like there are multiple channels with that name. Which one do you want to send it in?').setDescription(`Each of the following is a number representing the order of the channel. Please select the correct one\n${channel.position.join('\n')} `)
-                        author.send({embed: promptEmbed}).then(async ms=>{
-                            await ms.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
-                            .then(async coll => {
-                                let content = coll.first().content
-                                channel = msg.guild.channels.cache.filter(b => b.type != 'category').find(c => c.position == content.replace(/^[0-9]/g))
-                                if(!channel) await sendEmbed(msg, embed)
+                let resend = async(msg, embed)=>{
+                    await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                    .then(async collected =>{
+                        let content = collected.first().content
+                        let channel = await msg.guild.channels.cache.filter(b => b.type != 'category').find(c => c.name.toLowerCase() == content.toLowerCase().replace(/ /g, '-').replace(/#/g, '') || c.id == content)
+                        if(!channel){                    
+                            msg.author.send("I couldn't find that channel. Try again.")
+                            await sendEmbed(msg, embed)
+                        }
+                        else if(channel.length > 1){
+                            promptEmbed.setTitle('Looks like there are multiple channels with that name. Which one do you want to send it in?').setDescription(`Each of the following is a number representing the order of the channel. Please select the correct one\n${channel.rawPosition.join('\n')} `)
+                            author.send({embed: promptEmbed}).then(async ms=>{
+                                let resend2 = async(msg, embed)=>{
+                                    await ms.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                                    .then(async coll => {
+                                        let content = coll.first().content
+                                        channel = msg.guild.channels.cache.filter(b => b.type != 'category').find(c => c.rawPosition == content.replace(/^[0-9]/g))
+                                        if(!channel){
+                                            msg.author.send("That's not one of the channels. Please try again.")
+                                            await resend2(msg, embed)
+                                        }
+                                    })
+                                }
+                                await resend2(msg, embed)
                             })
-                        })
-                    }
-                    else try{channel.send({embed})} catch{msg.author.send(`I couldn't send a message in that channel. Please change my permissions for that channel or select a different channel.`);await sendEmbed(msg, embed)}
-                })
+                        }
+                        try{channel.send({embed})} catch{msg.author.send(`I couldn't send a message in that channel. Please change my permissions for that channel or select a different channel.`);await resend(msg, embed)}
+                    })
+                }
+                await resend(msg, embed)
             })
         }
         let embed = new discord.MessageEmbed()
+        u.clear(msg, 0)
         return await prompt(msg, embed)
 
     }
