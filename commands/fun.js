@@ -239,19 +239,17 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
         let cols = 1
         for(x of args.split('\n')){
             let j = []
-            for(y of x.split(' ')){
-                if(y != '' && y != ' ') j.push(y)
-            }
+            for(y of x.split(' ')) if(y != '' && y != ' ') j.push(y)
             rows.push(j.join(' '))
         }
         for(x of rows) if(x.split(' ').length > cols) cols = x.split(' ').length
-        if(rows.length * cols.length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
-        let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
-        let o = 1, a = 0 //o=y, a=x
         if(rows.length == 1 && cols == 1){
             let id = test.exec(args)
-            if(id && id[1]) return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
+            if(id) return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
         }
+        if(rows.join(' ').split(' ').length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
+        let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
+        let o = 1, a = 0 //o=y, a=x
         for (y of rows) {
             for(x of y.split(' ')){
                 let id = test.exec(x)
@@ -267,7 +265,7 @@ Alternatively, you can submit an issue on my github: ${Module.config.git}`
                 }
                 else{
                     let requested
-                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ fe0f/g, '').replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{essage.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
+                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{essage.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
                     let toPng = await svgToImg.from(requested.data).toPng()
                     let image = await Jimp.read(toPng)
                     canvas.blit(image, 150 * a, 150 * (o-1))
