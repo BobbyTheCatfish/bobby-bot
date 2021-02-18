@@ -45,6 +45,7 @@ const Augur = require('augurbot'),
 Module.addCommand({name: 'config',
     ownerOnly: true,
     guildOnly: true,
+    category: "Mod",
     process: async (msg, suffix) =>{
         let time = 5000 * 60
         let contentFilter = m => m.content

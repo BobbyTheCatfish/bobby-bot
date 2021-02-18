@@ -6,9 +6,9 @@ const Augur = require('augurbot'),
 const Module = new Augur.Module();
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
-    category: "Images",
+    category: "Fun",
     process: async(message, args) =>{
-        if(!args || !args.endsWith('?')) return message.channel.send("you need to ask me a question, silly.")
+        if(!args?.endsWith('?')) return message.channel.send("you need to ask me a question, silly.")
         const outcomes = [
           "It is certain.",
           "It is decidedly so.",
@@ -36,11 +36,11 @@ Module.addCommand({name: "8ball",
           "Outlook not so good.",
           "Very doubtful."
         ];
-        return message.reply(outcomes[Math.floor(Math.random() * outcomes.length)]);
+        return message.reply(u.rand(outcomes));
     }
 })
 .addCommand({name: "acronym",
-    category: "Images",
+    category: "Fun",
     process: async(message, args)=>{
         let length = 4
         if(args && !isNaN(args)) length = args
@@ -57,8 +57,9 @@ Module.addCommand({name: "8ball",
         }
     }
 })
-.addCommand({name: "error", process: async (message, args)=>{message.reply(`To report a bug, submit a new issue at my github: ${Module.config.git}/issues`)}})
+.addCommand({name: "error", category: "Development", process: async (message, args)=>{message.reply(`To report a bug, submit a new issue at my github: ${Module.config.git}/issues`)}})
 .addCommand({name: "flip",
+    category: "Fun",
     process: async (message, args) =>{
         let flip = Math.floor(Math.random()*2)
         if(message.guild.id == '408747484710436877' && message.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
@@ -74,34 +75,31 @@ Module.addCommand({name: "8ball",
     }
 })
 .addCommand({name: "impostor",
+    category: "Fun",
     process: async (message, args) =>{
         let impostor = Math.floor(Math.random() * 4)
         if(!args) return message.channel.send('Who do you want to vote off?')
-        if(impostor == 0) return message.channel.send(`⋆　　 •　          　ﾟ　                       　。
+        return message.channel.send(`⋆　　 •　          　ﾟ　                       　。
             　　.　　    　.　　　  　　.　　⋆　　   。　.
              　.  。　                     ඞ   。　    .      •
-             •              ${args} was The Impostor    ⋆
+             •              ${args} was${impostor != 0 ? ' not' : ''} The Impostor    ⋆
             .             　 。　  ⋆                     .                     .`)
-        else return message.channel.send(`⋆　　 •　          　ﾟ　                       　。
-          　　.　　    　.　　　  　　.　　⋆　　   。　.
-           　.  。　                     ඞ   。　    .      •
-           •              ${args} was not The Impostor    ⋆
-          .             　 。　  ⋆                     .                     .`)
           
     }
 })
 .addCommand({name: "info",
+    category: "General",
     process: async (msg, args) =>{
         let embed = u.embed()
         .setTitle('About BobbyTheCatfish')
         .setDescription(`***in the voice of my creator***\nHi! I'm BobbyTheCatfish. I've been building Bobby Bot as a side project to learn some coding skills. My 'main' focus is my YouTube channel, which is linked in this command, so take a look and maybe even subscribe!`)
-        .setColor('#00ff04')
         .setThumbnail(msg.client.users.cache.get(Module.config.ownerId).avatarURL())
         .setURL('https://www.youtube.com/channel/UCw8DLllFiJOmevgDznFiQZw')
         msg.channel.send({embed})
     }
 })
 .addCommand({name: "personal",
+    category: "Fun",
     process: async (msg) =>{
         const Jimp = require('jimp')
         let image = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/808446253737181244/personal.png')
@@ -114,6 +112,7 @@ Module.addCommand({name: "8ball",
     }
 })
 .addCommand({name: "mewhen",
+    category: "Fun",
     process: async (msg, args) =>{
         let words = args.toLowerCase().split(' ')
         let final = []
@@ -133,6 +132,7 @@ Module.addCommand({name: "8ball",
     }
 })
 .addCommand({name: "poll",
+    category: "Fun",
     process: async (msg, args) =>{
         let words = args.split(' ')
         let keywads = words.slice(0).join(' ')
@@ -147,7 +147,7 @@ Module.addCommand({name: "8ball",
                 body: JSON.stringify({
                   title: title,
                   options: options,
-                  multi: true,
+                  multi: false,
                   dupcheck: "normal",
                   captcha: true
                 })
@@ -156,7 +156,7 @@ Module.addCommand({name: "8ball",
             else{
                 body = JSON.parse(body);
                 let embed = u.embed()
-                    .setAuthor("New poll from " + msg.author.username)
+                    .setAuthor(`New poll from ${msg.guild?.displayName || msg.author.username}`)
                     .setTimestamp()
                     .setTitle(decodeURI(body.title))
                     .setURL(`https://www.strawpoll.me/${body.id}`)
@@ -169,6 +169,7 @@ Module.addCommand({name: "8ball",
 })
 .addCommand({name: "rock",
     aliases: ['paper','scissors','rps'],
+    category: "Fun",
     process: async (msg, args) =>{
         let decision = Math.floor(Math.random()*3),
             emoji2 = await msg.react(['🪨','📰','✂️'][decision]),
@@ -183,6 +184,7 @@ Module.addCommand({name: "8ball",
     }
 })
 .addCommand({name: "roll",
+    category: "Fun",
     process: async (message, args) =>{
         try{
             let numDies=1,
@@ -208,6 +210,7 @@ Module.addCommand({name: "8ball",
 })
 .addCommand({name: "enlarge",
     aliases:['e','embiggen'],
+    category: "Fun",
     process: async (message, args) =>{
         const unicode = require('emoji-unicode')
         const Jimp = require('jimp')
@@ -258,11 +261,13 @@ Module.addCommand({name: "8ball",
     }
 })
 .addCommand({name: "shop",
+    category: "General",
     process: async (message, args) =>{
         message.channel.send('https://teespring.com/stores/bobbys-gift-shop')
     }
 })
 .addCommand({name: "repo",
+    category: "Development",
     process: async(msg, suffix)=>{
         msg.channel.send('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot')
     }

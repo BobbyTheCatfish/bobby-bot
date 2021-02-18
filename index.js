@@ -21,6 +21,4 @@ const {AugurClient} = require('augurbot'),
   process.on("uncaughtException", (error) => u.errorHandler(error, "Uncaught Exception"));
 
 
-
-
 module.exports = client

@@ -7,9 +7,9 @@ const Module = new Augur.Module();
 Module.addCommand({name: 'embed',
     guildOnly: true,
     permissions: ['MANAGE_WEBHOOKS'],
+    category: "Moderation",
     process: async(msg, suffix) =>{
         let contentFilter = m => m.content
-        let fileFilter = m => m.attachments.first()
         let imageFilter = m => m.content || m.attachments.first()
         const time = 5000 * 60
         let fieldCount = 0

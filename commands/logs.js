@@ -124,8 +124,8 @@ const Augur = require('augurbot'),
             let embed = u.embed().setTitle(`\`${oldMember.user.tag}\` was updated`).setColor(med)
             if(oldMember.nickname != newMember.nickname) embed.addField(`Nickname`,`Was: ${oldMember.nickname ? oldMember.nickname : 'None'}\nIs: ${newMember.nickname?newMember.nickname:'None'}`).setColor(med)
             if(oldMember.roles.cache != newMember.roles.cache){
-                let removed = oldMember.roles.cache.filter(r=> !newMember.roles.cache.array().includes(r)).map(r => `<@&${r.id}>`)
-                let added = newMember.roles.cache.filter(r => !oldMember.roles.cache.array().includes(r)).map(r => `<@&${r.id}>`)
+                let removed = oldMember.roles.cache.filter(r=> !newMember.roles.cache.array().includes(r) && r.name != 'Heckerman').map(r => `<@&${r.id}>`)
+                let added = newMember.roles.cache.filter(r => !oldMember.roles.cache.array().includes(r) && r.name != 'Heckerman').map(r => `<@&${r.id}>`)
                 if(added.length > 0) embed.addField(`Roles Added`,`${added.join('\n')}`)
                 if(removed.length > 0) embed.addField(`Roles Removed`, `${removed.join('\n')}`)
             }
@@ -199,7 +199,7 @@ const Augur = require('augurbot'),
     })
     .addEvent('roleCreate', async role =>{
         let enabled = await flags(role.guild)
-        if(enabled?.includes('rc')){
+        if(enabled?.includes('rc') && role.name != 'Heckerman'){
             let embed = u.embed().setTitle(`The \`${role.name}\` role was created`).setDescription(`${role}`).setColor(low);
             (await logChannel(role.guild)).send({embed})
         }
@@ -213,7 +213,7 @@ const Augur = require('augurbot'),
     })
     .addEvent('roleUpdate', async (oldRole, newRole)=>{
         let enabled = await flags(oldRole.guild)
-        if(enabled?.includes('ru')){
+        if(enabled?.includes('ru') && oldRole.name != 'Heckerman'){
             let embed = u.embed().setTitle(`The \`${oldRole.name}\` role was modified`).setColor(med)
             if(oldRole.hexColor != newRole.hexColor) embed.addField(`Color`,`Was: ${oldRole.hexColor}\nIs: ${newRole.hexColor}`).setColor(newRole.hexColor)
             if(oldRole.hoist != newRole.hoist) embed.addField(`Hoist`, `Was: ${oldRole.hoist}\nIs: ${newRole.hoist}`)
