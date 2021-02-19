@@ -219,15 +219,14 @@ Module.addCommand({name: "playing",
         db.defaults({ Games: []}).write()
         let findEntry = db.get("Games").find({p1: msg.author.id})
         if(db.get("Games").find({p2: msg.author.id}).get('p2').value()) findEntry = db.get("Games").find({p2: msg.author.id})
-        
-        if(!findEntry.get("p1").value())
-        {
+        if(!findEntry.get("p1").value()){
             let player1 = msg.author,
-                player2 = msg.mentions.users.first()
-
+            player2 = msg.mentions.users.first()
+            
             if(!player2) return msg.channel.send("Who do you want to play against?")
             if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
             if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
+            if(findEntry.get('p1').value() == player2.id || findEntry.get('p2').value() == player2.id) return msg.channel.send("That person is already in a game.")
             
             msg.channel.send("Starting game...")
             player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
@@ -352,6 +351,7 @@ Module.addCommand({name: "playing",
             if(!player2) return msg.channel.send("Who do you want to play against?")
             if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
             if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
+            if(findEntry.get('p1').value() == player2.id || findEntry.get('p2').value() == player2.id) return msg.channel.send("That person is already in a game.")
             
             msg.channel.send("Starting game...")
             player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)

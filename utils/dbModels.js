@@ -11,26 +11,22 @@ mongoose.connect(config.db.db, config.db.settings);
 const models = {
     guildconfig: {
         createConfig: async (guildId) =>{
-            if(!await GuildConfig.exists({guildId})){
-                GuildConfig.create({guildId})
-            }
+            if(!await GuildConfig.exists({guildId})) GuildConfig.create({guildId})
             else return null
         },
         getConfig: async (guildId) =>{
             if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 if(guildDoc) return guildDoc
-                else return null
             }
-            else return null
+            return null
         },
         getInvite: async(guildId) => {
             if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 if(guildDoc) return guildDoc.invite
-                else return null
             }
-            else return null
+            return null
         },
         saveInvite: async(guildId, invite) => {
             if(await GuildConfig.exists({guildId})) return await GuildConfig.findOneAndUpdate({guildId}, {invite}, {new: true})
@@ -40,9 +36,8 @@ const models = {
             if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 if(guildDoc) return guildDoc.prefix
-                else return null
             }
-            else return null
+            return null
         },
         savePrefix: async (guildId, prefix) => {
             if(await GuildConfig.exists({guildId})) return await GuildConfig.findOneAndUpdate({guildId}, {prefix}, {new: true})
@@ -57,9 +52,8 @@ const models = {
                 let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channel = guildDoc?.channels.error
                 if(channel) return channel
-                else return null
             }
-            else return null
+            return null
         },
         saveBotLobby: async (guildId, channel) =>{
             if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"channels.botLobby": channel}, {new: true})
@@ -70,18 +64,16 @@ const models = {
                 let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channel = guildDoc?.channels?.botLobby
                 if(channel) return channel
-                else return null
             }
-            else return null
+            return null
         },
         getStarBoards: async(guildId)=>{
             if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channels = guildDoc?.channels?.starboards
-                if(channels) return channels
-                else return null 
+                if(channels) return channels 
             }
-            else return null
+            return null
         },
         saveStarBoard: async (guildId, channel, reactions, singleChannel, toStar)=>{
             if(await GuildConfig.exists({guildId})){
@@ -101,18 +93,16 @@ const models = {
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 let channel = guildDoc?.channels?.logChannel
                 if(channel) return channel.channel
-                else return null
             }
-            else return null
+            return null
         },
         getLogFlags: async(guildId)=>{
             if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 let channel = guildDoc?.channels?.logChannel
                 if(channel) return channel.flags
-                else return null
             }
-            else return null
+            return null
         }
     },
     tags:{
