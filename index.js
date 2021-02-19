@@ -1,18 +1,16 @@
-//requiring the different libraries
 const {AugurClient} = require('augurbot'),
   config = require('./config/config.json'),
   u = require('./utils/utils'),
-  mongoose = require('mongoose')
   client = new AugurClient(config,{
     clientOptions:{
       disableMentions: "everyone",
-      partials: ["REACTION"],
+      partials: ["REACTION","MESSAGE"],
+      //parse: u.parse //isn't working so i modified augur
     },
     commands: "./commands",
-    errorHandler: u.errorHandler
+    errorHandler: u.errorHandler,
+    utils: u
   })
-
-
 
   client.login();
 
