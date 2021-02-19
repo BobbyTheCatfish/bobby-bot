@@ -7,8 +7,8 @@ const Module = new Augur.Module();
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
     category: "Fun",
-    process: async(message, args) =>{
-        if(!args?.endsWith('?')) return message.channel.send("you need to ask me a question, silly.")
+    process: async(msg, args) =>{
+        if(!args?.endsWith('?')) return msg.channel.send("you need to ask me a question, silly.")
         const outcomes = [
           "It is certain.",
           "It is decidedly so.",
@@ -36,12 +36,12 @@ Module.addCommand({name: "8ball",
           "Outlook not so good.",
           "Very doubtful."
         ];
-        return message.reply(u.rand(outcomes));
+        return msg.reply(u.rand(outcomes));
     }
 })
 .addCommand({name: "acronym",
     category: "Fun",
-    process: async(message, args)=>{
+    process: async(msg, args)=>{
         let length = 4
         if(args && !isNaN(args)) length = args
         let alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y", "Z"];
@@ -52,34 +52,34 @@ Module.addCommand({name: "8ball",
         while (word.length == 0){
             for (var i = 0; i < length; i++) word.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
             word = word.join("");
-            if (pf.scan(word.toLowerCase()).length == 0) return message.channel.send("I've always wondered what __**" + word + "**__ stood for...");
+            if (pf.scan(word.toLowerCase()).length == 0) return msg.channel.send("I've always wondered what __**" + word + "**__ stood for...");
             else word = [];
         }
     }
 })
-.addCommand({name: "error", category: "Development", process: async (message, args)=>{message.reply(`To report a bug, submit a new issue at my github: ${Module.config.git}/issues`)}})
+.addCommand({name: "error", category: "Development", process: async (msg, args)=>{msg.reply(`To report a bug, submit a new issue at my github: ${Module.config.git}/issues`)}})
 .addCommand({name: "flip",
     category: "Fun",
-    process: async (message, args) =>{
+    process: async (msg, args) =>{
         let flip = Math.floor(Math.random()*2)
-        if(message.guild.id == '408747484710436877' && message.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
+        if(msg.guild.id == '408747484710436877' && msg.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
         if(args.toLowerCase() == 'heads'){
-            if(flip >=1) return message.react('💀').then(message.react('🎉'))
-            else return message.react('🪱').then(message.react('❌'))
+            if(flip >=1) return msg.react('💀').then(msg.react('🎉'))
+            else return msg.react('🪱').then(msg.react('❌'))
         }
         else if(args.toLowerCase() == 'tails'){
-            if(flip >=1) return message.react('🪱').then(message.react('🎉'));
-            else return message.react('💀').then(message.react('❌'))
+            if(flip >=1) return msg.react('🪱').then(msg.react('🎉'));
+            else return msg.react('💀').then(msg.react('❌'))
         }
-        else return message.reply('You need to specify heads or tails!').then(u.clean)
+        else return msg.reply('You need to specify heads or tails!').then(u.clean)
     }
 })
 .addCommand({name: "impostor",
     category: "Fun",
-    process: async (message, args) =>{
+    process: async (msg, args) =>{
         let impostor = Math.floor(Math.random() * 4)
-        if(!args) return message.channel.send('Who do you want to vote off?')
-        return message.channel.send(`⋆　　 •　          　ﾟ　                       　。
+        if(!args) return msg.channel.send('Who do you want to vote off?')
+        return msg.channel.send(`⋆　　 •　          　ﾟ　                       　。
             　　.　　    　.　　　  　　.　　⋆　　   。　.
              　.  。　                     ඞ   。　    .      •
              •              ${args} was${impostor != 0 ? ' not' : ''} The Impostor    ⋆
@@ -185,33 +185,33 @@ Module.addCommand({name: "8ball",
 })
 .addCommand({name: "roll",
     category: "Fun",
-    process: async (message, args) =>{
+    process: async (msg, args) =>{
         try{
             let numDies=1,
             numSides = args || 6
-            if(!(2 < args < 99) && !args.toLowerCase().includes('d')) return message.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
+            if(!(2 < args < 99) && !args.toLowerCase().includes('d')) return msg.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
             else if(args.toLowerCase().includes('d')){
                 let many = args.toLowerCase().split('d')
-                if(many[2] || isNaN(many[0]) || many[1] ? isNaN(many[1]) : isNaN(many[0])) return message.channel.send("To use multiple dice, do `2d20`, replacing 2 with the number you want.")
+                if(many[2] || isNaN(many[0]) || many[1] ? isNaN(many[1]) : isNaN(many[0])) return msg.channel.send("To use multiple dice, do `2d20`, replacing 2 with the number you want.")
                 numDies=args.split('d')[0] || 1
                 numSides=args.split('d')[1] || 6
             }
-            else if(!(2 < args < 99)) return message.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
+            else if(!(2 < args < 99)) return msg.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
             let diceRoll = (Math.floor(Math.random() * (Math.floor(numSides)*Math.floor(numDies)))+1)/numDies,
                 diceEmote = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'],
                 diceEmote2 =['0️⃣','784591469196345345','784591457054621717','784591457109147709','784591457302478878','784591457293303808','784591457259356171','784591457239040000','784591457768046592','784591456782254101'],
                 e1 = diceEmote[diceRoll.toString().charAt(0)],
                 e2 = diceEmote2[diceRoll.toString().charAt(1)]
             if(diceRoll == 10){e1=diceEmote[10];e2=null}
-            await message.react(e1)
-            if(e2) await message.react(e2)
+            await msg.react(e1)
+            if(e2) await msg.react(e2)
         }catch(err){u.errorHandler('Die Roll', err)}
     }
 })
 .addCommand({name: "enlarge",
     aliases:['e','embiggen'],
     category: "Fun",
-    process: async (message, args) =>{
+    process: async (msg, args) =>{
         const unicode = require('emoji-unicode')
         const Jimp = require('jimp')
         const svgToImg = require('svg-to-img')
@@ -226,10 +226,10 @@ Module.addCommand({name: "8ball",
         for(x of rows) if(x.split(' ').length > cols) cols = x.split(' ').length
         if(rows.length == 1 && cols == 1){
             let id = test.exec(args)
-            if(id) return message.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
+            if(id) return msg.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
         }
-        if(rows.join(' ').split(' ').length > 25) return message.channel.send("That's too many emojis! The limit is 25.")
-        if(!args.replace(/[\[\] ]/g, '')) return message.channel.send(`You need to supply emojis!`)
+        if(rows.join(' ').split(' ').length > 25) return msg.channel.send("That's too many emojis! The limit is 25.")
+        if(!args.replace(/[\[\] ]/g, '')) return msg.channel.send(`You need to supply emojis!`)
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
         let o = 1, a = 0 //o=y, a=x
         for (y of rows) {
@@ -241,7 +241,7 @@ Module.addCommand({name: "8ball",
                 }
                 else if(id){
                     let image
-                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{message.channel.send(`I couldn't enlarge the emoji ${x}.`);break}
+                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{msg.channel.send(`I couldn't enlarge the emoji ${x}.`);break}
                     image.resize(150, 150)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
@@ -252,9 +252,9 @@ Module.addCommand({name: "8ball",
                     let image = await Jimp.read(toPng)
                     canvas.blit(image, 150 * a, 150 * (o-1))
                 }
-                else{message.channel.send(`${x} isn't a valid emjoji.`); break}
+                else{msg.channel.send(`${x} isn't a valid emjoji.`); break}
                 a++
-                if(a == y.split(' ').length && o == rows.length) return await message.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
+                if(a == y.split(' ').length && o == rows.length) return await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
                 if(a == y.split(' ').length){a=0;o++}   
             }
         }
@@ -262,8 +262,8 @@ Module.addCommand({name: "8ball",
 })
 .addCommand({name: "shop",
     category: "General",
-    process: async (message, args) =>{
-        message.channel.send('https://teespring.com/stores/bobbys-gift-shop')
+    process: async (msg, args) =>{
+        msg.channel.send('https://teespring.com/stores/bobbys-gift-shop')
     }
 })
 .addCommand({name: "repo",

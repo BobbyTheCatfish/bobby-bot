@@ -5,22 +5,22 @@ const Augur = require('augurbot'),
 const Module = new Augur.Module();
 Module.addCommand({name: "inventory",
     guildOnly: true,
-    process: async(message, args)=>{
-        let inventory = message.guild.roles.cache.filter(r => message.member.roles.cache.find(e => e.name.toLowerCase()+' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
-        let embed = u.embed().setAuthor(message.member.displayName, message.member.user.displayAvatarURL({format: 'png'}))
+    process: async(msg, args)=>{
+        let inventory = msg.guild.roles.cache.filter(r => msg.member.roles.cache.find(e => e.name.toLowerCase()+' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
+        let embed = u.embed().setAuthor(msg.member.displayName, msg.member.user.displayAvatarURL({format: 'png'}))
             .setTitle("Equippable Color Inventory")
             .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`);
-        if(!inventory) return message.channel.send("You don't have any colors in your inventory!").then(u.clean)
-        else return message.channel.send({embed, disableMentions: "all"});
+        if(!inventory) return msg.channel.send("You don't have any colors in your inventory!").then(u.clean)
+        else return msg.channel.send({embed, disableMentions: "all"});
     }
 })
 .addCommand({name: "equip",
     guildOnly: true,
-    process: async(message, args)=>{
+    process: async(msg, args)=>{
         let words = args.split(' ')
         if(words[0].toLowerCase() == 'none'){
-            message.member.roles.cache.forEach(role =>{if(role.name.toLowerCase().endsWith('colors')) message.member.roles.remove(role)})
-            await message.react('👌')
+            msg.member.roles.cache.forEach(role =>{if(role.name.toLowerCase().endsWith('colors')) msg.member.roles.remove(role)})
+            await msg.react('👌')
         }
         else if(words[0].toLowerCase() == 'help'){
             let embed = u.embed()
@@ -32,19 +32,19 @@ Module.addCommand({name: "inventory",
                 { name: 'Step 3', value: 'Set the color of the old role to the default color. This will make it transparent.', inline: false },
                 { name: 'Step 4', value: 'Repeat steps 1-3 for all the roles that you want to have equipable colors', inline: false })
                 .setImage("https://media.discordapp.net/attachments/727981742937342002/749339754113400892/roles.gif")
-            return message.channel.send({embed})
+            return msg.channel.send({embed})
         }
         else{
             let keywords = words.slice(0).join(' ')
-            let role = message.guild.roles.cache.find(r => r.name.toLowerCase() == keywords.toLowerCase())
-            let colorRole = message.guild.roles.cache.find(r => r.name.toLowerCase() == keywords.toLowerCase()+' colors')
-            if(!role) return message.channel.send("That's not a valid role").then(m => u.clean(m)).then(u.clean(message))
-            if(!colorRole) return message.channel.send("Looks like the colors aren't set up for that role!").then(m => u.clean(m)).then(u.clean(message))
-            if (!message.member.roles.cache.has(role.id)) return message.channel.send("sorry, you don't have that role").then(m => u.clean(m)).then(u.clean(message))
+            let role = msg.guild.roles.cache.find(r => r.name.toLowerCase() == keywords.toLowerCase())
+            let colorRole = msg.guild.roles.cache.find(r => r.name.toLowerCase() == keywords.toLowerCase()+' colors')
+            if(!role) return msg.channel.send("That's not a valid role").then(m => u.clean(m)).then(u.clean(msg))
+            if(!colorRole) return msg.channel.send("Looks like the colors aren't set up for that role!").then(m => u.clean(m)).then(u.clean(msg))
+            if (!msg.member.roles.cache.has(role.id)) return msg.channel.send("sorry, you don't have that role").then(m => u.clean(m)).then(u.clean(msg))
             else{
-                message.member.roles.cache.forEach(role =>{if(role.name.toLowerCase().endsWith('colors')) message.member.roles.remove(role)}) 
-                await message.member.roles.add(colorRole)
-                await message.react("👌").then(u.clean(message))
+                msg.member.roles.cache.forEach(role =>{if(role.name.toLowerCase().endsWith('colors')) msg.member.roles.remove(role)}) 
+                await msg.member.roles.add(colorRole)
+                await msg.react("👌").then(u.clean(msg))
             }
         }
     }    

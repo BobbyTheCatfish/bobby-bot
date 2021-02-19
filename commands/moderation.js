@@ -171,7 +171,7 @@ Module.addCommand({name: "ban",
     process: async (msg, suffix) =>{
         let total = []
         for(let m of msg.guild.members.cache){
-            if(m.voice.channel && m != message.member){
+            if(m.voice.channel && m != msg.member){
                 m.voice.setChannel(null)
                 total.push(m.id)
             }
@@ -351,7 +351,7 @@ Module.addCommand({name: "ban",
             try {
                 msg.channel.send(content)
                 return msg.delete({timeout: 500 })
-            }catch (error) {msg.channel.send("I couldn't     delete your message")}
+            }catch (error) {msg.channel.send("I couldn't delete your message")}
         }
         if(msg.content.includes('no.')) return msg.channel.send('I refuse.')
         return msg.channel.send('no.')
