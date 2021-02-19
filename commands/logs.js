@@ -222,7 +222,5 @@ const Augur = require('augurbot'),
             if(embed.fields.length > 0) (await logChannel(oldRole.guild)).send({embed})
         }
     })
-    .addEvent('rateLimit', async (rateLimitInfo)=>{
-        console.log(rateLimitInfo)
-    })
+    .addEvent('rateLimit', async (rateLimitInfo)=>{console.log(rateLimitInfo)})
 module.exports = Module
