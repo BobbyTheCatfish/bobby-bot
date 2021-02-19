@@ -48,7 +48,7 @@ const Utils = {
               }
             } catch(error) {
               msg.edit({embed: timeoutEmbed});
-              return null;
+              return Utils.errorHandler(error, "Confirm Embed Error");
             }
     },
 
@@ -210,7 +210,7 @@ const Utils = {
     },
     prefix: async function(msg) {
         try {
-            if (msg.guild) return await db.guildconfig.getPrefix(msg.guild.id);
+            if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
             else return config.prefix;
         } catch(e) {
             console.log(e, msg);
