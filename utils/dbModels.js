@@ -11,23 +11,33 @@ mongoose.connect(config.db.db, config.db.settings);
 const models = {
     guildconfig: {
         createConfig: async (guildId) =>{
-            let server = await GuildConfig.exists({guildId})
-            if(!server){
+            if(!await GuildConfig.exists({guildId})){
                 GuildConfig.create({guildId})
             }
             else return null
         },
         getConfig: async (guildId) =>{
-            let server = await GuildConfig.exists({guildId})
-            if(server){
+            if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 if(guildDoc) return guildDoc
                 else return null
             }
+            else return null
+        },
+        getInvite: async(guildId) => {
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec()
+                if(guildDoc) return guildDoc.invite
+                else return null
+            }
+            else return null
+        },
+        saveInvite: async(guildId, invite) => {
+            if(await GuildConfig.exists({guildId})) return await GuildConfig.findOneAndUpdate({guildId}, {invite}, {new: true})
+            else return null
         },
         getPrefix: async (guildId) => {
-            let server = await GuildConfig.exists({guildId})
-            if(server){
+            if(await GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 if(guildDoc) return guildDoc.prefix
                 else return null
@@ -35,87 +45,69 @@ const models = {
             else return null
         },
         savePrefix: async (guildId, prefix) => {
-            let server = await GuildConfig.exists({guildId})
-            if(server){
-                return await GuildConfig.findOneAndUpdate({guildId}, {prefix}, {new: true})
-            }
+            if(await GuildConfig.exists({guildId})) return await GuildConfig.findOneAndUpdate({guildId}, {prefix}, {new: true})
             else return null
         },
-        saveErrorChannel: async (guild, channel) => {
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                return GuildConfig.findOneAndUpdate({guildId: guild}, {"channels.error":channel}, {new: true})
-            }
+        saveErrorChannel: async (guildId, channel) => {
+            if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"channels.error":channel}, {new: true})
             else return null
         },
-        getErrorChannel: async (guild)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild}).exec();
+        getErrorChannel: async (guildId)=>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channel = guildDoc?.channels.error
                 if(channel) return channel
                 else return null
             }
             else return null
         },
-        saveBotLobby: async (guild, channel) =>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                return GuildConfig.findOneAndUpdate({guildId: guild}, {"channels.botLobby": channel}, {new: true})
-            }
+        saveBotLobby: async (guildId, channel) =>{
+            if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"channels.botLobby": channel}, {new: true})
             else return null
         },
-        getBotLobby: async (guild) =>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild}).exec();
+        getBotLobby: async (guildId) =>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channel = guildDoc?.channels?.botLobby
                 if(channel) return channel
                 else return null
             }
             else return null
         },
-        getStarBoards: async(guild)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild}).exec();
+        getStarBoards: async(guildId)=>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 let channels = guildDoc?.channels?.starboards
                 if(channels) return channels
                 else return null 
             }
             else return null
         },
-        saveStarBoard: async (guild, channel, reactions, singleChannel, toStar)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild})
+        saveStarBoard: async (guildId, channel, reactions, singleChannel, toStar)=>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId})
                 let board = guildDoc?.channels?.starboards?.find(c => c.channel == channel)
-                if(board) return GuildConfig.findOneAndUpdate({guildId: guild, 'channels.starboards.channel': channel}, {$set: {'channels.starboards.$.channel':channel, 'channels.starboards.$.reactions':reactions,'channels.starboards.$.singleChannel': singleChannel, 'channels.starboards.$.toStar': toStar}})
-                else return GuildConfig.updateOne({guildId: guild}, {channels: {starboards:{$push: {channel, reactions, singleChannel, toStar}}}})
+                if(board) return GuildConfig.findOneAndUpdate({guildId, 'channels.starboards.channel': channel}, {$set: {'channels.starboards.$.channel':channel, 'channels.starboards.$.reactions':reactions,'channels.starboards.$.singleChannel': singleChannel, 'channels.starboards.$.toStar': toStar}})
+                else return GuildConfig.updateOne({guildId}, {channels: {starboards:{$push: {channel, reactions, singleChannel, toStar}}}})
             }
             else return null
         },
-        saveLogChannel: async(guild, channel, flags)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                return GuildConfig.findOneAndUpdate({guildId: guild}, {"channels.logChannel": {channel, flags}}, {new: true})
-            }
+        saveLogChannel: async(guildId, channel, flags)=>{
+            if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"channels.logChannel": {channel, flags}}, {new: true})
             else return null
         },
-        getLogChannel: async(guild)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild}).exec()
+        getLogChannel: async(guildId)=>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 let channel = guildDoc?.channels?.logChannel
                 if(channel) return channel.channel
                 else return null
             }
             else return null
         },
-        getLogFlags: async(guild)=>{
-            let server = await GuildConfig.exists({guildId: guild})
-            if(server){
-                let guildDoc = await GuildConfig.findOne({guildId: guild}).exec()
+        getLogFlags: async(guildId)=>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec()
                 let channel = guildDoc?.channels?.logChannel
                 if(channel) return channel.flags
                 else return null
@@ -124,25 +116,19 @@ const models = {
         }
     },
     tags:{
-        getTag: async (guild, name) =>{
-
-            let server = await Tags.exists({guildId: guild})
-            if(server){
-                let guildDoc = await Tags.findOne({guildId: guild}).exec();
+        getTag: async (guildId, name) =>{
+            if(await Tags.exists({guildId})){
+                let guildDoc = await Tags.findOne({guildId}).exec();
                 let tag = guildDoc?.tags.find(t => t.name == name);
                 if(tag) return tag
-                else return null
             }
-            else return null
+            return null
         },
-        getAllTags: async (guild) =>{
-            let server = await Tags.exists({guildId: guild})
-            if(server)return Tags.findOne({guildId: guild})                
-            else return null
+        getAllTags: async (guildId) =>{
+            return await Tags.exists({guildId}) ? Tags.findOne({guildId}).exec() : null
         },
         saveTag: async (guildId, name, text, file) =>{
-            let server = await Tags.exists({guildId})
-            if(server){
+            if(await Tags.exists({guildId})){
                 let guildDoc = await Tags.findOne({guildId}).exec()
                 let tag = guildDoc?.tags.find(t => t.name == name)
                 if(tag) return Tags.updateOne({guildId, "tags.name":name}, {$set: {"tags.$.text":text, "tags.$.file": file}})
@@ -150,52 +136,53 @@ const models = {
             }
             else return Tags.create({guildId, tags: [{name, text, file}]})
         },
-        removeTag: async (guild, name) =>{
-            let server = await Tags.exists({guildId: guild})
-            if(server){
-                let guildDoc = await Tags.findOne({guildId: guild}).exec()
+        removeTag: async (guildId, name) =>{
+            if(await Tags.exists({guildId})){
+                let guildDoc = await Tags.findOne({guildId}).exec()
                 let tag = guildDoc?.tags.find(t => t.name == name)
-                if(tag) return Tags.findOneAndUpdate({guildId: guild}, {$pull: {"tags":{name}}});
-                else return null
+                if(tag) return Tags.findOneAndUpdate({guildId}, {$pull: {"tags":{name}}});
             }
-            else return null
+            return null
         },
         globalStatus: async(guildId)=>{
-            let server = await Tags.exists({guildId})
-            if(server){
+            if(await Tags.exists({guildId})){
                 let guildDoc = await Tags.findOne({guildId}).exec()
                 if(guildDoc?.global == true) return true
-                else return null
+            }
+            return null
+        },
+        setGlobal: async(guildId, user)=>{
+            if(await Tags.exists({guildId})){
+                await Tags.updateOne({guildId},{global: true})
+                let guildDoc = await Tags.findOne({guildId}).exec()
+                guildDoc?.tags.forEach(async t=>{
+                    if(!await GTags.findOne({name: t.name})) await GTags.create({user, guildId, name: t.name, text: t.text, file: t.file, e: true})
+                })
+                return true
             }
             else return null
         },
-        setGlobal: async(guildId, user)=>{
-            await Tags.updateOne({guildId},{global: true})
-            let guildDoc = await Tags.findOne({guildId}).exec()
-            guildDoc?.tags.forEach(async t=>{
-                if(!await GTags.findOne({name: t.name})) await GTags.create({user, guildId, name: t.name, text: t.text, file: t.file, e: true})
-            })
-        },
         setLocal: async(guildId)=>{
-            await Tags.updateOne({guildId},{global: false})
-            let guildDoc = await Tags.findOne({guildId}).exec()
-            let globalDoc = await GTags.find({e: true}).exec()
-            globalDoc.forEach(async t=>{
-                if(t.guildId == guildId){
-                    if(!guildDoc?.tags.find(a=> a.name == t.name)){
-                        await Tags.findOneAndUpdate({guildId}, {$push: {tags:[{name: t.name, text: t.text, file: t.file}]}})
+            if(await Tags.exists({guildId})){
+                await Tags.updateOne({guildId},{global: false})
+                let guildDoc = await Tags.findOne({guildId}).exec()
+                let globalDoc = await GTags.find({e: true}).exec()
+                globalDoc.forEach(async t=>{
+                    if(t.guildId == guildId){
+                        if(!guildDoc?.tags.find(a=> a.name == t.name)){
+                            await Tags.findOneAndUpdate({guildId}, {$push: {tags:[{name: t.name, text: t.text, file: t.file}]}})
+                        }
+                        await GTags.findOneAndDelete({name: t.name})
                     }
-                    await GTags.findOneAndDelete({name: t.name})
-                }
-            })
-            return
+                })
+                return true
+            }
         }
     },
     globalTags: {
         getTag: async(name) =>{
             let globalDoc = await GTags.findOne({name}).exec()
-            if(globalDoc) return globalDoc
-            else return null
+            return globalDoc ? globalDoc : null
         },
         getAllTags: async()=>{
             return await GTags.find().exec()
@@ -203,37 +190,30 @@ const models = {
         saveTag: async(guildId, user, name, text, file)=>{
             let globalDoc = await GTags.find({e: true}).exec()
             let tag = globalDoc?.find(t => t.name == name)
-            if(tag) return GTags.findOneAndUpdate({name},{text, file})
-            else return GTags.create({user, guildId, name, text, file, e: true})
+            if(tag) return tag ? GTags.findOneAndUpdate({name},{text, file}) : GTags.create({user, guildId, name, text, file, e: true})
         },
         removeTag: async(name)=>{
             let globalDoc = await GTags.find({e: true}).exec()
             let tag = globalDoc?.find(t =>t.name == name)
-            if(tag) return GTags.findOneAndDelete({name})
-            else return null
-
+            if(tag) return tag ? GTags.findOneAndDelete({name}) : null
         }
     },
     welcome:{
         getWelcome: async(guildId) =>{
-            let server = GuildConfig.exists({guildId})
-            if(server){
+            if(GuildConfig.exists({guildId})){
                 let guildDoc = await GuildConfig.findOne({guildId}).exec();
                 return guildDoc?.welcome
             }
             else return null
         },
         saveWelcome: async (guildId, channel, roles, emoji, ruleChannel, custom) =>{
-            let server = GuildConfig.exists({guildId})
-            if(server) return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled':true, 'welcome.channel':channel, 'welcome.roles': roles, 'welcome.emoji': emoji, 'welcome.ruleChannel':ruleChannel, 'welcome.custom': custom},{new: true})
+            if(GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled':true, 'welcome.channel':channel, 'welcome.roles': roles, 'welcome.emoji': emoji, 'welcome.ruleChannel':ruleChannel, 'welcome.custom': custom},{new: true})
             else return null
         },
-        disableWelcome: async (guildId) =>{
-            return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled': false})
-        }
+        disableWelcome: async (guildId) => {return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled': false})}
     },
     init: (bot) => {
-      bot.guilds.forEach(guild => {
+      bot.guilds.cache.forEach(guild => {
         Server.findOne({serverId: guild.id}, (e, server) => {
           if (!e && server) {
             serverSettings.set(server.serverId, server);
