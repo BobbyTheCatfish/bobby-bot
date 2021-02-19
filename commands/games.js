@@ -1,10 +1,9 @@
-const Augur = require('augurbot'),
+let Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors'),
     low = require('lowdb'),
     FileSync = require('lowdb/adapters/FileSync'),
-    adapter = new FileSync('jsons/battleship.json'),
-    db = low(adapter),
+    db = low(new FileSync('jsons/battleship.json')),
     blankBoard = `on 0 0 0 0 0 0 0 0 0 0
 tw 0 0 0 0 0 0 0 0 0 0
 th 0 0 0 0 0 0 0 0 0 0
@@ -216,21 +215,21 @@ Module.addCommand({name: "playing",
 .addCommand({name: "battleship",
     aliases: ['b'],
     category: "Games",
-    process: async(message, args) =>{
+    process: async(msg, args) =>{
         db.defaults({ Games: []}).write()
-        let findEntry = db.get("Games").find({p1: message.author.id})
-        if(db.get("Games").find({p2: message.author.id}).get('p2').value()) findEntry = db.get("Games").find({p2: message.author.id})
+        let findEntry = db.get("Games").find({p1: msg.author.id})
+        if(db.get("Games").find({p2: msg.author.id}).get('p2').value()) findEntry = db.get("Games").find({p2: msg.author.id})
         
         if(!findEntry.get("p1").value())
         {
-            let player1 = message.author,
-                player2 = message.mentions.users.first()
+            let player1 = msg.author,
+                player2 = msg.mentions.users.first()
 
-            if(!player2) return message.channel.send("Who do you want to play against?")
-            if(player1.id == player2.id) return message.channel.send("You can't play against yourself, silly!")
-            if(player2.bot) return message.channel.send("You can't play against a bot. They're too good at the game")
+            if(!player2) return msg.channel.send("Who do you want to play against?")
+            if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
+            if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
             
-            message.channel.send("Starting game...")
+            msg.channel.send("Starting game...")
             player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
             player2.send(`${player1.username} has requested to play a game of battleship with you. Please confirm or deny their request.`).then(async startDM => {
                 let filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === player2.id;
@@ -281,8 +280,8 @@ Module.addCommand({name: "playing",
                 x = test ? test[1] : '',
                 y = test ? test[2] : '',
                 xes = ['a','b','c','d','e','f','g','h','i','j'],
-                sendP1 = message.client.users.cache.get(findEntry.get("p1").value()),
-                sendP2 = message.client.users.cache.get(findEntry.get("p2").value()),
+                sendP1 = msg.client.users.cache.get(findEntry.get("p1").value()),
+                sendP2 = msg.client.users.cache.get(findEntry.get("p2").value()),
                 turn = findEntry.get('turn').value(),
                 sendTo = (turn == '1' ? sendP1 : sendP2),
                 sendToOpp = (turn == '1' ? sendP2 : sendP1);
@@ -291,7 +290,7 @@ Module.addCommand({name: "playing",
                     row = findEntry.get(turn == 1 ? 'p2Rows' : 'p1Rows').value()[y-1],
                     letterArray = ['a','b','c','d','e']
                     hit = letterArray.includes(row.charAt(pos)) ? row.charAt(pos) : false
-                if((sendP1.id == message.author.id && turn == '2') || (sendP2 == message.author.id && turn == '1')) return message.author.send("It's not your turn!")
+                if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 if(['2','3'].includes(row.charAt(pos))) return sendTo.send("You already hit that spot!").then(u.clean)
                 try{
                     if (hit) findEntry.assign(turn == '1' ? {p1Hits: findEntry.get('p1Hits').value()+1} : {p2Hits: findEntry.get('p2Hits').value()+1}).write()
@@ -311,7 +310,7 @@ Module.addCommand({name: "playing",
                     if(findEntry.get(turn == '1' ? 'p1Hits' : 'p2Hits').value() >= 17 || !findEntry.get(turn == '1' ? 'p2board' : 'p1board').value().join('\n').includes('1')){
                         sendTo.send('You won!');
                         sendToOpp.send(`${sendTo.username} won! Better luck nex time.`);
-                        return
+                        return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
                 catch (e) {u.errorHandler(e, 'Battleship game error')}
@@ -325,14 +324,123 @@ Module.addCommand({name: "playing",
                 return findEntry.assign({turn: turn == '1' ? '2' : '1'}).write()
             }
             else if(args.toLowerCase() == 'quit'){
-                let toQuitter = (message.author.id == sendP1.id ? sendP1 : sendP2),
-                    toQuitted = (message.author.id == sendP1.id ? sendP2 : sendP1)
+                let toQuitter = (msg.author.id == sendP1.id ? sendP1 : sendP2),
+                    toQuitted = (msg.author.id == sendP1.id ? sendP2 : sendP1)
                 toQuitter.send("You forfitted the match. GG!")
                 toQuitted.send(`${toQuitter.username} forfitted the match. GG!`)
-                db.get('Games').remove(findEntry.get('p1').value() == message.author.id ? {p1: message.author.id} : {p2: message.author.id}).write()
+                db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
             }
-            else if(args.toLowerCase() == 'remind') sendToOpp.send(`${message.author.username} wanted to remind you that it's your turn!`)
-            else return message.author.send("That's not the right format! Try something like !battleship b9")
+            else if(args.toLowerCase() == 'remind') sendToOpp.send(`${msg.author.username} wanted to remind you that it's your turn!`)
+            else return msg.author.send("That's not the right format! Try something like !battleship b9")
+        }
+    }
+})
+.addCommand({name:"tictactoe",
+    aliases: ['t'],
+    process: async(msg, suffix) =>{
+        db = low(new FileSync('jsons/tictactoe.json'))
+        db.defaults({Games: []}).write()
+        let findEntry = db.get('Games').find({'p1': msg.author.id})
+        if(db.get('Games').find({'p2': msg.author.id}).get('p2').value()) findEntry = db.get('Games').find({'p2': msg.author.id})
+        async function replace(board){
+            return board.join('\n').replace(/0/g, '🟦').replace(/x/g, '🇽').replace(/o/g, '🇴')
+        }
+        if(!findEntry.get('p1').value()){
+            let player1 = msg.author,
+                player2 = msg.mentions.users.first()
+
+            if(!player2) return msg.channel.send("Who do you want to play against?")
+            if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
+            if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
+            
+            msg.channel.send("Starting game...")
+            player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
+            player2.send(`${player1.username} has requested to play a game of tic tak toe with you. Please confirm or deny their request.`).then(async startDM => {
+                let filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === player2.id;
+                await startDM.react('✅')
+                await startDM.react('🛑')
+                startDM.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] }).then(async collected => {
+                    const reaction = collected.first();
+                    if (reaction.emoji.name == '✅'){
+                        player1.send(`${player2.username} accepted the request. Starting the game....`)
+                        player2.send(`Confirmation recieved. Starting the game...`)
+                        let turn = Math.floor(Math.random()*2)+1
+                        player1 = turn == 1 ? player1 : player2
+                        player2 = turn == 1 ? player2 : msg.author
+                        db.get("Games").push({
+                            p1: player1.id,
+                            p2: player2.id,
+                            board: ['1️⃣ 0 0 0','2️⃣ 0 0 0','3️⃣ 0 0 0','🆚 🇦 🇧 🇨'],
+                            turn,
+                        }).write();
+                        let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
+                        let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
+
+                        player1.send(`${player1 == msg.author ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
+                        player2.send(`${player2 == msg.author ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
+                    } 
+                    else{
+                        player2.send(`Game denial recieved. Letting ${player1.username} know.`)
+                        return player1.send(`${player1.username} didn't want to play.`)
+                    }
+                }).catch((err) => {
+                    u.errorHandler(err)
+                    player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
+                    return player2.send(`The request was canceled because you didn't respond in time!`)
+                })
+            })
+        }
+        else{
+            async function win(board, turn){
+                let symbol = turn == '1' ? 'o' : 'x',
+                reg = new RegExp(`${turn == '1' ? 'x' : 'o'}`,'g')
+                board = board.join('\n').replace(reg, '0').split('\n')
+                for(hor of board) if(hor.charAt(4) == symbol && hor.charAt(6) == symbol && hor.charAt(8) == symbol) return true
+                if(board[0].charAt(4) == symbol && board[1].charAt(6) == symbol && board[2].charAt(8) == symbol) return true
+                if(board[0].charAt(8) == symbol && board[1].charAt(6) == symbol && board[2].charAt(4) == symbol) return true
+                for(let i = 4; i <  9; i = i+2) if(board[0].charAt(i) != '0' && board[1].charAt(i) != '0' && board[2].charAt(i) != '0') return true
+                else return null
+            }
+            async function tie(board){
+                if(board.join('').replace(/[^0]/g, '') == '') return true
+                else return null
+            }
+            let test = /(\w)(\d*)/g.exec(suffix.toLowerCase().replace(' ', '')), 
+                x = test ? test[1] : '',
+                y = test ? test[2] : '',
+                xes = ['a','b','c'],
+                sendP1 = msg.client.users.cache.get(findEntry.get("p1").value()),
+                sendP2 = msg.client.users.cache.get(findEntry.get("p2").value()),
+                turn = findEntry.get('turn').value(),
+                sendTo = (turn == '1' ? sendP1 : sendP2),
+                sendToOpp = (turn == '1' ? sendP2 : sendP1);
+            if(xes.includes(x) && 0 < Math.round(y) < 4){
+                let pos = xes.indexOf(x)
+                if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
+                let boardVal = findEntry.get('board').value(),
+                    index = 2*pos+4
+                if(boardVal[y-1].charAt(index) != 0) return msg.author.send("That tile already has a marker on it!")
+                let newEmbed
+                try{
+                    findEntry.get('board').assign({[y-1]: boardVal[y-1].substr(0, index)+`${turn == '1' ? 'o' : 'x'}`+boardVal[y-1].substr(index+1)}).write()
+                    newEmbed = u.embed().setTitle('The Board').setDescription(await replace(findEntry.get('board').value())).setFooter(`To place your piece, (O), do \`!t xy\` (example: \`!b a1\`)`)
+                    if(await win(boardVal, turn)){
+                        sendTo.send('You won!', {embed: newEmbed});
+                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`, {embed: embed2});
+                        return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
+                    }
+                    else if(await tie(boardVal)){
+                        sendTo.send('It looks like this game is a draw.')
+                        sendToOpp.send('It looksl ike this game is a draw')
+                        return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
+                    }
+                }
+                catch (e) {return u.errorHandler(e, 'TTT game error')}
+                sendP1.send(turn == '1' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP2.username} put a piece at ${x.toUpperCase()}${y}.`,{embed: newEmbed})
+                sendP2.send(turn == '2' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP1.username} put a piece at ${x.toUpperCase()}${y}.`,{embed: newEmbed})
+                return findEntry.assign({turn: turn == '1' ? '2' : '1'}).write()
+            }
+            else return msg.author.send("That's not the right format! Try something like `!t a1`")
         }
     }
 })
