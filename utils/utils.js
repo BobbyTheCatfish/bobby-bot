@@ -126,6 +126,13 @@ const Utils = {
             }
         }catch(error) {return null;}
     },
+    getMentions: async function(msg, member = false){
+        let users = Utils.parse(msg).suffix.match(match).join('\n').replace(/[^0-9\n]/g, '').split('\n')
+        let userArray = []
+        if(member) for(u of users) userArray.push(msg.guild.members.cache.get(u))
+        else for (u of users) userArray.push(msg.client.users.cache.get(u))
+        return userArray
+    },
     noop: () => {},
 
     time: ()=> {
@@ -182,9 +189,9 @@ const Utils = {
     },
     parse: async function(msg) {
         try {
-          let prefix = await Utils.prefix(msg);
-          let message = msg.content;
-          let parse;
+          let prefix = await Utils.prefix(msg),
+            message = msg.content,
+            parse;
             if (msg.author.bot) parse = null;
             else if (message.startsWith(prefix)) parse = message.slice(prefix.length);
             else if (message.startsWith(`<@${msg.client.user.id}>`)) parse = message.slice((`<@${msg.client.user.id}>`).length);
@@ -192,12 +199,12 @@ const Utils = {
             if (parse) {
                 parse = parse.trim().split(" ");
                 return {
-                command: parse.shift().toLowerCase(),
-                suffix: parse.join(" ")
+                    command: parse.shift().toLowerCase(),
+                    suffix: parse.join(" ")
                 };
             } else return null;
         } catch(e) {
-          Utils.alertError(e, msg);
+          Utils.errorHandler(e, msg.content);
           return null;
         }
     },
