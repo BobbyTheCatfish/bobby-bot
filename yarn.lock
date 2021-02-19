@@ -724,7 +724,7 @@
 
 "augurbot@^2.1.2":
   "integrity" "sha512-nd/xE0R4UIvgu+ukWTS3xI460xPedfJ8kuOd7W0YEalkPc5O6WzkveD6eImavBvW4q6MO37vZIFtNOh7yNhQhg=="
-  "resolved" "https://registry.npmjs.org/augurbot/-/augurbot-2.1.2.tgz"
+  "resolved" "https://BobbyTheCatfish@bitbucket.org/BobbyTheCatfish/augurbot.git"
   "version" "2.1.2"
 
 "aws-sign2@~0.7.0":
@@ -1464,7 +1464,7 @@
   "resolved" "https://registry.yarnpkg.com/diff/-/diff-5.0.0.tgz"
   "version" "5.0.0"
 
-"discord.js@^12.2.0":
+"discord.js@^12.2.0", "discord.js@>=12.2.0":
   "integrity" "sha512-VwZkVaUAIOB9mKdca0I5MefPMTQJTNg0qdgi1huF3iwsFwJ0L5s/Y69AQe+iPmjuV6j9rtKoG0Ta0n9vgEIL6w=="
   "resolved" "https://registry.yarnpkg.com/discord.js/-/discord.js-12.5.1.tgz"
   "version" "12.5.1"
