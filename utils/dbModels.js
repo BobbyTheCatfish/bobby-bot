@@ -180,12 +180,12 @@ const models = {
         saveTag: async(guildId, user, name, text, file)=>{
             let globalDoc = await GTags.find({e: true}).exec()
             let tag = globalDoc?.find(t => t.name == name)
-            if(tag) return tag ? GTags.findOneAndUpdate({name},{text, file}) : GTags.create({user, guildId, name, text, file, e: true})
+            return tag ? GTags.findOneAndUpdate({name},{text, file}) : GTags.create({user, guildId, name, text, file, e: true})
         },
         removeTag: async(name)=>{
             let globalDoc = await GTags.find({e: true}).exec()
             let tag = globalDoc?.find(t =>t.name == name)
-            if(tag) return tag ? GTags.findOneAndDelete({name}) : null
+            return tag ? GTags.findOneAndDelete({name}) : null
         }
     },
     welcome:{
