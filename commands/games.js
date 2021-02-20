@@ -240,7 +240,7 @@ Module.addCommand({name: "playing",
 
                 player1.send(`It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`,{embed: p1embed1})
                 player1.send({embed: p1embed2})
-                player2.send(`It's ${findEntry.get('turn').value() == '2' ? 'your' : player2.username+'\'s' } turn`,{embed: p2embed1})
+                player2.send(`It's ${findEntry.get('turn').value() == '2' ? 'your' : player1.username+'\'s' } turn`,{embed: p2embed1})
                 return player2.send({embed: p2embed2})
             }
             else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
@@ -256,12 +256,12 @@ Module.addCommand({name: "playing",
                 turn = findEntry.get('turn').value(),
                 sendTo = (turn == '1' ? sendP1 : sendP2),
                 sendToOpp = (turn == '1' ? sendP2 : sendP1);
+            if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
             if(xes.includes(x) && 0 < Math.round(y) < 11){
                 let pos = xes.indexOf(x),
                     row = findEntry.get(turn == 1 ? 'p2Rows' : 'p1Rows').value()[y-1],
                     letterArray = ['a','b','c','d','e']
                     hit = letterArray.includes(row.charAt(pos)) ? row.charAt(pos) : false
-                if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 if(['2','3'].includes(row.charAt(pos))) return sendTo.send("You already hit that spot!").then(u.clean)
                 let findRows = findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows')
                 try{
@@ -275,10 +275,14 @@ Module.addCommand({name: "playing",
                     if(!findRows.value().join('\n').replace(/[^a-e]/g, '')){
                         let r1 = replace(findEntry.get(turn == '1' ? 'p1Rows' : 'p2Rows').value().join('\n')),
                             r2 = replace(findRows.value().join('\n')),
-                            embed1 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}\n\n${sendToOpp.username}'s board:\n${r2}`),
-                            embed2 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}\n\n${sendTo.username}'s board:\n${r2}`)
+                            embed1 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}`),
+                            embed2 = u.embed().setDescription(`${sendToOpp.username}'s board:\n${r2}`),
+                            embed3 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}`),
+                            embed4 = u.embed().setDescription(`${sendTo.username}'s board:\n${r2}`)
                         sendTo.send('You won!', {embed: embed1});
-                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`,{embed: embed2});
+                        sendTo.send({embed: embed2})
+                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`,{embed: embed3});
+                        sendToOpp.send({embed: embed4})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
