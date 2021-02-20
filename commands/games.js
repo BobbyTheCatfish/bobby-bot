@@ -4,17 +4,7 @@ let Augur = require('augurbot'),
     low = require('lowdb'),
     FileSync = require('lowdb/adapters/FileSync'),
     db = low(new FileSync('jsons/battleship.json')),
-    blankBoard = `on 0 0 0 0 0 0 0 0 0 0
-tw 0 0 0 0 0 0 0 0 0 0
-th 0 0 0 0 0 0 0 0 0 0
-4️⃣ 0 0 0 0 0 0 0 0 0 0
-5️⃣ 0 0 0 0 0 0 0 0 0 0
-6️⃣ 0 0 0 0 0 0 0 0 0 0
-7️⃣ 0 0 0 0 0 0 0 0 0 0
-8️⃣ 0 0 0 0 0 0 0 0 0 0
-9️⃣ 0 0 0 0 0 0 0 0 0 0
-tn 0 0 0 0 0 0 0 0 0 0
-🆚 🇦 🇧 🇨 🇩 🇪 🇫 🇬 🇭 🇮 🇯`
+    blankBoard = `0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000`
 //0 - Nothing 🟦
 //1 - Ship ⬜
 //2 - Ship Hit 💥
@@ -22,14 +12,10 @@ tn 0 0 0 0 0 0 0 0 0 0
 const Module = new Augur.Module();
 //The battleship board generator code is not original. You can find the original here: https://www.math.purdue.edu/~bradfoa/personal_projects/battleship/. All credit to Alden Bradford.
 function generateBoard(){
-    let brd = new Board();
-    brd.placeShips();
-    if (brd.failed) return null
-    let board = brd.appearance().replace(/1\b/g,'on').replace(/2\b/g, 'tw').replace(/3\b/g, 'th').replace(/4\b/g, '4️⃣').replace(/5\b/g, '5️⃣').replace(/6\b/g, '6️⃣').replace(/7\b/g, '7️⃣').replace(/8\b/g, '8️⃣').replace(/9\b/g, '9️⃣').replace(/[a-e]/g, '1').replace(/10\b/g, 'tn').replace(/[A-Z]/g, '').replace(/~/g, '0')
-    board = board.split('\n').splice(1)
-    board.push('🆚 🇦 🇧 🇨 🇩 🇪 🇫 🇬 🇭 🇮 🇯')
-    let row = brd.appearance().replace(/[^a-e~\n]/g, '').replace(/~/g, '0').split('\n').splice(1)
-    return {board, row}
+    let board = new Board();
+    board.placeShips();
+    if (board.failed) return null
+    return board.appearance().replace(/[^a-e~\n]/g, '').replace(/~/g, '0').split('\n').splice(1)
 }
 function parseShips(string){
 let inputList = string.match(/\w,\d+/g);
@@ -42,18 +28,13 @@ for(let i = 0; i < inputList.length; i++){
 }
 return ships;
 }
-function replace(board){
-    let replacements = [[/ 0/g, ' 🟦'],[/ 1/g, ' ⬜'],[/ 2/g, ' 💥'],[/ 3/g, ' 🟥'],['on', '1️⃣'],['tw', '2️⃣'],['th', '3️⃣'],['tn', '🔟']]
-    for(x of replacements) board = board.replace(x[0], x[1])
-    return board
-}
 class Board {
 constructor(form){
     this.rows = 10;
     this.cols = 10;
     this.cells = [];
     this.initializeCells();
-    this.shipPairs = parseShips('(a,5),(b,4),(c,3),(d,3),(e,2)');
+    this.shipPairs = parseShips('(a,2),(b,3),(c,3),(d,4),(e,5)');
     this.failed = false;
 }
 initializeCells(){
@@ -217,11 +198,19 @@ Module.addCommand({name: "playing",
     category: "Games",
     process: async(msg, args) =>{
         db.defaults({ Games: []}).write()
+        function replace(board){
+            let prefixes = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'],
+                final = [],
+                i = 0
+            for(let x of board.split('\n')) {final.push(`${prefixes[i]} ${x.split('').join(' ').replace(/0/g, '🟦').replace(/[a-e]/g, '⬜').replace(/2/g, '💥').replace(/3/g, '🟥')}`);i++}
+            final.push('🆚 🇦 🇧 🇨 🇩 🇪 🇫 🇬 🇭 🇮 🇯')
+            return final.join('\n')
+        }
         let findEntry = db.get("Games").find({p1: msg.author.id})
         if(db.get("Games").find({p2: msg.author.id}).get('p2').value()) findEntry = db.get("Games").find({p2: msg.author.id})
         if(!findEntry.get("p1").value()){
             let player1 = msg.author,
-            player2 = msg.mentions.users.first()
+                player2 = msg.mentions.users.first()
             
             if(!player2) return msg.channel.send("Who do you want to play against?")
             if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
@@ -230,52 +219,35 @@ Module.addCommand({name: "playing",
             
             msg.channel.send("Starting game...")
             player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
-            player2.send(`${player1.username} has requested to play a game of battleship with you. Please confirm or deny their request.`).then(async startDM => {
-                let filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === player2.id;
-                await startDM.react('✅')
-                await startDM.react('🛑')
-                startDM.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] }).then(collected => {
-                    const reaction = collected.first();
-                    if (reaction.emoji.name == '✅'){
-                        player1.send(`${player2.username} accepted the request. Starting the game....`)
-                        player2.send(`Confirmation recieved. Starting the game...`)
-                        let p1b = generateBoard(),
-                            p2b = generateBoard()
-                        db.get("Games").push({
-                            p1: player1.id,
-                            p2: player2.id,
-                            p1board: p1b.board,
-                            p2board: p2b.board,
-                            p1Blank: blankBoard.split('\n'),
-                            p2Blank: blankBoard.split('\n'),
-                            p1Rows: p1b.row,
-                            p2Rows: p2b.row,
-                            turn: Math.floor(Math.random()+1),
-                            p1Hits: 0,
-                            p2Hits: 0
-                        }).write();
-                        let p1embed1 = u.embed().setTitle(`Your Board`).setDescription(replace(findEntry.get('p1board').value().join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
-                            p2embed1 = u.embed().setTitle(`Your Board`).setDescription(replace(findEntry.get('p2board').value().join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
-                            p1embed2 = u.embed().setTitle(`${player2.username}'s Board`).setDescription(replace(findEntry.get('p2Blank').value().join('\n'))),
-                            p2embed2 = u.embed().setTitle(`${player1.username}'s Board`).setDescription(replace(findEntry.get('p1Blank').value().join('\n')))
+            let askEmbed = u.embed().setTitle(`Battleship Request from ${player1.username}`).setDescription(`${player1.username} has requested to play a game of battleship with you. Please confirm or deny their request`),
+                confirmEmbed = u.embed().setTitle('Confirmation recieved').setDescription('Starting the game...'),
+                cancelEmbed = u.embed().setTitle('Cancelation recieved').setDescription(`Letting ${player1.username} know.`),
+                confirm = await u.confirmEmbed(player2, askEmbed, confirmEmbed, cancelEmbed);
+            if(confirm == true){
+                db.get("Games").push({
+                    p1: player1.id,
+                    p2: player2.id,
+                    p1Blank: blankBoard.split('\n'),
+                    p2Blank: blankBoard.split('\n'),
+                    p1Rows: generateBoard(),
+                    p2Rows: generateBoard(),
+                    turn: Math.floor(Math.random() * 2),
+                }).write();
+                let p1embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p1Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
+                    p2embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p2Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
+                    p1embed2 = u.embed().setTitle(`${player2.username}'s Board`).setDescription(replace(await findEntry.get('p2Blank').value().join('\n'))),
+                    p2embed2 = u.embed().setTitle(`${player1.username}'s Board`).setDescription(replace(await findEntry.get('p1Blank').value().join('\n')))
 
-                        player1.send(`It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`,{embed: p1embed1})
-                        player1.send({embed: p1embed2})
-                        player2.send(`It's ${findEntry.get('turn').value() == '2' ? 'your' : player2.username+'\'s' } turn`,{embed: p2embed1})
-                        player2.send({embed: p2embed2})
-                    } 
-                    else{
-                        player2.send(`Game denial recieved. Letting ${player1.username} know.`)
-                        return player1.send(`${player1.username} didn't want to play.`)
-                    }
-                }).catch((err) => {
-                    player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
-                    return player2.send(`The request was canceled because you didn't respond in time!`)
-                })
-            })
+                player1.send(`It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`,{embed: p1embed1})
+                player1.send({embed: p1embed2})
+                player2.send(`It's ${findEntry.get('turn').value() == '2' ? 'your' : player2.username+'\'s' } turn`,{embed: p2embed1})
+                return player2.send({embed: p2embed2})
+            }
+            else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
+            else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
         }
         else{
-            let test = /(\w)(\d*)/g.exec(args.toLowerCase().replace(' ', '')), 
+            let test = /([a-j])(10|[1-9])/g.exec(args.toLowerCase().replace(' ', '')),
                 x = test ? test[1] : '',
                 y = test ? test[2] : '',
                 xes = ['a','b','c','d','e','f','g','h','i','j'],
@@ -291,31 +263,29 @@ Module.addCommand({name: "playing",
                     hit = letterArray.includes(row.charAt(pos)) ? row.charAt(pos) : false
                 if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 if(['2','3'].includes(row.charAt(pos))) return sendTo.send("You already hit that spot!").then(u.clean)
+                let findRows = findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows')
                 try{
-                    if (hit) findEntry.assign(turn == '1' ? {p1Hits: findEntry.get('p1Hits').value()+1} : {p2Hits: findEntry.get('p2Hits').value()+1}).write()
 
-                    let str = findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').get(y-1).value(),
-                        index = 2*(pos)+4
-                    if(['1','2','3','10'].includes(y)) index--
-
-                    findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').assign({[y-1]: str.substr(0, index)+`${hit ? '2' : '3'}`+str.substr(index+1)}).write()
+                    let str = findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').get(y-1).value()
+                    findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').assign({[y-1]: str.substr(0, pos)+`${hit ? '2' : '3'}`+str.substr(pos+1)}).write()
                     
-                    str = findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows').get(y-1).value()
-                    findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows').assign({[y-1]: str.substr(0, pos)+`${hit ? '2' : '3'}`+str.substr(pos+1)}).write()
+                    str = findRows.get(y-1).value()
+                    findRows.assign({[y-1]: str.substr(0, pos)+`${hit ? '2' : '3'}`+str.substr(pos+1)}).write()
 
-                    str = findEntry.get(turn == '1' ? 'p2board' : 'p1board').get(y-1).value()
-                    findEntry.get(turn == '1' ? 'p2board' : 'p1board').assign({[y-1]: str.substr(0, index)+`${hit ? '2' : '3'}`+str.substr(index+1)}).write()
-
-                    if(findEntry.get(turn == '1' ? 'p1Hits' : 'p2Hits').value() >= 17 || !findEntry.get(turn == '1' ? 'p2board' : 'p1board').value().join('\n').includes('1')){
-                        sendTo.send('You won!');
-                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`);
+                    if(!findRows.value().join('\n').replace(/[^a-e]/g, '')){
+                        let r1 = replace(findEntry.get(turn == '1' ? 'p1Rows' : 'p2Rows').value().join('\n')),
+                            r2 = replace(findRows.value().join('\n')),
+                            embed1 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}\n\n${sendToOpp.username}'s board:\n${r2}`),
+                            embed2 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}\n\n${sendTo.username}'s board:\n${r2}`)
+                        sendTo.send('You won!', {embed: embed1});
+                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`,{embed: embed2});
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
-                catch (e) {u.errorHandler(e, 'Battleship game error')}
+                catch (e) {u.errorHandler(e, 'Battleship db write error')}
 
                 let newTrackEmbed = u.embed().setTitle(`${turn == '1' ? sendP2.username : sendP1.username}'s board`).setDescription(replace(findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').value().join('\n'))),
-                    otherPEmbed = u.embed().setTitle(`Your board`).setDescription(replace(findEntry.get(turn == '1' ? 'p2board' : 'p1board').value().join('\n'))),
+                    otherPEmbed = u.embed().setTitle(`Your board`).setDescription(replace(findRows.value().join('\n'))),
                     sunk
                 if(hit && !(findEntry.get(turn == 1 ?'p2Rows' : 'p1Rows').value()).join('').split('').includes(hit)) sunk = ['Patrol Boat','Submarine','Destroyer','Battleship','Carrier'][letterArray.indexOf(hit)]
                 sendTo.send((hit ? `Hit! 💥 ${sunk ? `You sunk their ${sunk}!` : ''}` : 'Miss!'),{embed: newTrackEmbed})
@@ -405,16 +375,16 @@ Module.addCommand({name: "playing",
                 if(board.join('').replace(/[^0]/g, '') == '') return true
                 else return null
             }
-            let test = /(\w)(\d*)/g.exec(suffix.toLowerCase().replace(' ', '')), 
+            let test = /(\w)(\d)/g.exec(suffix.toLowerCase().replace(' ', '')), 
                 x = test ? test[1] : '',
-                y = test ? test[2] : '',
+                y = test ? Math.round(test[2]) : '',
                 xes = ['a','b','c'],
                 sendP1 = msg.client.users.cache.get(findEntry.get("p1").value()),
                 sendP2 = msg.client.users.cache.get(findEntry.get("p2").value()),
                 turn = findEntry.get('turn').value(),
                 sendTo = (turn == '1' ? sendP1 : sendP2),
                 sendToOpp = (turn == '1' ? sendP2 : sendP1);
-            if(xes.includes(x) && 0 < Math.round(y) < 4){
+            if(xes.includes(x) && y > 0 && y < 4){
                 let pos = xes.indexOf(x)
                 if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 let boardVal = findEntry.get('board').value(),
@@ -430,8 +400,8 @@ Module.addCommand({name: "playing",
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                     else if(await tie(boardVal)){
-                        sendTo.send('It looks like this game is a draw.')
-                        sendToOpp.send('It looksl ike this game is a draw')
+                        sendTo.send('It looks like this game is a draw.',{embed: newEmbed})
+                        sendToOpp.send('It looksl ike this game is a draw', {embed: newEmbed})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
