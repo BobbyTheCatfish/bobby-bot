@@ -28,13 +28,13 @@ const Utils = {
         }
         
     },
-    confirmEmbed: async function(message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('Your request timed out'), time = 6000)
+    confirmEmbed: async function(message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)
     {
-            let msg = await message.channel.send({embed: promptEmbed, disableMentions: "all"})
+            let msg = await (message.channel ? message.channel : message).send({embed: promptEmbed, disableMentions: "all"})
             await msg.react('✅');
             await msg.react('🛑');
             
-            const filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === message.author.id;
+            const filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === (message.author ? message.author : message).id;
           
             try {
               const collected = await msg.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] });
@@ -48,7 +48,7 @@ const Utils = {
               }
             } catch(error) {
               msg.edit({embed: timeoutEmbed});
-              return Utils.errorHandler(error, "Confirm Embed Error");
+              return null
             }
     },
 
