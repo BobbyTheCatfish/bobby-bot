@@ -227,16 +227,14 @@ Module.addCommand({name: "playing",
                 db.get("Games").push({
                     p1: player1.id,
                     p2: player2.id,
-                    p1Blank: ['0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000'],
-                    p2Blank: ['0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000'],
                     p1Rows: generateBoard(),
                     p2Rows: generateBoard(),
                     turn: Math.floor(Math.random() * 2)+1,
                 }).write();
                 let p1embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p1Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
                     p2embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p2Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
-                    p1embed2 = u.embed().setTitle(`${player2.username}'s Board`).setDescription(replace(await findEntry.get('p2Blank').value().join('\n'))),
-                    p2embed2 = u.embed().setTitle(`${player1.username}'s Board`).setDescription(replace(await findEntry.get('p1Blank').value().join('\n')))
+                    p1embed2 = u.embed().setTitle(`${player2.username}'s Board`).setDescription(replace(await findEntry.get('p2Rows').value().join('\n').replace(/[a-e]/g, '0'))),
+                    p2embed2 = u.embed().setTitle(`${player1.username}'s Board`).setDescription(replace(await findEntry.get('p1Rows').value().join('\n').replace(/[a-e]/g, '0')))
 
                 player1.send(`It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`,{embed: p1embed1})
                 player1.send({embed: p1embed2})
@@ -256,8 +254,8 @@ Module.addCommand({name: "playing",
                 turn = findEntry.get('turn').value(),
                 sendTo = (turn == '1' ? sendP1 : sendP2),
                 sendToOpp = (turn == '1' ? sendP2 : sendP1);
-            if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
             if(xes.includes(x) && 0 < Math.round(y) < 11){
+                if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 let pos = xes.indexOf(x),
                     row = findEntry.get(turn == 1 ? 'p2Rows' : 'p1Rows').value()[y-1],
                     letterArray = ['a','b','c','d','e']
@@ -266,10 +264,7 @@ Module.addCommand({name: "playing",
                 let findRows = findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows')
                 try{
 
-                    let str = findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').get(y-1).value()
-                    findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').assign({[y-1]: str.substr(0, pos)+`${hit ? '2' : '3'}`+str.substr(pos+1)}).write()
-                    
-                    str = findRows.get(y-1).value()
+                    let str = findRows.get(y-1).value()
                     findRows.assign({[y-1]: str.substr(0, pos)+`${hit ? '2' : '3'}`+str.substr(pos+1)}).write()
 
                     if(!findRows.value().join('\n').replace(/[^a-e]/g, '')){
@@ -288,7 +283,7 @@ Module.addCommand({name: "playing",
                 }
                 catch (e) {u.errorHandler(e, 'Battleship db write error')}
 
-                let newTrackEmbed = u.embed().setTitle(`${turn == '1' ? sendP2.username : sendP1.username}'s board`).setDescription(replace(findEntry.get(turn == '1' ? 'p2Blank' : 'p1Blank').value().join('\n'))),
+                let newTrackEmbed = u.embed().setTitle(`${turn == '1' ? sendP2.username : sendP1.username}'s board`).setDescription(replace(findEntry.get(turn == '1' ? 'p2Rows' : 'p1Rows').value().join('\n').replace(/[a-e]/g, '0'))),
                     otherPEmbed = u.embed().setTitle(`Your board`).setDescription(replace(findRows.value().join('\n'))),
                     sunk
                 if(hit && !(findEntry.get(turn == 1 ?'p2Rows' : 'p1Rows').value()).join('').split('').includes(hit)) sunk = ['Patrol Boat','Submarine','Destroyer','Battleship','Carrier'][letterArray.indexOf(hit)]
