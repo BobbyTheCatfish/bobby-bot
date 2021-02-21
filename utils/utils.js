@@ -213,7 +213,7 @@ const Utils = {
             if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
             else return config.prefix;
         } catch(e) {
-            console.log(e, msg);
+            Utils.errorHandler(e, msg.content);
             return config.prefix;
         }
     },

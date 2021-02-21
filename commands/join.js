@@ -58,7 +58,7 @@ Module.addEvent('guildMemberAdd', async member => {
 })
 .addCommand({name: 'welcome',
     guildOnly: true,
-    permissions: ['MAGAGE_GUILD'],
+    permissions: ['MANAGE_GUILD'],
     process: async (msg, suffix) =>{
         let welcome = {channel: null, role: null, emoji: null, ruleChannel: null}
         let channelFilter = m => (m.content.startsWith('<#') && m.content.endsWith('>') || m.content.toLowerCase() == 'none') && m.author == msg.author

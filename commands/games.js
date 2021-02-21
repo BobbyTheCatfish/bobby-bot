@@ -4,141 +4,137 @@ let Augur = require('augurbot'),
     low = require('lowdb'),
     FileSync = require('lowdb/adapters/FileSync'),
     db = low(new FileSync('jsons/battleship.json')),
-    blankBoard = `0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000\n0000000000`
-//0 - Nothing 🟦
-//1 - Ship ⬜
-//2 - Ship Hit 💥
-//3 - Miss 🟥
-const Module = new Augur.Module();
-//The battleship board generator code is not original. You can find the original here: https://www.math.purdue.edu/~bradfoa/personal_projects/battleship/. All credit to Alden Bradford.
+    Module = new Augur.Module();
+
+//The generateBoard function below is a slightly modified version of Alden Bradford's, which you can find here: https://www.math.purdue.edu/~bradfoa/personal_projects/battleship/. All credit to Alden Bradford.
 function generateBoard(){
+    function parseShips(string){
+    let inputList = string.match(/\w,\d+/g);
+    let ships = [];
+    for(let i = 0; i < inputList.length; i++){
+        let pair = [];
+        pair[0] = inputList[i].match(/\w/)[0];
+        pair[1] = parseInt(inputList[i].match(/\d+/)[0],10);
+        ships[i] = pair;
+    }
+    return ships;
+    }
+    class Board {
+    constructor(form){
+        this.rows = 10;
+        this.cols = 10;
+        this.cells = [];
+        this.initializeCells();
+        this.shipPairs = parseShips('(a,2),(b,3),(c,3),(d,4),(e,5)');
+        this.failed = false;
+    }
+    initializeCells(){
+        this.cells = [];
+        for(let i=0;i<this.cols;i++){
+        this.cells[i]=[];
+        for(let j=0;j<this.rows;j++){
+            this.cells[i][j]= new Cell();
+        }
+        }
+    }
+    appearance(){
+        let string = 
+        "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z";
+        string = string.slice(0,this.cols*2+2);
+        string = string.concat('\n');
+        for(let j = 0; j < this.rows; j++){
+        if( j < 9)  string = string.concat('');
+        string = string.concat(`${j+1}`);
+        for(let i = 0; i < this.cols; i++){
+            string = string.concat(" "+this.cells[i][j].appearance());
+        }
+        string = string.concat('\n');
+        }
+        string = string.slice(0,-1);
+        return string;
+    }
+    placeShip(charLenPair){
+        let direction = ["v","h"][Math.floor(Math.random()*2)];
+        let max_col = this.cols;
+        let max_row = this.rows;
+        if(direction === "v") max_row -= (charLenPair[1]-1);
+        if(direction === "h") max_col -= (charLenPair[1]-1);
+        if(max_row <1 || max_col<1) return false;
+        let corner=[Math.floor(Math.random()*max_col),
+            Math.floor(Math.random()*max_row)];
+        let newShip = new Ship(charLenPair,direction,corner,this);
+        if(newShip.canFit()){
+        newShip.insert();
+        return true;
+        } else {
+        return false;
+        }
+    }
+    placeShips(){
+        for(let attempt = 0; attempt < 1000000; attempt++){
+        this.initializeCells();
+        let attemptSuccessful = true;
+        for(let i = 0; i<this.shipPairs.length; i++){
+            if(!this.placeShip(this.shipPairs[i])){
+            attemptSuccessful = false;
+            break;
+            }
+        }
+        if(attemptSuccessful){
+            return;
+        }
+        }
+        this.failed = true;
+    }
+    }
+    class Ship{
+    constructor(charLenPair,orientation,corner,board){
+        this.appearance = charLenPair[0];
+        this.length = charLenPair[1];
+        this.orientation = orientation;
+        this.corner = corner;
+        this.board = board;
+    }
+    cells(){
+        let cellList = [];
+        if(this.orientation === "h"){
+        for(let i = 0; i < this.length; i++){
+            cellList[i] = this.board.cells[this.corner[0]+i][this.corner[1]  ];
+        }
+        }
+        if(this.orientation === "v"){
+        for(let i = 0; i < this.length; i++){
+            cellList[i] = this.board.cells[this.corner[0]  ][this.corner[1]+i];
+        }
+        }
+        return cellList;
+    }
+    canFit(){
+        let cellList = this.cells();
+        for(let i = 0; i<this.length; i++){
+        if(cellList[i].contains) return false;
+        }
+        return true;
+    }
+    insert(){
+        let cellList=this.cells();
+        for(let i = 0; i<this.length; i++){
+        cellList[i].contains = this;
+        }	
+    }
+    }
+    class Cell {
+    constructor(){
+    this.contains = null;
+    }
+    appearance(){
+        return this.contains ? this.contains.appearance : '~';
+    }
+    }
     let board = new Board();
     board.placeShips();
     if (board.failed) return null
     return board.appearance().replace(/[^a-e~\n]/g, '').replace(/~/g, '0').split('\n').splice(1)
-}
-function parseShips(string){
-let inputList = string.match(/\w,\d+/g);
-let ships = [];
-for(let i = 0; i < inputList.length; i++){
-    let pair = [];
-    pair[0] = inputList[i].match(/\w/)[0];
-    pair[1] = parseInt(inputList[i].match(/\d+/)[0],10);
-    ships[i] = pair;
-}
-return ships;
-}
-class Board {
-constructor(form){
-    this.rows = 10;
-    this.cols = 10;
-    this.cells = [];
-    this.initializeCells();
-    this.shipPairs = parseShips('(a,2),(b,3),(c,3),(d,4),(e,5)');
-    this.failed = false;
-}
-initializeCells(){
-    this.cells = [];
-    for(let i=0;i<this.cols;i++){
-    this.cells[i]=[];
-    for(let j=0;j<this.rows;j++){
-        this.cells[i][j]= new Cell();
-    }
-    }
-}
-appearance(){
-    let string = 
-    "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z";
-    string = string.slice(0,this.cols*2+2);
-    string = string.concat('\n');
-    for(let j = 0; j < this.rows; j++){
-    if( j < 9)  string = string.concat('');
-    string = string.concat(`${j+1}`);
-    for(let i = 0; i < this.cols; i++){
-        string = string.concat(" "+this.cells[i][j].appearance());
-    }
-    string = string.concat('\n');
-    }
-    string = string.slice(0,-1);
-    return string;
-}
-placeShip(charLenPair){
-    let direction = ["v","h"][Math.floor(Math.random()*2)];
-    let max_col = this.cols;
-    let max_row = this.rows;
-    if(direction === "v") max_row -= (charLenPair[1]-1);
-    if(direction === "h") max_col -= (charLenPair[1]-1);
-    if(max_row <1 || max_col<1) return false;
-    let corner=[Math.floor(Math.random()*max_col),
-        Math.floor(Math.random()*max_row)];
-    let newShip = new Ship(charLenPair,direction,corner,this);
-    if(newShip.canFit()){
-    newShip.insert();
-    return true;
-    } else {
-    return false;
-    }
-}
-placeShips(){
-    for(let attempt = 0; attempt < 1000000; attempt++){
-    this.initializeCells();
-    let attemptSuccessful = true;
-    for(let i = 0; i<this.shipPairs.length; i++){
-        if(!this.placeShip(this.shipPairs[i])){
-        attemptSuccessful = false;
-        break;
-        }
-    }
-    if(attemptSuccessful){
-        return;
-    }
-    }
-    this.failed = true;
-}
-}
-class Ship{
-constructor(charLenPair,orientation,corner,board){
-    this.appearance = charLenPair[0];
-    this.length = charLenPair[1];
-    this.orientation = orientation;
-    this.corner = corner;
-    this.board = board;
-}
-cells(){
-    let cellList = [];
-    if(this.orientation === "h"){
-    for(let i = 0; i < this.length; i++){
-        cellList[i] = this.board.cells[this.corner[0]+i][this.corner[1]  ];
-    }
-    }
-    if(this.orientation === "v"){
-    for(let i = 0; i < this.length; i++){
-        cellList[i] = this.board.cells[this.corner[0]  ][this.corner[1]+i];
-    }
-    }
-    return cellList;
-}
-canFit(){
-    let cellList = this.cells();
-    for(let i = 0; i<this.length; i++){
-    if(cellList[i].contains) return false;
-    }
-    return true;
-}
-insert(){
-    let cellList=this.cells();
-    for(let i = 0; i<this.length; i++){
-    cellList[i].contains = this;
-    }	
-}
-}
-class Cell {
-constructor(){
-this.contains = null;
-}
-appearance(){
-    return this.contains ? this.contains.appearance : '~';
-}
 }
 Module.addCommand({name: "playing",
     guildOnly: true,
@@ -197,6 +193,10 @@ Module.addCommand({name: "playing",
     aliases: ['b'],
     category: "Games",
     process: async(msg, args) =>{
+        //0 - Nothing 🟦
+        //1 - Ship ⬜
+        //2 - Ship Hit 💥
+        //3 - Miss 🟥
         db.defaults({ Games: []}).write()
         function replace(board){
             let prefixes = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'],
@@ -227,11 +227,11 @@ Module.addCommand({name: "playing",
                 db.get("Games").push({
                     p1: player1.id,
                     p2: player2.id,
-                    p1Blank: blankBoard.split('\n'),
-                    p2Blank: blankBoard.split('\n'),
+                    p1Blank: ['0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000'],
+                    p2Blank: ['0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000','0000000000'],
                     p1Rows: generateBoard(),
                     p2Rows: generateBoard(),
-                    turn: Math.floor(Math.random() * 2),
+                    turn: Math.floor(Math.random() * 2)+1,
                 }).write();
                 let p1embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p1Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
                     p2embed1 = u.embed().setTitle(`Your Board`).setDescription(replace((await findEntry.get('p2Rows').value()).join('\n'))).setFooter("To send a torpedo, do !b <tile>. For example, !b a1"),
@@ -329,40 +329,29 @@ Module.addCommand({name: "playing",
             
             msg.channel.send("Starting game...")
             player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
-            player2.send(`${player1.username} has requested to play a game of tic tak toe with you. Please confirm or deny their request.`).then(async startDM => {
-                let filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === player2.id;
-                await startDM.react('✅')
-                await startDM.react('🛑')
-                startDM.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] }).then(async collected => {
-                    const reaction = collected.first();
-                    if (reaction.emoji.name == '✅'){
-                        player1.send(`${player2.username} accepted the request. Starting the game....`)
-                        player2.send(`Confirmation recieved. Starting the game...`)
-                        let turn = Math.floor(Math.random()*2)+1
-                        player1 = turn == 1 ? player1 : player2
-                        player2 = turn == 1 ? player2 : msg.author
-                        db.get("Games").push({
-                            p1: player1.id,
-                            p2: player2.id,
-                            board: ['1️⃣ 0 0 0','2️⃣ 0 0 0','3️⃣ 0 0 0','🆚 🇦 🇧 🇨'],
-                            turn,
-                        }).write();
-                        let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
-                        let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
-
-                        player1.send(`${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
-                        player2.send(`${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
-                    } 
-                    else{
-                        player2.send(`Game denial recieved. Letting ${player1.username} know.`)
-                        return player1.send(`${player1.username} didn't want to play.`)
-                    }
-                }).catch((err) => {
-                    u.errorHandler(err)
-                    player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
-                    return player2.send(`The request was canceled because you didn't respond in time!`)
-                })
-            })
+            let promptEmbed = u.embed().setTitle('Tic Tac Toe Request').setDescription(`${player1.username} has requested to play a game of tic tak toe with you. Please confirm or deny their request.`),
+                confirmEmbed = u.embed().setTitle('Confirmation recieved.').setDescription('Starting the game...'),
+                cancelEmbed = u.embed().setTitle('Cancelation acknowledged').setDescription(`Letting ${player1.username} know.`),
+                confirm = u.confirmEmbed(player2, promptEmbed, confirmEmbed, cancelEmbed)
+            if(confirm == true){
+                player1.send(`${player2.username} accepted the request. Starting the game....`)
+                let turn = Math.floor(Math.random() *2 ) +1
+                player1 = turn == 1 ? player1 : player2
+                player2 = turn == 1 ? player2 : msg.author
+                db.get("Games").push({
+                    p1: player1.id,
+                    p2: player2.id,
+                    board: ['1️⃣ 0 0 0','2️⃣ 0 0 0','3️⃣ 0 0 0','🆚 🇦 🇧 🇨'],
+                    turn,
+                }).write();
+                let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
+                let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
+    
+                player1.send(`${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
+                player2.send(`${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
+            } 
+            else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
+            else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
         }
         else{
             async function win(board, turn){
@@ -379,9 +368,9 @@ Module.addCommand({name: "playing",
                 if(board.join('').replace(/[^0]/g, '') == '') return true
                 else return null
             }
-            let test = /(\w)(\d)/g.exec(suffix.toLowerCase().replace(' ', '')), 
+            let test = /([a-c])([1-3])/gi.exec(suffix.toLowerCase().replace(' ', '')), 
                 x = test ? test[1] : '',
-                y = test ? Math.round(test[2]) : '',
+                y = test ? test[2] : '',
                 xes = ['a','b','c'],
                 sendP1 = msg.client.users.cache.get(findEntry.get("p1").value()),
                 sendP2 = msg.client.users.cache.get(findEntry.get("p2").value()),
