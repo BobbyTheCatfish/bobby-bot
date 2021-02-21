@@ -294,8 +294,8 @@ Module.addCommand({name: "playing",
             else if(args.toLowerCase() == 'quit'){
                 let toQuitter = (msg.author.id == sendP1.id ? sendP1 : sendP2),
                     toQuitted = (msg.author.id == sendP1.id ? sendP2 : sendP1)
-                toQuitter.send("You forfitted the match. GG!")
-                toQuitted.send(`${toQuitter.username} forfitted the match. GG!`)
+                toQuitter.send("You forfeited the match. GG!")
+                toQuitted.send(`${toQuitter.username} forfeited the match. GG!`)
                 db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
             }
             else if(args.toLowerCase() == 'remind') sendToOpp.send(`${msg.author.username} wanted to remind you that it's your turn!`)
