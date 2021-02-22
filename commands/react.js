@@ -25,7 +25,9 @@ Module.addEvent('message', async (msg) =>{
                         else return msg.reply("You need to `@mention` a user with that tag!").then(u.clean);
                     }
                 }
-                return msg.channel.send(replaceContent, {files: [read.file]})
+                if(read.file && read.text) return msg.channel.send(replaceContent, {files: [read.file]})
+                else if(read.text) return msg.channel.send(replaceContent)
+                else return msg.channel.send({files: [read.file]})
             }
         }
     }
