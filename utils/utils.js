@@ -262,14 +262,10 @@ const Utils = {
         if(validUrl.isUri(message)) return true
         else return undefined
     },
-    botSpam: (message) =>
-    {
-        if (message.guild && (message.guild.id == config.bobbyGuild) && (message.channel.id != "209046676781006849") && (message.channel.id != config.channels.botspam))
-        {
-            message.reply(`I've placed your results in <#${config.channels.botspam}> to keep things nice and tidy in here. Hurry before they get cold!`).then(Utils.clean);
-            return message.guild.channels.cache.get(config.channels.botspam);
-        }
-        else return message.channel;
+    botSpam: (msg) =>{
+        if(!msg.guild) return msg.channel
+        let channel = msg.client.db.guildconfig.getBotLobby(msg.guild.id)
+        return channel ? channel : msg.channel 
     },    
     errorHandler: function(error, msg = null) {
         if (!error) return;
@@ -278,11 +274,11 @@ const Utils = {
         let embed = Utils.embed().setTitle(error.name);
     
         if (msg instanceof Discord.Message) {
-          console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM")}: ${msg.cleanContent}`);
+          console.error(`${msg.author?.username} in ${(msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM")}: ${msg.cleanContent}`);
           const client = msg.client;
           msg.channel.send("I've run into an error. I've let my devs know.")
             .then(Utils.clean);
-          embed.addField("User", msg.author.username, true)
+          embed.addField("User", msg.author?.username, true)
             .addField("Location", (msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM"), true)
             .addField("Command", msg.cleanContent || "`undefined`", true);
         } else if (typeof msg === "string") {
