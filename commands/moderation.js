@@ -368,7 +368,7 @@ Module.addCommand({name: "ban",
         if(!suffix) return msg.channel.send(`The prefix is \`${read}\``).then(u.clean)
         if(suffix.length > 3) return msg.reply("you cannot have a prefix of more than 3 characters.").then(u.clean)
         await Module.db.guildconfig.savePrefix(msg.guild.id, suffix);
-        return msg.channel.send(`Changed the prefix to \`${read}\``).then(u.clean)
+        return msg.channel.send(`Changed the prefix to \`${await Module.db.guildconfig.getPrefix(msg.guild.id)}\``).then(u.clean)
     }
 })
 .addEvent('messageReactionAdd', async (reaction, user) =>{
