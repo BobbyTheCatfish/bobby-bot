@@ -128,7 +128,7 @@ Module.addCommand({name: "8ball",
             final.push(k)
         });
         msg.delete()
-        return msg.channel.send(`${msg.member ? msg.member.displayName : msg.author.username} + ' when ' + final.join(' ')`, {files: ['media/mewhen.png']})
+        return msg.channel.send(`${msg.member ? msg.member.displayName : msg.author.username} when ${final.join(' ')}`, {files: ['media/mewhen.png']})
     }
 })
 .addCommand({name: "poll",
