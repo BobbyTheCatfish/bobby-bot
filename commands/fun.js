@@ -62,7 +62,7 @@ Module.addCommand({name: "8ball",
     category: "Fun",
     process: async (msg, args) =>{
         let flip = Math.floor(Math.random()*2)
-        if(msg.guild.id == '408747484710436877' && msg.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
+        if(msg.guild?.id == '408747484710436877' && msg.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
         if(args.toLowerCase() == 'heads'){
             if(flip >=1) return msg.react('💀').then(msg.react('🎉'))
             else return msg.react('🪱').then(msg.react('❌'))
@@ -247,7 +247,7 @@ Module.addCommand({name: "8ball",
                 }
                 else if(unicode(x)){
                     let requested
-                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{essage.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
+                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{msg.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
                     let toPng = await svgToImg.from(requested.data).toPng()
                     let image = await Jimp.read(toPng)
                     canvas.blit(image, 150 * a, 150 * (o-1))
