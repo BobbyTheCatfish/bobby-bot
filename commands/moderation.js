@@ -30,7 +30,7 @@ Module.addCommand({name: "ban",
             if(decision == true)
             {
                 try{
-                    msg.guild.member(target).ban(`${msg.author.username} banned them for: ${reason.substr(0,400)}`);
+                    msg.guild.member(target).ban(`${msg.author.username} banned them for: ${reason}`);
                 }catch(e){
                     msg.channel.send("I ran into an error while banning them.")
                     logChannel ? logChannel.send(`An error occured while trying to ban ${target}: ${e}`) : console.log(e)
