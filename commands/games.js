@@ -377,8 +377,8 @@ Module.addCommand({name: "playing",
                 if((sendP1.id == msg.author.id && turn == '2') || (sendP2 == msg.author.id && turn == '1')) return msg.author.send("It's not your turn!")
                 let boardVal = findEntry.get('board').value(),
                     index = 2*pos+4
+                    newEmbed
                 if(boardVal[y-1].charAt(index) != 0) return msg.author.send("That tile already has a marker on it!")
-                let newEmbed
                 try{
                     findEntry.get('board').assign({[y-1]: boardVal[y-1].substr(0, index)+`${turn == '1' ? 'o' : 'x'}`+boardVal[y-1].substr(index+1)}).write()
                     newEmbed = u.embed().setTitle('The Board').setDescription(await replace(findEntry.get('board').value())).setFooter(`To place your piece, (O), do \`!t xy\` (example: \`!b a1\`)`)
@@ -399,6 +399,96 @@ Module.addCommand({name: "playing",
                 return findEntry.assign({turn: turn == '1' ? '2' : '1'}).write()
             }
             else return msg.author.send("That's not the right format! Try something like `!t a1`")
+        }
+    }
+})
+.addCommand({name: "blackjack",
+    process: async(msg, suffix)=>{
+        db = low(new FileSync('jsons/blackjack.json'))
+        db.defaults({Games: []}).write()
+        let findEntry = db.get('Games').find({'p1': msg.author.id})
+        if(db.get('Games').find({'p2': msg.author.id}).get('p2').value()) findEntry = db.get('Games').find({'p2': msg.author.id})
+        async function replace(board){
+            return board.join('\n').replace(/0/g, '🟦').replace(/x/g, '🇽').replace(/o/g, '🇴')
+        }
+        if(!findEntry.get('p1').value()){
+            let player1 = msg.author,
+                player2 = msg.mentions.users.first()
+
+            if(!player2) return msg.channel.send("Who do you want to play against?")
+            if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
+            if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
+            if(findEntry.get('p1').value() == player2.id || findEntry.get('p2').value() == player2.id) return msg.channel.send("That person is already in a game.")
+            
+            player1.send(`Game request sent to ${player2.username}. Waiting for their confirmation`)
+            let promptEmbed = u.embed().setTitle('Tic Tac Toe Request').setDescription(`${player1.username} has requested to play a game of tic tak toe with you. Please confirm or deny their request.`),
+                confirmEmbed = u.embed().setTitle('Confirmation recieved.').setDescription('Starting the game...'),
+                cancelEmbed = u.embed().setTitle('Cancelation acknowledged').setDescription(`Letting ${player1.username} know.`),
+                confirm = u.confirmEmbed(player2, promptEmbed, confirmEmbed, cancelEmbed)
+            if(confirm == true){
+                player1.send(`${player2.username} accepted the request. Starting the game....`)
+                let turn = Math.floor(Math.random() *2 ) +1,
+                    botDraws = [],
+                    cardArray = [],
+                    p1Draws = [],
+                    p2Draws = []
+                for(let i = 1; i < 57; i++) cardArray.push(i)
+                player1 = turn == 1 ? player1 : player2
+                player2 = turn == 1 ? player2 : msg.author
+                while(botDraws.length < 3){
+                    let tempDraws = []
+                    let backupCardArray = cardArray
+                    let card = cardArray[Math.floor(Math.random * cardArray.length)]
+                    tempDraws.push(card)
+                    cardArray = cardArray.filter(c => c != card)
+                    if(tempDraws.reduce() > 21){
+                        tempDraws = []
+                        cardArray = backupCardArray
+                    }
+                    if(!tempDraws.reduce() < 21 && !tempDraws.reduce > 13) draw()
+                    else botDraws = tempDraws
+                }
+                while(p1Draws.length < 3){
+                    let backupCardArray = cardArray
+                    let card = cardArray[Math.floor(Math.random * cardArray.length)]
+                    p1Draws.push(card)
+                    cardArray = cardArray.filter(c => c != card)
+                    if(p1Draws.reduce() > 21){
+                        p1Draws = []
+                        cardArray = backupCardArray
+                    }   
+                    
+                }
+                while(p2Draws.length < 3){
+                    let backupCardArray = cardArray
+                    let card = cardArray[Math.floor(Math.random * cardArray.length)]
+                    p2Draws.push(card)
+                    cardArray = cardArray.filter(c => c != card)
+                    if(p2Draws.reduce() > 21){
+                        p2Draws = []
+                        cardArray = backupCardArray
+                    }
+                }
+                db.get("Games").push({
+                    p1: player1.id,
+                    p2: player2.id,
+                    p1Draws,
+                    p2Draws,
+                    botDraws,
+                    turn,
+                    cardArray
+                }).write();
+                let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
+                let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
+    
+                player1.send(`${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
+                player2.send(`${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
+            } 
+            else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
+            else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
+        }
+        else{
+            
         }
     }
 })
