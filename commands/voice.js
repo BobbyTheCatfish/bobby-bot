@@ -28,7 +28,7 @@ Module.addCommand({name:"play",
           {
             songInfo = await ytdl.getInfo(args);
             song = {title: songInfo.videoDetails.title, url: songInfo.videoDetails.video_url};
-          }catch (error) {return msg.channel.send("Couldn't find that song! Make sure it's a valid youtube URL")}
+          }catch (error) {console.log(error);return msg.channel.send("Couldn't find that song! Make sure it's a valid youtube URL")}
     
           if(!serverQueue)
           {
