@@ -63,6 +63,10 @@ Module.addCommand({name: "inventory",
             else if(reaction.emoji.name == '🙋') roleToAdd = '752288725769257121'
             else try{return await reaction.users.remove(member)}catch(error){}
         }
+        else if(reaction.message.id == '816683339854512159'){
+            if(reaction.emoji.id == '784239487852478535') roleToAdd = '816682305653440573'
+
+        }
         else if(reaction.message.id == '763414193713315841'){
             if(reaction.emoji.name == '🔔') roleToAdd = '763049563577647124'
             else try{return await reaction.users.remove(member)}catch(error){}
@@ -108,7 +112,7 @@ Module.addCommand({name: "inventory",
                 try{await reaction.message.guild.member(member).roles.remove(roles)}catch(error){console.log(error)}
             }
         }
-        if(['757627485247766566','763414193713315841','765691902048993324','765752313477988362','766084149110505503'].includes(reaction.message.id))try {await reaction.message.guild.member(member).roles.add(roleToAdd)} catch (error) {console.log(error)}
+        if(['816683339854512159','757627485247766566','763414193713315841','765691902048993324','765752313477988362','766084149110505503'].includes(reaction.message.id))try {await reaction.message.guild.member(member).roles.add(roleToAdd)} catch (error) {console.log(error)}
     } catch (error) {console.log('error while adding reaction role',error)}
   })
 .addEvent("messageReactionRemove", async (reaction, member) => {
