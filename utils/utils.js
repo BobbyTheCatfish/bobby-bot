@@ -181,7 +181,7 @@ const Utils = {
     },
     properCase: async (txt) => txt.split(" ").map(word => (word[0].toUpperCase() + word.substr(1).toLowerCase())).join(" "),
     
-    rand: async (array) => array[Math.floor(Math.random() * array.length)],
+    rand: (array) => array[Math.floor(Math.random() * array.length)],
     
     validUrl: async (message) =>{
         if(validUrl.isUri(message)) return true
