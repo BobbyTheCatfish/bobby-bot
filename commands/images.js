@@ -1,9 +1,7 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    colors = require('colors'),
     Jimp = require('jimp'),
-    request = require('request'),
-    dwebp = require('cwebp').DWebp
+    axios = require('axios')
 
 async function getTarget(msg, suffix, keywords=false){
     let target,
@@ -146,7 +144,7 @@ Module.addCommand({name: "amongus",
         try{
             if (color != 255){
                 let img = new Jimp(256, 256, color);
-                return msg.channel.send({files: [await img.getBufferAsync(Jimp.MIME_PNG)]});
+                return msg.channel.send(`\`${color.toString(16)}\``,{files: [await img.getBufferAsync(Jimp.MIME_PNG)]});
             }
             return msg.reply(`sorry, I couldn't understand the color "${args}"`).then(u.clean);
         } catch (error) {console.log(error)}
@@ -340,6 +338,45 @@ Module.addCommand({name: "amongus",
             }
         }
         if (!processed) msg.channel.send("I couldn't find any recent images to rotate!")
+    }
+})
+.addCommand({name: 'animal',
+    category: 'Images',
+    process: async(msg, args)=>{
+        let animals = ['Cat','Dog','Shiba','Bird','Fox','Lizard','Owl']
+        if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals.join('\n')}\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
+        let a = args.toLowerCase(),
+        image
+        if(a == animals[0].toLowerCase()) image = (await axios.get('https://aws.random.cat/meow')).data.file
+        else if(a == animals[1].toLowerCase()) image = (await axios.get('https://dog.ceo/api/breeds/image/random')).data.message
+        else if(a == animals[2].toLowerCase()) image = (await axios.get('http://shibe.online/api/shibes')).data[0]
+        else if(a == animals[3].toLowerCase()) image = (await axios.get('https://shibe.online/api/birds')).data[0]
+        else if(a == animals[4].toLowerCase()) image = (await axios.get('https://randomfox.ca/floof/')).data.image
+        else if(a == animals[5].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url
+        else if(a == animals[6].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return Module.commands.find('animal').execute(msg, args)}
+        if(!image) return msg.channel.send("That's not one of the animals!")
+        try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.')}
+    }
+})
+.addCommand({name: 'luna',
+    category: 'Images',
+    process: async(msg, args)=>{
+        const fs = require('fs'),
+            file = await fs.readFile('media/luna.txt', 'utf8'),
+            pic = u.rand(file.split('\n'))
+        msg.channel.send(pic)
+            
+    }
+})
+.addCommand({name: 'addluna',
+    category: 'Images',
+    ownerOnly: true,
+    process: async(msg, args)=>{
+        const fs = require('fs')
+        file = await fs.appendFile('media/luna.txt', `\n${args}`, function (err) {
+            if (err) throw err;
+          })
+        return msg.channel.send('Luna Pics Added 🐱')
     }
 })
 
