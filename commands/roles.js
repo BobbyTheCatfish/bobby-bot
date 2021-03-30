@@ -1,6 +1,7 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    colors = require('colors')
+    colors = require('colors'),
+    emoji = require('emoji-aware').onlyEmoji
 
 const Module = new Augur.Module();
 Module.addCommand({name: "inventory",
@@ -48,6 +49,50 @@ Module.addCommand({name: "inventory",
             }
         }
     }    
+})
+
+.addCommand({name: 'reactionrole',
+    ownerOnly: true,
+    process: async(msg, args) =>{
+        let things = []
+        let time = 5000*60
+        let contentFilter = m => m.content
+        let roleFilter = m => m.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase())
+        let emojiFilter = m => emoji(m.content)?.first() || m.guild.emojis.cache.find(e => e.id == m.replace(/[^0-9]]/g, '') || e.name == m)
+        let sendNSave = async() =>{
+            return msg.channel.send("Will get around to this later")
+        }
+        let prompt = async () =>{
+            let embed = u.embed().setTitle(`What should the ${things.length > 0 ? 'first' : 'next'} emoji be?`).setDescription('You can either use the emoji, or type the name or id of a server emoji.')
+            msg.author.send({embed}).then(async m =>{
+                await m.channel.awaitMessages(emojiFilter, {max: 1, time, errors: ['time']})
+                .then(async collected =>{
+                    let emoji = emojiFilter(collected.first())
+                    embed = embed.setTitle('What role should be associated with it?')
+                    msg.author.send({embed}).then(async ms =>{
+                        await ms.channel.awaitMessages(roleFilter, {max: 1, time, errors: ['time']})
+                        .then(async coll =>{
+                            let role = roleFilter(coll.first())
+                            things.push({emoij: emoji, role: role})
+                            embed = u.embed().setTitle("Do you want to add more?")
+                            msg.author.send({embed}).then(async message =>{
+                                let filter = reaction => ['✅','❌'].includes(reaction.emoji.name)
+                                await message.react('✅')
+                                await message.react('❌')
+                                await message.channel.awaitReactions(filter, {max: 1, time, errors: ['time']})
+                                .then(async collected =>{
+                                    let reacted = collected.first().emoji.name
+                                    if(reacted == '✅') return await prompt()
+                                    else return await sendNSave()
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+
+        }
+    }
 })
 .addEvent("messageReactionAdd", async (reaction, member) =>{
     try {

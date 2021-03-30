@@ -1,6 +1,7 @@
 const GuildConfig = require('../schemas/guildconfig'),
     Tags = require('../schemas/tags'),
     GTags = require('../schemas/globalTags'),
+    rRoles = require('../schemas/reactionRoles')
     config = require("../config/config.json"),
     mongoose = require("mongoose");
 
@@ -201,6 +202,24 @@ const models = {
             else return null
         },
         disableWelcome: async (guildId) => {return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled': false})}
+    },
+    reactionRoles: {
+        getAllReactionRoles: async()=>{
+            return await rRoles.find().exec()
+        },
+        getGuildReactionRoles: async(guildId) =>{
+            let globalDoc = await rRoles.find().exec()
+            let rRole = globalDoc.filter(r => r.guildId == guildId)
+            return rRole ?? null
+        },
+        addReactionRoles: async(msg, reactions, removeOnUnreact)=>{
+            return rRoles.create({guildId: msg.guild, channelId: msg.channel, messageId: msg.id, reactions, removeOnUnreact})
+        },
+        removeReactionRoles: async(messageId) =>{
+            let globalDoc = await rRoles.find().exec()
+            let rRole = globalDoc.find(r => r.messageId == messageId)
+            return rRole ? rRoles.findOneAndDelete({messageId}) : null
+        }
     },
     init: (bot) => {
       bot.guilds.cache.forEach(guild => {
