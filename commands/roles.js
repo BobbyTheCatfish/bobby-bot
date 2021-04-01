@@ -54,35 +54,47 @@ Module.addCommand({name: "inventory",
 .addCommand({name: 'reactionrole',
     ownerOnly: true,
     process: async(msg, args) =>{
-        let things = []
-        let time = 5000*60
-        let contentFilter = m => m.content
-        let roleFilter = m => m.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase())
-        let emojiFilter = m => emoji(m.content)?.first() || m.guild.emojis.cache.find(e => e.id == m.replace(/[^0-9]]/g, '') || e.name == m)
+        u.clean(msg, 0)
+        let things = [],
+            yesNo = ['✅','❌'],
+            time = 5000*60
+        let filter = r => yesNo.includes(r.emoji.name) && !r.me
+        let roleFilter = m => msg.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase())
+        let emojiFilter = m => emoji(m.content)[0] ? {id: null, name: emoji(m.content)[0]} : null || msg.guild.emojis.cache.find(e => e.id == m.content.replace(/[^0-9]]/g, '') || e.name.toLowerCase() == m.content.toLowerCase())
         let sendNSave = async() =>{
-            return msg.channel.send("Will get around to this later")
+            let embed = u.embed().setTitle('Should the roles be removed when the user unreacts?')
+            msg.author.send({embed}).then(async m => {
+                await u.react(m, yesNo)
+                await m.awaitReactions(filter, {max: 1, time, errors: ['time']}).then(async collected => {
+                    let removeOnUnreact = false
+                    if(collected.first().emoji.name == yesNo[0]) removeOnUnreact = true
+                    let combine = []
+                    for(x of things) combine.push(`${x.id ? `<:${x.name}:${x.id}>` : x.name} - <@&${x.roleId}>`)
+                    embed.setTitle(`Get your role${things.length > 1 ? 's' : ''}!`).setDescription(`React with the corresponding emoji to get the role!${removeOnUnreact ? '\nUnreact to get the role taken away.' : ''}\n${combine.join('\n')}`).setFooter('Remember that you have to use !equip <role name> to get the color!')
+                    msg.author.send(`Sending the message in ${msg.channel}`)
+                    msg.channel.send({embed, disableMentions: 'all'}).then(async message =>{
+                        await Module.db.reactionRoles.saveReactionRoles(message, things, removeOnUnreact)
+                        await u.react(message, things.map(t => t.id || t.name))
+                    })
+                })
+            })
         }
         let prompt = async () =>{
-            let embed = u.embed().setTitle(`What should the ${things.length > 0 ? 'first' : 'next'} emoji be?`).setDescription('You can either use the emoji, or type the name or id of a server emoji.')
+            let embed = u.embed().setTitle(`What should the ${things.length < 1 ? 'first' : 'next'} emoji be?`).setDescription('You can either use the emoji, or type the name or id of a server emoji.')
             msg.author.send({embed}).then(async m =>{
-                await m.channel.awaitMessages(emojiFilter, {max: 1, time, errors: ['time']})
-                .then(async collected =>{
+                await m.channel.awaitMessages(emojiFilter, {max: 1, time, errors: ['time']}).then(async collected =>{
                     let emoji = emojiFilter(collected.first())
-                    embed = embed.setTitle('What role should be associated with it?')
+                    embed = u.embed().setTitle(`What role should be associated with ${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name}?`)
                     msg.author.send({embed}).then(async ms =>{
-                        await ms.channel.awaitMessages(roleFilter, {max: 1, time, errors: ['time']})
-                        .then(async coll =>{
+                        await ms.channel.awaitMessages(roleFilter, {max: 1, time, errors: ['time']}).then(async coll =>{
                             let role = roleFilter(coll.first())
-                            things.push({emoij: emoji, role: role})
-                            embed = u.embed().setTitle("Do you want to add more?")
+                            things.push({name: emoji.name, id: emoji.id, roleId: role.id})
+                            embed = u.embed().setTitle("Do you want to add more?").setDescription(`The following will be added:\n${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name} - <@&${role.id}>`)
                             msg.author.send({embed}).then(async message =>{
-                                let filter = reaction => ['✅','❌'].includes(reaction.emoji.name)
-                                await message.react('✅')
-                                await message.react('❌')
-                                await message.channel.awaitReactions(filter, {max: 1, time, errors: ['time']})
-                                .then(async collected =>{
+                                await u.react(message, yesNo)
+                                await message.awaitReactions(filter, {max: 1, time, errors: ['time']}).then(async collected =>{
                                     let reacted = collected.first().emoji.name
-                                    if(reacted == '✅') return await prompt()
+                                    if(reacted == yesNo[0]) return await prompt()
                                     else return await sendNSave()
                                 })
                             })
@@ -90,95 +102,35 @@ Module.addCommand({name: "inventory",
                     })
                 })
             })
-
         }
+        await prompt()
     }
 })
-.addEvent("messageReactionAdd", async (reaction, member) =>{
+.addEvent("messageReactionAdd", async (reaction, user) =>{
     try {
-      let roleToAdd
-        if(reaction.message.id == '757627485247766566'){ 
-            if(reaction.emoji.name == '🎮') roleToAdd = '543613328598237184'
-            else if(reaction.emoji.id == '756664793439666296') roleToAdd = '756673988339433582'
-            else if(reaction.emoji.name == '🇦') roleToAdd = '752288637453992008'
-            else if(reaction.emoji.name == '🔫') roleToAdd = '513847806436573217'
-            else if(reaction.emoji.name == '☮️')  roleToAdd = '685683556994777133'
-            else if(reaction.emoji.name == '💁‍♀️') roleToAdd = '687406901079834656'
-            else if(reaction.emoji.name == '🍎') roleToAdd = '550093235691978782'
-            else if(reaction.emoji.name == '🙋') roleToAdd = '752288725769257121'
-            else try{return await reaction.users.remove(member)}catch(error){}
-        }
-        else if(reaction.message.id == '816683339854512159'){
-            if(reaction.emoji.id == '784239487852478535') roleToAdd = '816682305653440573'
-
-        }
-        else if(reaction.message.id == '763414193713315841'){
-            if(reaction.emoji.name == '🔔') roleToAdd = '763049563577647124'
-            else try{return await reaction.users.remove(member)}catch(error){}
-        }
-        else if(reaction.message.id == '765691902048993324'){
-                if(reaction.emoji.id == '765690921270378507') roleToAdd = '765673542565363752'//red
-            else if(reaction.emoji.id == '765690920585789452') roleToAdd = '765673736585609225'//blue
-            else if(reaction.emoji.id == '765690921047293972') roleToAdd = '765673820286877697'//green
-            else if(reaction.emoji.id == '765690921089105992') roleToAdd = '765673865824829490'//pink
-            else if(reaction.emoji.id == '765690921022914581') roleToAdd = '765673918907809813'//orange
-            else if(reaction.emoji.id == '765690921358327838') roleToAdd = '765673959277723649'//yellow
-            else if(reaction.emoji.id == '765690920704016404') roleToAdd = '765673985203503144'//black
-            else if(reaction.emoji.id == '765690921215852544') roleToAdd = '765674056036909088'//white
-            else if(reaction.emoji.id == '765690920884240435') roleToAdd = '765674084243210251'//purple
-            else if(reaction.emoji.id == '765690920833908776') roleToAdd = '765674130326290483'//brown
-            else if(reaction.emoji.id == '765690920791179314') roleToAdd = '765674206833934337'//cyan
-            else if(reaction.emoji.id == '765690921052274768') roleToAdd = '765674248094089247'//lime
-            else try{return await reaction.users.remove(member)}catch(error){}
-            let g = reaction.message.guild.member(member).roles.cache
-            let roles = ['765673542565363752','765673736585609225','765673820286877697','765673865824829490','765673918907809813','765673959277723649','765673985203503144','765674056036909088','765674084243210251','765674130326290483','765674206833934337','765674248094089247']
-            if(g.has(roles[0]) || g.has(roles[1]) || g.has(roles[2]) || g.has(roles[3]) || g.has(roles[4]) || g.has(roles[5]) || g.has(roles[6]) || g.has(roles[7]) || g.has(roles[8]) || g.has(roles[9]) || g.has(roles[10]) || g.has(roles[11])){
-                try {
-                    await reaction.message.guild.member(member).roles.remove(roles)
-                    await reaction.users.remove(member);
-                } catch (error) {console.log(error)}
-            }
-        }
-        else if(reaction.message.id == '765752313477988362'){
-            if(reaction.emoji.id == '765751012723523615') roleToAdd = '765749150796611614'//amongus pings
-            if(reaction.emoji.id == '765751540144799745') roleToAdd = '765749245680418836'//mc pings
-            if(reaction.emoji.name == '✏️') roleToAdd = '765749212263612466'//skribbl pings
-            else try{return await reaction.users.remove(member)}catch(error){}
-        }
-        else if(reaction.message.id == '766084149110505503'){
-            if(reaction.emoji.name == '🇸') roleToAdd = '766084189115908116'//sen
-            else if(reaction.emoji.name == '🇯') roleToAdd = '766084246908960779'//jun
-            else if(reaction.emoji.name == '3️⃣') roleToAdd = '766084383991005195'//sop
-            else if(reaction.emoji.name == '🇫') roleToAdd = '766084645003460609'//fresh
-            else try{return await reaction.users.remove(member)}catch(error){}
-            let roles = ['766084189115908116','766084246908960779','766084383991005195','766084645003460609']
-            let g = reaction.message.guild.member(member).roles.cache
-            if(g.has(roles[0])||g.has(roles[1])||g.has(roles[2])||g.has(roles[3])){
-                try{await reaction.message.guild.member(member).roles.remove(roles)}catch(error){console.log(error)}
-            }
-        }
-        if(['816683339854512159','757627485247766566','763414193713315841','765691902048993324','765752313477988362','766084149110505503'].includes(reaction.message.id))try {await reaction.message.guild.member(member).roles.add(roleToAdd)} catch (error) {console.log(error)}
+      let dbLookup = await Module.db.reactionRoles.getReactionRole(reaction.message.id)
+      if(dbLookup[0]){
+        let member = reaction.message.guild.member(user),
+            role = dbLookup[0].reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId
+        if(!role) reaction.users.remove(member.user)
+        else if(!reaction.message.guild.roles.cache.get(role)) return (await u.errorChannel(reaction.message)).send({embed: u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)})
+        else if(!member.roles.cache.get(role)) member.roles.add(role)
+      }
     } catch (error) {console.log('error while adding reaction role',error)}
   })
-.addEvent("messageReactionRemove", async (reaction, member) => {
+.addEvent("messageReactionRemove", async (reaction, user) => {
     try{
-        let roleToRemove
-        if(reaction.message.id == '765752313477988362'){
-            let g = reaction.message.guild.member(member).roles.cache
-            if(reaction.emoji.id == '765751012723523615') roleToRemove = '765749150796611614'//amongus pings
-            if(reaction.emoji.id == '765751540144799745') roleToRemove = '765749245680418836'//mc pings
-            if(reaction.emoji.name == '✏️') roleToRemove = '765749212263612466'//skribbl pings
-            if(g.has(roleToRemove))
-            try {await reaction.message.guild.member(member).roles.remove(roleToRemove)} catch (error) {} 
-        }
-        else if(reaction.message.id == '766084149110505503'){
-            let g = reaction.message.guild.member(member).roles.cache
-            if(reaction.emoji.name == '🇸') roleToRemove = '766084189115908116'//sen
-            if(reaction.emoji.name == '🇯') roleToRemove = '766084246908960779'//jun
-            if(reaction.emoji.name == '3️⃣') roleToRemove = '766084383991005195'//sop
-            if(reaction.emoji.name == '🇫') roleToRemove = '766084645003460609'//fresh
-            if(g.has(roleToRemove)) try{await reaction.message.guild.member(member).roles.remove(roleToRemove)}catch(error){}
+        let dbLookup = await Module.db.reactionRoles.getRemoveableRoles(reaction.message.id)
+        if(dbLookup){
+            let member = reaction.message.guild.member(user),
+                role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId
+            if(!reaction.message.guild.roles.cache.get(role)) (await u.errorChannel(reaction.message)).send({embed: u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)})
+            else if(member.roles.cache.get(role)) member.roles.remove(member.guild.roles.cache.get(role))
         }
     }catch(error){console.log('Error on reaction role removal', error)}
+})
+.addEvent('ready', async ()=>{
+    let dbLookup = await Module.db.reactionRoles.getAllReactionRoles()
+    for({messageId, channelId} of dbLookup) Module.client.channels.cache.get(channelId).messages.fetch(messageId)
 })
 module.exports = Module

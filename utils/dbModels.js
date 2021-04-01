@@ -204,21 +204,26 @@ const models = {
         disableWelcome: async (guildId) => {return GuildConfig.findOneAndUpdate({guildId}, {'welcome.enabled': false})}
     },
     reactionRoles: {
+        getReactionRole: async(messageId)=>{
+            return await rRoles.find({messageId}).exec()
+        },
         getAllReactionRoles: async()=>{
             return await rRoles.find().exec()
         },
         getGuildReactionRoles: async(guildId) =>{
-            let globalDoc = await rRoles.find().exec()
-            let rRole = globalDoc.filter(r => r.guildId == guildId)
-            return rRole ?? null
+            return await rRoles.find({guildId}).exec()
         },
-        addReactionRoles: async(msg, reactions, removeOnUnreact)=>{
-            return rRoles.create({guildId: msg.guild, channelId: msg.channel, messageId: msg.id, reactions, removeOnUnreact})
+        saveReactionRoles: async(msg, reactions, removeOnUnreact)=>{
+            return rRoles.create({guildId: msg.guild.id, channelId: msg.channel.id, messageId: msg.id, reactions, removeOnUnreact})
         },
         removeReactionRoles: async(messageId) =>{
             let globalDoc = await rRoles.find().exec()
             let rRole = globalDoc.find(r => r.messageId == messageId)
             return rRole ? rRoles.findOneAndDelete({messageId}) : null
+        },
+        getRemoveableRoles: async(messageId) =>{
+            let globalDoc = await rRoles.find({removeOnUnreact: true}).exec()
+            return globalDoc.find(r => r.messageId == messageId)
         }
     },
     init: (bot) => {

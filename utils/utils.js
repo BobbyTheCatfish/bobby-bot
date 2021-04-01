@@ -183,6 +183,15 @@ const Utils = {
     
     rand: (array) => array[Math.floor(Math.random() * array.length)],
     
+    react: async (message, reactions) => {
+        let i = 0
+        let x = setInterval(()=>{
+            message.react(reactions[i])
+            i++
+            if(i == reactions.length) clearInterval(x)
+        }, 1500)
+    },
+
     validUrl: async (message) =>{
         if(validUrl.isUri(message)) return true
         else return undefined
@@ -190,8 +199,13 @@ const Utils = {
     botSpam: async (msg) =>{
         if(!msg.guild) return msg.channel
         let channel = await msg.client.db.guildconfig.getBotLobby(msg.guild.id)
-        return channel ? channel : msg.channel
-    },    
+        return channel ?? msg.channel
+    },
+    errorChannel: async(msg) =>{
+        if(!msg.guild) return msg.channel
+        let channel = await msg.client.db.guildconfig.getErrorChannel(msg.guild.id)
+        return msg.client.channels.cache.get(channel) ?? msg.channel
+    },
     errorHandler: async (error, msg = null) => {
         if (!error) return;
         console.error(Date());

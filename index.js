@@ -4,7 +4,7 @@ const {AugurClient} = require('augurbot'),
   client = new AugurClient(config,{
     clientOptions:{
       disableMentions: "everyone",
-      partials: ["REACTION","MESSAGE"],
+      partials: ["REACTION"],
       //parse: u.parse //isn't working so i modified augur
     },
     commands: "./commands",
