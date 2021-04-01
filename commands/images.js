@@ -353,7 +353,7 @@ Module.addCommand({name: "amongus",
         else if(a == animals[3].toLowerCase()) image = (await axios.get('https://shibe.online/api/birds')).data[0]
         else if(a == animals[4].toLowerCase()) image = (await axios.get('https://randomfox.ca/floof/')).data.image
         else if(a == animals[5].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url
-        else if(a == animals[6].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return Module.commands.find('animal').execute(msg, args)}
+        else if(a == animals[6].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return Module.commands.get('animal').exec(msg, args)}
         if(!image) return msg.channel.send("That's not one of the animals!")
         try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.')}
     }
