@@ -52,7 +52,8 @@ Module.addCommand({name: "inventory",
 })
 
 .addCommand({name: 'reactionrole',
-    ownerOnly: true,
+    permissions: ['ADMINISTRATOR'],
+    //ownerOnly: true,
     process: async(msg, args) =>{
         u.clean(msg, 0)
         let things = [],
@@ -61,6 +62,7 @@ Module.addCommand({name: "inventory",
         let filter = r => yesNo.includes(r.emoji.name) && !r.me
         let roleFilter = m => msg.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase())
         let emojiFilter = m => emoji(m.content)[0] ? {id: null, name: emoji(m.content)[0]} : null || msg.guild.emojis.cache.find(e => e.id == m.content.replace(/[^0-9]]/g, '') || e.name.toLowerCase() == m.content.toLowerCase())
+        if(Module.db.reactionRoles.getGuildReactionRole(msg.guild.id)[0]) return msg.reply("Looks like there's already a reaction role thing set up! Modification and deletion coming soon.")
         let sendNSave = async() =>{
             let embed = u.embed().setTitle('Should the roles be removed when the user unreacts?')
             msg.author.send({embed}).then(async m => {
@@ -84,22 +86,36 @@ Module.addCommand({name: "inventory",
             msg.author.send({embed}).then(async m =>{
                 await m.channel.awaitMessages(emojiFilter, {max: 1, time, errors: ['time']}).then(async collected =>{
                     let emoji = emojiFilter(collected.first())
-                    embed = u.embed().setTitle(`What role should be associated with ${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name}?`)
-                    msg.author.send({embed}).then(async ms =>{
-                        await ms.channel.awaitMessages(roleFilter, {max: 1, time, errors: ['time']}).then(async coll =>{
-                            let role = roleFilter(coll.first())
-                            things.push({name: emoji.name, id: emoji.id, roleId: role.id})
-                            embed = u.embed().setTitle("Do you want to add more?").setDescription(`The following will be added:\n${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name} - <@&${role.id}>`)
-                            msg.author.send({embed}).then(async message =>{
-                                await u.react(message, yesNo)
-                                await message.awaitReactions(filter, {max: 1, time, errors: ['time']}).then(async collected =>{
-                                    let reacted = collected.first().emoji.name
-                                    if(reacted == yesNo[0]) return await prompt()
-                                    else return await sendNSave()
+                    if(things.find(t => t.id ? t.id == emoji.id : t.name == emoji.name)){
+                        embed = u.embed().setTitle(`That emoji is already assigned to a role`)
+                        msg.author.send({embed})
+                        return await (prompt())
+                    }
+                    let prompt2 = async ()=>{
+                        embed = u.embed().setTitle(`What role should be associated with ${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name}?`)
+                        msg.author.send({embed}).then(async ms =>{
+                            await ms.channel.awaitMessages(roleFilter, {max: 1, time, errors: ['time']}).then(async coll =>{
+                                let role = roleFilter(coll.first())
+                                if(things.find(t => t.roleId == role.id)){
+                                    embed = u.embed().setTitle(`That role is already assigned to an emoji`)
+                                    msg.author.send({embed})
+                                    return await prompt2()
+                                }
+                                things.push({name: emoji.name, id: emoji.id, roleId: role.id})
+                                if(things.length >= 10) return await sendNSave()
+                                embed = u.embed().setTitle(`Do you want to add more? (*${10-things.length}* left)`).setDescription(`The following has been added:\n${emoji.id ? `<:${emoji.name}:${emoji.id}` : emoji.name} - ${role.name}`)
+                                msg.author.send({embed}).then(async message =>{
+                                    await u.react(message, yesNo)
+                                    await message.awaitReactions(filter, {max: 1, time, errors: ['time']}).then(async collected =>{
+                                        let reacted = collected.first().emoji.name
+                                        if(reacted == yesNo[0]) return await prompt()
+                                        else return await sendNSave()
+                                    })
                                 })
                             })
                         })
-                    })
+                    }
+                    await prompt2()
                 })
             })
         }
@@ -116,7 +132,7 @@ Module.addCommand({name: "inventory",
         else if(!reaction.message.guild.roles.cache.get(role)) return (await u.errorChannel(reaction.message)).send({embed: u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)})
         else if(!member.roles.cache.get(role)) member.roles.add(role)
       }
-    } catch (error) {console.log('error while adding reaction role',error)}
+    } catch (error) {u.errorHandler(error, 'Error on adding reaction role')}
   })
 .addEvent("messageReactionRemove", async (reaction, user) => {
     try{
@@ -127,7 +143,7 @@ Module.addCommand({name: "inventory",
             if(!reaction.message.guild.roles.cache.get(role)) (await u.errorChannel(reaction.message)).send({embed: u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)})
             else if(member.roles.cache.get(role)) member.roles.remove(member.guild.roles.cache.get(role))
         }
-    }catch(error){console.log('Error on reaction role removal', error)}
+    }catch(error){u.errorHandler(error, 'Error on reaction role removal')}
 })
 .addEvent('ready', async ()=>{
     let dbLookup = await Module.db.reactionRoles.getAllReactionRoles()

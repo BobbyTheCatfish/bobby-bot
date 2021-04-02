@@ -230,8 +230,6 @@ const Utils = {
         embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));
         errorLog.send(embed);
     }
-
-    
 };
 
 module.exports = Utils;

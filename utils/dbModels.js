@@ -210,8 +210,8 @@ const models = {
         getAllReactionRoles: async()=>{
             return await rRoles.find().exec()
         },
-        getGuildReactionRoles: async(guildId) =>{
-            return await rRoles.find({guildId}).exec()
+        getGuildReactionRole: async(guildId) =>{
+            return await rRoles.find({guildId})?.exec()
         },
         saveReactionRoles: async(msg, reactions, removeOnUnreact)=>{
             return rRoles.create({guildId: msg.guild.id, channelId: msg.channel.id, messageId: msg.id, reactions, removeOnUnreact})
