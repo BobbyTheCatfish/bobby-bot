@@ -722,10 +722,10 @@
   "resolved" "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz"
   "version" "0.4.0"
 
-"augurbot@^2.1.2":
-  "integrity" "sha512-nd/xE0R4UIvgu+ukWTS3xI460xPedfJ8kuOd7W0YEalkPc5O6WzkveD6eImavBvW4q6MO37vZIFtNOh7yNhQhg=="
-  "resolved" "git+https://BobbyTheCatfish@bitbucket.org/BobbyTheCatfish/augurbot.git"
-  "version" "2.1.2"
+"augurbot@^2.5.4":
+  "integrity" "sha512-5uu5aarYQc5MeSj5G23oCddkQND2ohIjlog3qvHnk6INJGK2VY10UKhuMPqy730BE18g4jzD0lyHqcYng5v+qw=="
+  "resolved" "https://registry.npmjs.org/augurbot/-/augurbot-2.5.4.tgz"
+  "version" "2.5.4"
 
 "aws-sign2@~0.7.0":
   "integrity" "sha1-tG6JCTSpWR8tL2+G1+ap8bP+dqg="
@@ -1464,7 +1464,7 @@
   "resolved" "https://registry.yarnpkg.com/diff/-/diff-5.0.0.tgz"
   "version" "5.0.0"
 
-"discord.js@^12.2.0", "discord.js@>=12.2.0":
+"discord.js@^12.2.0", "discord.js@>=12.x":
   "integrity" "sha512-VwZkVaUAIOB9mKdca0I5MefPMTQJTNg0qdgi1huF3iwsFwJ0L5s/Y69AQe+iPmjuV6j9rtKoG0Ta0n9vgEIL6w=="
   "resolved" "https://registry.yarnpkg.com/discord.js/-/discord.js-12.5.1.tgz"
   "version" "12.5.1"
@@ -1846,15 +1846,6 @@
   "integrity" "sha1-+8cfDEGt6zf5bFd60e1C2P2sypE="
   "resolved" "https://registry.npmjs.org/forever-agent/-/forever-agent-0.6.1.tgz"
   "version" "0.6.1"
-
-"form-data@^3.0.0":
-  "integrity" "sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg=="
-  "resolved" "https://registry.npmjs.org/form-data/-/form-data-3.0.1.tgz"
-  "version" "3.0.1"
-  dependencies:
-    "asynckit" "^0.4.0"
-    "combined-stream" "^1.0.8"
-    "mime-types" "^2.1.12"
 
 "form-data@~2.3.2":
   "integrity" "sha512-1lLKB2Mu3aGP1Q/2eCOx0fNbRMe7XdwktwOruhfqqd0rIJWwN4Dh+E3hrPSlDCXnSR7UtZ1N38rVXm+6+MEhJQ=="
@@ -3286,7 +3277,7 @@
   dependencies:
     "lodash.toarray" "^4.4.0"
 
-"node-fetch@^2.3.0", "node-fetch@^2.6.0", "node-fetch@^2.6.1":
+"node-fetch@^2.3.0", "node-fetch@^2.6.1":
   "integrity" "sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw=="
   "resolved" "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz"
   "version" "2.6.1"
@@ -3337,14 +3328,6 @@
     "rimraf" "^2.6.1"
     "semver" "^5.3.0"
     "tar" "^4"
-
-"node-superfetch@^0.1.10":
-  "integrity" "sha512-984lO43EvDtjBOpVXDqnR2L5+pVt+qWfqIE6H7Sl21BoIz26OwSKxBnO9ZmJkYXAimR64MUPiz6tn5hySy1d0Q=="
-  "resolved" "https://registry.npmjs.org/node-superfetch/-/node-superfetch-0.1.11.tgz"
-  "version" "0.1.11"
-  dependencies:
-    "form-data" "^3.0.0"
-    "node-fetch" "^2.6.0"
 
 "nodeify@^1.0.0":
   "integrity" "sha1-ZKtpp7268DzhB7TwM1yHwLnpGx0="
@@ -4837,7 +4820,7 @@
     "has-flag" "^4.0.0"
     "supports-color" "^7.0.0"
 
-"svg-to-img@^2.0.9":
+"svg-to-img@^2.0.7":
   "integrity" "sha512-FPQc7gPJq54d7cjD4vDahaXMIpZv4bk1AJOMuRtqylwdaszaAIFqgTLuP3lZFDGydAPW2okFzf3ZrwuOyRxNvw=="
   "resolved" "https://registry.npmjs.org/svg-to-img/-/svg-to-img-2.0.9.tgz"
   "version" "2.0.9"

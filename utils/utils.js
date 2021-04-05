@@ -216,7 +216,7 @@ const Utils = {
           console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM")}: ${msg.cleanContent}`);
           const client = msg.client;
           msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
-          embed.addField("User", msg.author.username, true).addField("Location", (msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM"), true).addField("Command", msg.cleanContent || "`undefined`", true);
+          embed.addField("User", msg.author.username, true).addField("Location", (msg.guild ? `${msg.guild.name} > ${msg.channel.name}` : "DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
         } else if (typeof msg === "string") {
           console.error(msg);
           embed.addField("Message", msg.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));

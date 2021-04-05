@@ -1,13 +1,14 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Jimp = require('jimp'),
-    axios = require('axios')
-
-async function getTarget(msg, suffix, keywords=false){
+    axios = require('axios'),
+    readError = 'I ran into an error while getting the image.'
+async function getTarget(msg, suffix, keywords=false, interaction = null){
     let target,
         urlexp = /\<?(https?:\/\/\S+)\>?(?:\s)?(\d*)/,
         match
-        if(!keywords){
+        if(interaction?.target) return msg.client.users.cache.get(interaction.target).displayAvatarURL({format: 'png', size: 256})
+        else if(!keywords){
             if(msg.attachments.size > 0) target = msg.attachments.first().url
             else if (match = urlexp.exec(suffix)) target = match[1]
             else{
@@ -31,24 +32,24 @@ async function getTarget(msg, suffix, keywords=false){
 const Module = new Augur.Module();
 Module.addCommand({name: "amongus",
     category: "Images",
-    process: async (msg, args) =>{
-
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
         let colorSelected
-        let words = args.toLowerCase().split(' ')[0]
+        let words = interaction?.input ?? args.toLowerCase().split(' ')[0]
         let keywords = args.split(' ').slice(1).join(' ')
         let colors = ['black','blue','brown','cyan','green','lime','orange','pink','purple','red','white','yellow']
         let target
-        if(colors.includes(words)) target = await getTarget(msg, keywords, keywords);
-        else target = await getTarget(msg, args, false)        
-        try
-        {
-        
+        if(colors.includes(words)) target = target ?? await getTarget(msg, keywords, keywords, interaction);
+        else target = target ?? await getTarget(msg, args, false, interaction)
+        try{
             if(colors.includes(words)) colorSelected = `media/amongians/${words}.png`
             else colorSelected = `media/amongians/${colors[Math.floor(Math.random() * 12)]}.png`
-
+            
             const canvas = new Jimp(353, 458, 0x00000000);
             const avatar = await Jimp.read(colorSelected);
-            try{await Jimp.read(target)}catch(e){return msg.channel.send("I couldn't read that file.")}
+            try{await Jimp.read(target)}catch(e){
+                if(interaction) return readError
+                else return msg.channel.send("I couldn't read that file.")
+            }
             const mask = await Jimp.read("./media/amongians/mask.png");
             const topLayer = await Jimp.read('media/amongians/helmetmask.png')
             const image =  await Jimp.read(target)
@@ -57,17 +58,22 @@ Module.addCommand({name: "amongus",
             canvas.mask(mask,0,0)
             avatar.blit(canvas, 0,0)
             avatar.blit(topLayer, 0, 0)
-            await msg.channel.send({files: [await avatar.getBufferAsync(Jimp.MIME_PNG)]});
+            let output = await avatar.getBufferAsync(Jimp.MIME_PNG)
+            msg.channel.send({files: [output]});
+            if(interaction) return null
         }catch (error) {console.log(error)}
     }
 })
 .addCommand({name: "andywarhol",
     category: "Images",
-    process: async (msg, args) =>{
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
         try
         {
-            let target = await getTarget(msg, args);
-            try{await Jimp.read(target)} catch(e){return msg.channel.send("I couldn't read that file.")}
+            let target = await getTarget(msg, args, false, interaction);
+            try{await Jimp.read(target)} catch(e){
+                if(interaction.target) return readError
+                else return msg.channel.send("I couldn't read that file.")
+            }
             const img = await Jimp.read(target);
             const canvas = new Jimp(536, 536, 0xffffffff);
         
@@ -82,6 +88,7 @@ Module.addCommand({name: "amongus",
             canvas.blit(img, 8, 8);
 
             await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
+            if(interaction.target) return null
         } catch (error) {console.log(error);msg.channel.send('I ran into an error. I\'ve let my developer know')}
     }
 })
@@ -95,11 +102,22 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "blur",
     category: "Images",
-    process: async (msg, args) =>{
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
         try{
-            let deg = parseInt(args, 10) || 5
-            if(deg < 0) return msg.channel.send("You can't sharpen the image with this command!")
-            if(deg > 50) return msg.channel.send("That value is too high!")
+            let deg = parseInt(interaction.input ?? args, 10) || 5,
+                response
+            if(deg < 0) response = "You can't sharpen the image with this command!"
+            else if(deg > 50) response = "That value is too high!"
+            if(interaction.target && response) return response
+            else if(response) return msg.channel.send(response)
+            if(interaction.target){
+                let target = await getTarget(msg, args, false, interaction)
+                try{await Jimp.read(target)}catch(e){return readError}
+                let image = await Jimp.read(target)
+                image.blur(deg)
+                await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
+                return `Here's your filter! (Blur amount: ${deg})`
+            }
             let processed = false;
             for (m of await msg.channel.messages.fetch({limit: 100}))
             {
@@ -120,16 +138,21 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "blurple",
     category: "Images",
-    process: async (msg, args) =>{
-        let target = await getTarget(msg, args, false)
-        try{await Jimp.read(target)}catch(e){return msg.channel.send("I couldn't read that file.")}
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
+        let target = await getTarget(msg, args, false, interaction)
+        try{await Jimp.read(target)}catch(e){
+            if(interaction.target) return readError
+            return msg.channel.send(readError)
+        }
         let image = await Jimp.read(target)
         image.color([
           { apply: "desaturate", params: [100] },
           { apply: "saturate", params: [47.7] },
           { apply: "hue", params: [227] }
         ])
-        return msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
+        
+        await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
+        if(interaction.target) return null
     }
 })
 .addCommand({name: "color",
@@ -152,34 +175,48 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "colorme",
     category: "Images",
-    process: async (msg, args) =>{
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
         let keywords = args
-        let color = parseInt(args.split(' ')[0], 10);
+        let color = parseInt(interaction.input ?? args.split(' ')[0], 10);
         
         if(color) keywords = args.replace(color+' ', '')
-        let target,
+        let target = await getTarget(msg, args, false, interaction),
             urlexp = /\<?(https?:\/\/\S+)\>?(?:\s+)?(\d*)/,
             match;
-        if (msg.attachments.size > 0) target = msg.attachments.first().url;
+        if (!target && msg.attachments.size > 0) target = msg.attachments.first().url;
         else if (match = urlexp.exec(args)){
           target = match[1];
           color = parseInt(match[2], 10);
         }
-        else target = (keywords? await u.getMention(msg, keywords, false) : await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 256})
+        else if(!target) target = (keywords? await u.getMention(msg, keywords, false) : await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 256})
         
         color = Math.floor(color) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
   
-        if(color > 360 || color < -360) return msg.channel.send("That's out of range! Try using a number between -360 and 360.")
+        if(color > 360 || color < -360) {
+            if(interaction.target) return "That's out of range! Try using a number between -360 and 360"
+            return msg.channel.send("That's out of range! Try using a number between -360 and 360.")
+        }
         
         let image = await Jimp.read(target)
         image.color([{ apply: "hue", params: [color] }]);
-        
+        if(interaction.target){
+            msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
+            return `Hue: ${color}`
+        }
         await msg.channel.send(`Hue: ${color}`,{files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
     }
 })
 .addCommand({name: "crop",
     category: "Images",
-    process: async (msg, args) =>{
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
+        if(interaction.target){
+            let target = await getTarget(msg, args, false, interaction)
+            try{await Jimp.read(target)}catch{return readError}
+            const cropped = await Jimp.read(target)
+            cropped.autocrop({cropOnlyFrames: false, cropSymmetric: false, tolerance: .01})
+            await msg.channel.send({files: [await cropped.getBufferAsync(Jimp.MIME_PNG)]})
+            return null
+        }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
         {
@@ -200,9 +237,9 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "flex",
     category: "Images",
-    process: async (msg, args) =>{
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
         const arm = "https://cdn.discordapp.com/attachments/488887953939103775/545672817354735636/509442648080121857.png";
-        const staticURL = (await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 128})
+        const staticURL = interaction.target ? await getTarget(msg, args, false, interaction) : (await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 128})
         const right = await Jimp.read(arm);
         const mask = await Jimp.read("./media/flexmask.png");
         const avatar = await Jimp.read(staticURL);
@@ -219,21 +256,36 @@ Module.addCommand({name: "amongus",
         canvas.blit(avatar, 120, 0);
   
         await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]});
+        if(interaction.target) return null
     }
 })
 .addCommand({name: "invert",
     category: "Images",
-    process: async (msg, args) =>{
-        let target = await getTarget(msg, null, false)
-        try{await Jimp.read(target)}catch(e){return msg.channel.send("I couldn't read that file.")}
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
+        let target = await getTarget(msg, null, false, interaction)
+        try{await Jimp.read(target)}catch(e){
+            if(interaction.target) return readError
+            return msg.channel.send(readError)
+        }
         let image = await Jimp.read(target)
         image.invert()
         await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
+        if(interaction.target) return null
     }
 })
 .addCommand({name: "mirror",
     category: "Images",
-    process: async (msg, direction) =>{
+    process: async (msg, direction, interaction = {target: null, input: null}) =>{
+        if(interaction.target){
+            let target = await getTarget(msg, direction, false, interaction)
+            try{await Jimp.read(target)}catch{return readError}
+            const image = await Jimp.read(target)
+            if(interaction.input == 'y') image.flip(false, true)
+            if(interaction.input == 'xy') image.flip(true, true)
+            else image.flip(true, false)
+            await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
+            return null
+        }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
         {
@@ -257,9 +309,12 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "popart",
     category: "Images",
-    process: async (msg, args) =>{
-        let target = await getTarget(msg, null, false)
-        try{await Jimp.read(target)}catch(e){return msg.channel.send("I couldn't read that file.")}
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
+        let target = await getTarget(msg, null, false, interaction)
+        try{await Jimp.read(target)}catch(e){
+            if(interaction.target) return readError
+            return msg.channel.send(readError)
+        }
         const img = await Jimp.read(target);
         const canvas = new Jimp(536, 536, 0xffffffff);
     
@@ -276,52 +331,73 @@ Module.addCommand({name: "amongus",
     
         img.color([{apply: "spin", params: [120]}]);
         canvas.blit(img, 8, 8);
-        msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]});
+        await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]});
+        if(interaction.target) return null
     }
 })
 .addCommand({name: "removebg",
-    process: async (msg, args)=>{
-        let processed = false;
-        for (m of await msg.channel.messages.fetch({limit: 100}))
-        {
-            if (m.author.bot) continue;
-            if (m.attachments.size > 0)
-            {
-                let target = m.attachments.first().url
-                processed = true;
-                try{await Jimp.read(target)}catch(e){return m.channel.send("I couldn't read that file.")}
-                const image = await Jimp.read(target)
-                const targetColor = {r: 255, g: 255, b: 255, a: 255};  // Color you want to replace
-                const replaceColor = {r: 0, g: 0, b: 0, a: 0};  // Color you want to replace with
-                const colorDistance = (c1, c2) => Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2) + Math.pow(c1.a - c2.a, 2));  // Distance between two colors
-                const threshold = 32;  // Replace colors under this threshold. The smaller the number, the more specific it is.
-                image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
-                    const thisColor = {
-                        r: image.bitmap.data[idx + 0],
-                        g: image.bitmap.data[idx + 1],
-                        b: image.bitmap.data[idx + 2],
-                        a: image.bitmap.data[idx + 3]
-                    };
-                    if(colorDistance(targetColor, thisColor) <= threshold) {
-                        image.bitmap.data[idx + 0] = replaceColor.r;
-                        image.bitmap.data[idx + 1] = replaceColor.g;
-                        image.bitmap.data[idx + 2] = replaceColor.b;
-                        image.bitmap.data[idx + 3] = replaceColor.a;
-                    }
-                });
-                await m.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
-                break
-            }
+    process: async (msg, args, interaction = {target: null, input: null})=>{
+        let image
+        let removebackground = async (image) =>{
+            const targetColor = {r: 255, g: 255, b: 255, a: 255};  // Color you want to replace
+            const replaceColor = {r: 0, g: 0, b: 0, a: 0};  // Color you want to replace with
+            const colorDistance = (c1, c2) => Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2) + Math.pow(c1.a - c2.a, 2));  // Distance between two colors
+            const threshold = 32;  // Replace colors under this threshold. The smaller the number, the more specific it is.
+            image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
+                const thisColor = {
+                    r: image.bitmap.data[idx + 0],
+                    g: image.bitmap.data[idx + 1],
+                    b: image.bitmap.data[idx + 2],
+                    a: image.bitmap.data[idx + 3]
+                };
+                if(colorDistance(targetColor, thisColor) <= threshold) {
+                    image.bitmap.data[idx + 0] = replaceColor.r;
+                    image.bitmap.data[idx + 1] = replaceColor.g;
+                    image.bitmap.data[idx + 2] = replaceColor.b;
+                    image.bitmap.data[idx + 3] = replaceColor.a;
+                }
+            });
         }
-        if (!processed) msg.channel.send("I couldn't find any recent images to remove the background from!")
-            
-
+        if(!interaction.target){
+            let processed = false;
+            for (m of await msg.channel.messages.fetch({limit: 100}))
+            {
+                if (m.author.bot) continue;
+                if (m.attachments.size > 0)
+                {
+                    let target = m.attachments.first().url
+                    processed = true;
+                    try{await Jimp.read(target)}catch(e){continue}
+                    image = await Jimp.read(target)
+                    break
+                }
+            }
+            if (!processed) return msg.channel.send("I couldn't find any recent images to remove the background from!")
+        }
+        else{
+            let target = await getTarget(msg, args, false, interaction)
+            try{await Jimp.read(target)}catch{return readError}
+            image = await Jimp.read(target)
+        }
+        removebackground(image).then(async()=>{
+            await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
+            if(interaction.target) return null
+        })
     }
 })
 .addCommand({name: "rotate",
     category: "Images",
-    process: async (msg, args) =>{
-        let deg = parseInt(args, 10) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
+    process: async (msg, args, interaction = {target: null, input: null}) =>{
+        let deg = parseInt(interaction.input ?? args, 10) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
+        if(interaction.target){
+            let target = getTarget(msg, args, false, interaction)
+            try{await Jimp.read(target)}catch{return readError}
+            const image = await Jimp.read(target)
+            image.rotate(-deg)
+            image.autocrop({cropOnlyFrames: false, tolerance: 0, leaveBorder: 3})
+            await msg.channel.send(`\`Rotated ${deg}°\``, {files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
+            return null
+        }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
         {
@@ -361,11 +437,9 @@ Module.addCommand({name: "amongus",
 .addCommand({name: 'luna',
     category: 'Images',
     process: async(msg, args)=>{
-        const fs = require('fs'),
-            file = await fs.readFile('media/luna.txt', 'utf8'),
-            pic = u.rand(file.split('\n'))
-        msg.channel.send(pic)
-            
+        let fs = require('fs'),
+            file = fs.readFileSync('media/luna.txt', 'utf8')
+        msg.channel.send(u.rand(file.split('\n')))
     }
 })
 .addCommand({name: 'addluna',
@@ -373,11 +447,26 @@ Module.addCommand({name: "amongus",
     ownerOnly: true,
     process: async(msg, args)=>{
         const fs = require('fs')
-        file = await fs.appendFile('media/luna.txt', `\n${args}`, function (err) {
+        file = fs.appendFile('media/luna.txt', `\n${args}`, function (err) {
             if (err) throw err;
           })
         return msg.channel.send('Luna Pics Added 🐱')
     }
 })
+.addInteraction({
+  id: "828084734134321162",
+  name: 'filter',
+  syntax: "filter source value",
+  category: "Images",
+  process: async (int) => {
+    //int.defer()
+    let cmd = int.data.options[0].name.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
+    let newArgs = {target: int.data.options[0].options[0].value, input: int.data.options[0].options[1]?.value}
+    let process = await int.client.commands.get(cmd).process(int, '', newArgs)
+    if(process) int.createResponse(process)
+    else(int.createResponse(`Here's your filter`))
+  }
+})
+
 
 module.exports = Module
