@@ -43,8 +43,8 @@ const Augur = require('augurbot'),
     {onlyEmoji} = require('emoji-aware')
 
 Module.addCommand({name: 'config',
-    ownerOnly: true,
-    guildOnly: true,
+    onlyOwner: true,
+    onlyGuild: true,
     category: "Mod",
     process: async (msg, suffix) =>{
         let time = 5000 * 60,

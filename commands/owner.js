@@ -31,7 +31,7 @@ const runCommand = (msg, cmd)=>{
 Module.addCommand({name: "pingeveryone",
     category: "Owner",
     hidden: true,
-    ownerOnly: true,
+    onlyOwner: true,
     process: async (msg, suffix) =>{
         if(msg.author.id != '337713155801350146') return
         try {
@@ -46,7 +46,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "pinghere",
         category: "Owner",
         hidden: true,
-        ownerOnly: true,
+        onlyOwner: true,
         process: async (msg, suffix) =>{
             if(msg.author.id != '337713155801350146') return
             try {
@@ -61,7 +61,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "activity",
         category: "Owner",
         syntax: '<type>|<url> (if applicable)',
-        ownerOnly: true,
+        onlyOwner: true,
         process: async (msg, suffix) =>{
             let words = suffix.split(' ')
             let keywords = words.slice(1).join(' ')
@@ -156,7 +156,7 @@ Module.addCommand({name: "pingeveryone",
 
     .addCommand({name: "email",
         category: "Owner",
-        ownerOnly: true,
+        onlyOwner: true,
         process: async (msg, suffix) =>{
             if(!suffix) return msg.channel.send("what are you thinking, dummy? give me some args")
             let emailAddress = suffix.split('|')[0]
@@ -213,7 +213,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "iamyourdev",
         category: 'Owner',
         hidden: true,
-        dmOnly: true,
+        onlyDM: true,
         process: async(msg, suffix)=>{
             const devGuild = msg.client.guilds.cache.get('406821751905976320')
             if((await devGuild.fetchBans()).find(m => m.id == msg.author.id)) return msg.author.send("You were banned from the bot testing server.")
@@ -227,7 +227,7 @@ Module.addCommand({name: "pingeveryone",
 
     .addCommand({name: "send",
         category: "Owner",
-        ownerOnly: true,
+        onlyOwner: true,
         description: "Sends stuff to a specific channel",
         process: async (msg, suffix) =>{
             if(!suffix) return msg.channel.send("what are you thinking, dummy? give me some args")
@@ -243,7 +243,7 @@ Module.addCommand({name: "pingeveryone",
 
     .addCommand({name: "servers",
         category: "Owner",
-        ownerOnly: true,
+        onlyOwner: true,
         description: "Gets the number of servers the bot is in",
         process: async (msg, suffix) =>{
             let getGuilds = msg.client.guilds.cache?.map(g => `${g.name}`).join("\n");
@@ -257,7 +257,7 @@ Module.addCommand({name: "pingeveryone",
 
     .addCommand({name: "commands",
         category: "Owner",
-        ownerOnly: true,
+        onlyOwner: true,
         description: "Number of commands",
         process: async (msg, suffix) =>{
             msg.channel.send(`There are \`${msg.client.commands.size}\` commands${(suffix.toLowerCase() == 'list') ? `\n${msg.client.commands.map(e => e.name).join('\n')}` : ''}`)
@@ -265,7 +265,7 @@ Module.addCommand({name: "pingeveryone",
     })
 
     .addCommand({name: 'spam',
-        ownerOnly: true,
+        onlyOwner: true,
         description: 'spam pings for when you really need it',
         process: async (msg, args) =>{
             setInterval(() => {
@@ -277,7 +277,7 @@ Module.addCommand({name: "pingeveryone",
     //github stuff
     .addCommand({name: 'add',
         category: 'Owner',
-        ownerOnly: true,
+        onlyOwner: true,
         description: 'Add files to the repo (step 1)',
         hidden: true,
         process: async (msg) => {
@@ -287,7 +287,7 @@ Module.addCommand({name: "pingeveryone",
     })
     .addCommand({name: 'commit',
         category: 'Owner',
-        ownerOnly: true,
+        onlyOwner: true,
         description: 'Commit files to the repo (step 2)',
         hidden: true,
         process: async (msg, suffix) => {
@@ -299,7 +299,7 @@ Module.addCommand({name: "pingeveryone",
     })
     .addCommand({name: "push",
         category: 'Owner',
-        ownerOnly: true,
+        onlyOwner: true,
         description: "Push bot updates to the git (step 3)",
         hidden: true,
         process: async (msg, suffix) =>{
@@ -309,7 +309,7 @@ Module.addCommand({name: "pingeveryone",
     })
     .addCommand({name: "pull",
         category: "Owner",
-        ownerOnly: true,
+        onlyOwner: true,
         description: "Pull bot updates from git",
         hidden: true,
         process: (msg) => {
@@ -321,7 +321,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "reload",
         category: "Bot Admin",
         hidden: true,
-        ownerOnly: true,
+        onlyOwner: true,
         syntax: "[file1.js] [file2.js]",
         description: "Reload command files.",
         info: "Use the command without a suffix to reload all command files.\n\nUse the command with the module name (including the `.js`) to reload a specific file.",
@@ -341,7 +341,7 @@ Module.addCommand({name: "pingeveryone",
     .addCommand({name: "reloadlib",
         category: "Bot Admin",
         hidden: true,
-        ownerOnly: true,
+        onlyOwner: true,
         syntax: "[file1.js] [file2.js]",
         description: "Reload local library files.",
         process: (msg, suffix) => {

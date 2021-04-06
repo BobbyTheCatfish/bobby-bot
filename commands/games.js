@@ -137,7 +137,7 @@ function generateBoard(){
     return board.appearance().replace(/[^a-e~\n]/g, '').replace(/~/g, '0').split('\n').splice(1)
 }
 Module.addCommand({name: "playing",
-    guildOnly: true,
+    onlyGuild: true,
     category: "Games",
     process: async(msg, suffix)=>{
         function currentPlayers(game){

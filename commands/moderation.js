@@ -10,7 +10,7 @@ Module.addCommand({name: "ban",
     description: "Bans people",
     info: "Want to ban someone from your server? Look no further. You can also ban multiple people in one swing of the ban hammer.",
     category: "Mod",
-    guildOnly: true,
+    onlyGuild: true,
     process: async (msg, suffix) =>{
         if(!msg.member.hasPermission("BAN_MEMBERS")) return msg.channel.send("You are not worthy to wield the ban hammer.").then(m => u.clean([m,msg]))
         let target, promptEmbed, confirmEmbed, cancelEmbed,
@@ -81,7 +81,7 @@ Module.addCommand({name: "ban",
     info: "Want to kick someone from your server? Look no further. You can also kick multiple people in one swing of the boot.",
     category: "Mod",
     permissions: ['KICK_MEMBERS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async (msg, suffix) =>{
         const logChannel = null
         let target
@@ -153,7 +153,7 @@ Module.addCommand({name: "ban",
     info: "Deletes up to 200 messages in a channel, including the one you send",
     category: "Mod",
     permissions:['MANAGE_MESSAGES'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async (msg, suffix) =>{
         var deleteCount = suffix;
         if(isNaN(deleteCount) || !deleteCount || deleteCount < 2 || deleteCount > 200) return msg.channel.send("Please provide a number between 2 and 200 for the number of messages to delete")
@@ -167,7 +167,7 @@ Module.addCommand({name: "ban",
     description: "Disconnects all members from VCs",
     category: "Mod",
     permissions: ['MOVE_MEMBERS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async (msg, suffix) =>{
         let total = []
         for(let m of msg.guild.members.cache){
@@ -185,7 +185,7 @@ Module.addCommand({name: "ban",
     description: 'Tool for managing server emojis',
     category: 'Mod',
     permissions: ['MANAGE_EMOJIS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async (msg, suffix) =>{
         const validName = 'You need to specify a valid name for the emoji'
         const validLink = 'You need to upload a picture or paste a link. If you posted a link but it didnt work, try including https:// at the start and making sure that it ends with .png or .gif'
@@ -233,7 +233,7 @@ Module.addCommand({name: "ban",
     description: 'Locks all the VCs',
     category: 'Mod',
     permissions: ['MOVE_MEMBERS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         if(!msg.guild.id == '765669316217143315') return
         if(!msg.member.hasPermission('MANAGE_MESSAGES')) return msg.channel.send("You don't have permission to use that command.")
@@ -257,7 +257,7 @@ Module.addCommand({name: "ban",
     description: 'Mutes people',
     category: 'Mod',
     permissions: ['MANAGE_ROLES'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         let s = []
         let err = []
@@ -282,7 +282,7 @@ Module.addCommand({name: "ban",
     description: 'Unmutes people',
     category: 'Mod',
     permissions: ['MANAGE_ROLES'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         let s = []
         let err = []
@@ -307,7 +307,7 @@ Module.addCommand({name: "ban",
     description: 'Mutes all members in a VC',
     category: 'Mod',
     permissions: ['MUTE_MEMBERS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to mute the members in it!");
@@ -318,7 +318,7 @@ Module.addCommand({name: "ban",
     description: 'Unutes all members in a VC',
     category: 'Mod',
     permissions: ['MUTE_MEMBERS'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
@@ -329,7 +329,7 @@ Module.addCommand({name: "ban",
     description: `Changes someone's nickname`,
     category: 'Mod',
     permissions: ['MANAGE_NICKNAMES'],
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         let nickUser = msg.guild.member(msg.mentions.users.first());
         if(!nickUser) return msg.channel.send("Who's nickname would you like me to change?")
@@ -341,7 +341,7 @@ Module.addCommand({name: "ban",
 .addCommand({name:'say',
     description: `Repeats after you`,
     category: 'Mod',
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, suffix) =>{
         if(msg.author.id == '337713155801350146' || (msg.member.hasPermission("ADMINISTRATOR")))
         {
@@ -360,7 +360,7 @@ Module.addCommand({name: "ban",
 .addCommand({name:'prefix',
     description: `Changes the server prefix`,
     category: 'Mod',
-    guildOnly: true,
+    onlyGuild: true,
     otherPerms: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.hasPermission("ADMINISTRATOR")),
     process: async(msg, suffix) =>{
         let read = await Module.db.guildconfig.getPrefix(msg.guild.id)

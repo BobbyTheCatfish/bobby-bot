@@ -98,14 +98,14 @@ Module.addCommand({name:"play",
         }
     }
 }).addCommand({name:'join',
-  ownerOnly: true,
+  onlyOwner: true,
   process: async(msg, args) =>{
     const voiceChannel = msg.member.voice.channel;
     if(!voiceChannel) return msg.channel.send("You need to be in a voice channel for me to join!");
     await voiceChannel.join();
   }
 }).addCommand({name: 'leave',
-  ownerOnly: true,
+  onlyOwner: true,
   process: async(msg,args)=>{
     const voiceChannel = msg.member.voice.channel;
     if(!voiceChannel) return msg.channel.send("You need to be in a voice channel for me to leave!");

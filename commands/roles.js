@@ -5,7 +5,7 @@ const Augur = require('augurbot'),
 
 const Module = new Augur.Module();
 Module.addCommand({name: "inventory",
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, args)=>{
         let inventory = msg.guild.roles.cache.filter(r => msg.member.roles.cache.find(e => e.name.toLowerCase()+' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
         let embed = u.embed().setAuthor(msg.member.displayName, msg.member.user.displayAvatarURL({format: 'png'}))
@@ -16,7 +16,7 @@ Module.addCommand({name: "inventory",
     }
 })
 .addCommand({name: "equip",
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg, args)=>{
         let words = args.split(' ')
         if(words[0].toLowerCase() == 'none'){
@@ -53,7 +53,7 @@ Module.addCommand({name: "inventory",
 
 .addCommand({name: 'reactionrole',
     permissions: ['ADMINISTRATOR'],
-    //ownerOnly: true,
+    //onlyOwner: true,
     process: async(msg, args) =>{
         u.clean(msg, 0)
         let things = [],

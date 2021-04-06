@@ -5,7 +5,7 @@ const Augur = require('augurbot'),
 const Module = new Augur.Module();
 
 Module.addCommand({name: 'embed',
-    guildOnly: true,
+    onlyGuild: true,
     permissions: ['MANAGE_WEBHOOKS'],
     category: "Moderation",
     process: async(msg, suffix) =>{

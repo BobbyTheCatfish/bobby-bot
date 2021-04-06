@@ -444,7 +444,7 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: 'addluna',
     category: 'Images',
-    ownerOnly: true,
+    onlyOwner: true,
     process: async(msg, args)=>{
         const fs = require('fs')
         file = fs.appendFile('media/luna.txt', `\n${args}`, function (err) {

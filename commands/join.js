@@ -57,7 +57,7 @@ Module.addEvent('guildMemberAdd', async member => {
     }
 })
 .addCommand({name: 'welcome',
-    guildOnly: true,
+    onlyGuild: true,
     permissions: ['MANAGE_GUILD'],
     process: async (msg, suffix) =>{
         let welcome = {channel: null, role: null, emoji: null, ruleChannel: null}

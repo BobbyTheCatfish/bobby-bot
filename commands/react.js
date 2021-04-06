@@ -34,7 +34,7 @@ Module.addEvent('message', async (msg) =>{
 })
 
 .addCommand({name: 'tag',
-    guildOnly: true,
+    onlyGuild: true,
     otherPerms: (msg) =>  msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId,
     process: async(msg, args) =>{
         if(await Module.db.tags.globalStatus(msg.guild.id)){
@@ -72,7 +72,7 @@ Module.addEvent('message', async (msg) =>{
     }
 })
 .addCommand({name: 'tags',
-    guildOnly: true,
+    onlyGuild: true,
     process: async(msg,args)=>{
         if(args.toLowerCase() == 'global' && ((msg.member && msg.member.hasPermission('ADMINISTRATOR')|| msg.author.id == Module.config.ownerId))){
             if(!await Module.db.tags.globalStatus(msg.guild.id)){
