@@ -11,6 +11,12 @@ const GuildConfigSchema = new mongoose.Schema({
         required: true,
         default: '!',
     },
+    roles: {
+        type: Object,
+        muted: {
+            type: String
+        }
+    },
     welcome: {
         type: Object,
         enabled: {

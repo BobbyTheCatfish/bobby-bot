@@ -104,6 +104,18 @@ const models = {
                 if(channel) return channel.flags
             }
             return null
+        },
+        getMutedRole: async(guildId) =>{
+            if(await GuildConfig.exists({guildId})){
+                let guildDoc = await GuildConfig.findOne({guildId}).exec()
+                let role = guildDoc?.roles?.muted
+                if(role) return role
+            }
+            return null
+        },
+        saveMutedRole: async(guildId, muted) =>{
+            if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"roles.muted": muted}, {new: true})
+            return null
         }
     },
     tags:{

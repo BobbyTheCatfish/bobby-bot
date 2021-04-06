@@ -68,11 +68,10 @@ Module.addCommand({name: 'config',
                             msg.channel.send("I had a problem saving that.")
                             return mainMenu()
                         }
-                        else{
-                            let newEmbed = u.embed().setTitle(`Error log channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Errors will be ${channel ? `sent to ${channel}` : 'contained to my logs'}`)
-                            msg.channel.send(newEmbed)
-                            return mainMenu()
-                        }
+                        let newEmbed = u.embed().setTitle(`Error log channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Errors will be ${channel ? `sent to ${channel}` : 'contained to my logs'}`)
+                        msg.channel.send(newEmbed)
+                        return mainMenu()
+
                     }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                 })
             }
@@ -91,11 +90,9 @@ Module.addCommand({name: 'config',
                             msg.channel.send("I had a problem saving that.")
                             return mainMenu()
                         }
-                        else{
-                            let newEmbed = u.embed().setTitle(`Bot lobby channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Large text dumsp will be ${!channel ? 'sent in the channel they\'re sent in' : `sent to ${(channel)}`}`)
-                            msg.channel.send(newEmbed)
-                            return mainMenu()
-                        }
+                        let newEmbed = u.embed().setTitle(`Bot lobby channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Large text dumps will be ${!channel ? 'sent in the channel they\'re sent in' : `sent to ${(channel)}`}`)
+                        msg.channel.send(newEmbed)
+                        return mainMenu()
                     }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                 })
             }
@@ -106,10 +103,9 @@ Module.addCommand({name: 'config',
                     let content = collected.first().content
                     if(content.toLowerCase().startsWith('error')) return errorChannel()
                     else if(content.toLowerCase().startsWith('bot')) return botLobby()
-                    else{
-                        msg.channel.send("That's not one of the options")
-                        return channelPrompt()
-                    }
+                    msg.channel.send("That's not one of the options")
+                    return channelPrompt()
+                    
                 }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
             })
         }
@@ -125,7 +121,7 @@ Module.addCommand({name: 'config',
                                 msg.channel.send("I couldn't find that channel. Please try again.")
                                 return channelPrompt(msg)
                             }
-                            else return reactions(channel.id)
+                            return reactions(channel.id)
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                 }
@@ -138,17 +134,13 @@ Module.addCommand({name: 'config',
                                 if(reactionz.length == 0) reactionz = ['⭐','🌟']
                                 return singleChannel(channel, reactionz)
                             }
-                            else{
-                                let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content) || onlyEmoji(content)
-                                if(!findEmoji){
-                                    msg.channel.send("I couldn't find that emoji!")
-                                    return reactions(channel, reactionz)
-                                }
-                                else{
-                                    reactionz.push(content)
-                                    return reactions(channel,reactionz)
-                                }
+                            let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content) || onlyEmoji(content)
+                            if(!findEmoji){
+                                msg.channel.send("I couldn't find that emoji!")
+                                return reactions(channel, reactionz)
                             }
+                            reactionz.push(content)
+                            return reactions(channel,reactionz)
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                     
@@ -163,7 +155,7 @@ Module.addCommand({name: 'config',
                                 msg.channel.send("I couldn't find that channel. Please try again.")
                                 return singleChannel(channel, reactions)
                             }
-                            else return toStar(channel, reactions, channel2?.id)
+                            return toStar(channel, reactions, channel2?.id)
                         })
                     }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                 }
@@ -200,13 +192,10 @@ Module.addCommand({name: 'config',
                                 msg.channel.send("I couldn't find that channel. It might have been deleted.")
                                 return selectionPrompt()
                             }
-                            else if(findBoard){
-                                return initialPrompt(findBoard)
-                            }
-                            else{
-                                msg.channel.send("That's not one of the options. Please try again.")
-                                return selectionPrompt()
-                            }
+                            else if(findBoard) return initialPrompt(findBoard)
+                            msg.channel.send("That's not one of the options. Please try again.")
+                            return selectionPrompt()
+                            
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                 }
@@ -216,10 +205,10 @@ Module.addCommand({name: 'config',
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             if(content == 'reactions') return reactionPrompt(channel)
-                            else if(content == 'exclusivity') return singleChannelPrompt(channel)
-                            else if(content == 'reaction') return toStarPrompt(channel)
-                            else if(content == 'delete') return deletePrompt(channel)
-                            else if(content == 'done') return msg.channel.send("Modification Complete")
+                            if(content == 'exclusivity') return singleChannelPrompt(channel)
+                            if(content == 'reaction') return toStarPrompt(channel)
+                            if(content == 'delete') return deletePrompt(channel)
+                            if(content == 'done') return msg.channel.send("Modification Complete")
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                 }
@@ -234,15 +223,13 @@ Module.addCommand({name: 'config',
                                     Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, emoji, channel.singleChannel, channel.toStar)
                                     return reactionPrompt(channel)
                                 }
-                                else{
-                                    let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content)?.id || onlyEmoji(content)
-                                    if(!findEmoji){
-                                        msg.channel.send("I couldn't find that emoji!")
-                                        await addEmoji(channel, emoji)
-                                    }
-                                    else emoji.push(findEmoji.id)
-                                    return addEmoji(channel. emoji)
+                                let findEmoji = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == content)?.id || onlyEmoji(content)
+                                if(!findEmoji){
+                                    msg.channel.send("I couldn't find that emoji!")
+                                    return addEmoji(channel, emoji)
                                 }
+                                emoji.push(findEmoji.id)
+                                return addEmoji(channel. emoji)
                             }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                         })
                     }
@@ -260,11 +247,9 @@ Module.addCommand({name: 'config',
                                     msg.channel.send("That's not one of the reactions.")
                                     return removeEmoji(channel)
                                 }
-                                else{
-                                    let newArray = channel.reactions.filter(r =>r != foundEmoji)
-                                    Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, newArray, channel.toStar)
-                                    return removeEmoji(channel)
-                                }
+                                let newArray = channel.reactions.filter(r =>r != foundEmoji)
+                                Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, newArray, channel.toStar)
+                                return removeEmoji(channel)
                             }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                         })
                     }
@@ -274,10 +259,8 @@ Module.addCommand({name: 'config',
                             let content = collected.first().content.toLowerCase()
                             if(content == 'add') return addEmoji(msg, channel)
                             else if(content == 'remove') return removeEmoji(msg, channel)
-                            else{
-                                msg.channel.send("That's not one of the options.")
-                                return manageBoard(msg)
-                            }
+                            msg.channel.send("That's not one of the options.")
+                            return manageBoard()
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                 }
@@ -292,10 +275,8 @@ Module.addCommand({name: 'config',
                                 Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, channel.reactions, chanel, channel.toStar)
                                 return manageBoard(channel)
                             }
-                            else{
-                                msg.channel.send("I couldn't find that channel. Please try again.")
-                                return singleChannelPrompt(channel)
-                            }
+                            msg.channel.send("I couldn't find that channel. Please try again.")
+                            return singleChannelPrompt(channel)
                         }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                     })
                 }
@@ -318,13 +299,12 @@ Module.addCommand({name: 'config',
                     let content = collected.first().content
                     if(content.toLowerCase() == 'create') return createBoard()
                     else if(content.toLowerCase() == 'manage') return manageBoard()
-                    else{
-                        msg.channel.send("That's not one of the options. Please try again.")
-                        return starPrompt()
-                    }
+                    msg.channel.send("That's not one of the options. Please try again.")
+                    return starPrompt()
                 }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
             })
         }
+
         let logPrompt = async()=>{
             let flags = async(channel, firstTime = true, enabledEvents=[]) =>{
                 let embed = u.embed().setTitle('What would you like to monitor?').setDescription(`Type \`done\` when you're done.\n\nEnabled:\n${enabledEvents.map(e => e[0]).join('\n')}`)
@@ -346,10 +326,9 @@ Module.addCommand({name: 'config',
                             enabledEvents.push(filtered)
                             return flags(channel, false, enabledEvents)
                         }
-                        else{
-                            msg.channel.send("That's not one of the options. Please try again.")
-                            return flags(channel, false, enabledEvents)
-                        }
+                        msg.channel.send("That's not one of the options. Please try again.")
+                        return flags(channel, false, enabledEvents)
+                        
                     }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
                 })
             }
@@ -365,48 +344,44 @@ Module.addCommand({name: 'config',
                     let channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
                     if(!channel){
                         msg.channel.send("I couldn't find that channel. Please try again.")
-                        return logPrompt(msg)
+                        return logPrompt()
                     }
-                    else{
-                        return flags(msg, channel.id)
-                    }
+                    return flags(channel.id)
                 }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
             })
         }
         let mutedPrompt = async() =>{
-            let currentRole = msg.guild.roles.cache.get(await Module.db.guildconfig.getMutedRole(msg.guild.id)),
-                embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.\nThe current role is ${currentRole}`)
-            msg.channel.send({embed}).then(async m=>{
+            let currentRole = await Module.db.guildconfig.getMutedRole(msg.guild.id),
+                embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.\nThe current role is <@&${currentRole}>`)
+            msg.channel.send({embed, disableMentions: 'all'}).then(async m=>{
                 await m.channel.awaitMessages(roleFilter, options).then(async collected =>{
                     let content = collected.first().content
-                    let channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, '')) || null
-                    if(!channel && content.toLowerCase() != 'none'){
+                    let role = msg.guild.roles.cache.get(content.replace(/[^0-9]/g, ''))
+                    if(!role && content.toLowerCase() != 'none'){
                         msg.channel.send("I couldn't find that role. Please try again")
                         return mutedPrompt()
                     }
-                    else{
-                        await Module.db.guildconfig.saveMutedRole(msg.guild.id, null)
-                        return mainMenu()
-                    }
-                }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                    await Module.db.guildconfig.saveMutedRole(msg.guild.id, role?.id || 'disabled')
+                    embed = u.embed().setTitle('Muted role saved').setDescription(role ? `The role ${role} will be assigned to people when \`!mute\` is used.` : "The muted role has been disabled, so `!mute` will not work.")
+                    m.channel.send({embed, disableMentions: 'all'})
+                    return mainMenu()
+                }).catch((e)=> {m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}); console.log(e)})
             })
         }
+
         let mainMenu = async () => {
-            let choices = ['Channels', 'Starboards', 'Logging', 'Muted', 'Done'],
+            let choices = ['Channels', 'Starboards', 'Logging', 'Muted Role', 'Done'],
                 embed = u.embed().setTitle('What do you want to configure?').setDescription(`Options:\n${choices.join('\n')}`)
             msg.channel.send({embed}).then(async m=>{
                 await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                     let content = collected.first().content.toLowerCase()
-                         if(content == choices[0].toLowerCase()) return channelPrompt()
-                    else if(content == choices[1].toLowerCase()) return starPrompt()
-                    else if(content == choices[2].toLowerCase()) return logPrompt()
-                    else if(content == choices[3].toLowerCase()) return mutedPrompt()
-                  //else if(content == choices[4].toLowerCase()) return rolePrompt()
-                    else if(content == choices[4].toLowerCase()) return collected.first().react('👍')
-                    else{
-                        msg.channel.send("That's not one of the options")
-                        return mainMenu()
-                    }
+                    if(content == choices[0].toLowerCase()) return channelPrompt()
+                    if(content == choices[1].toLowerCase()) return starPrompt()
+                    if(content == choices[2].toLowerCase()) return logPrompt()
+                    if(content == choices[3].toLowerCase()) return mutedPrompt()
+                    if(content == choices[4].toLowerCase()) return collected.first().react('👍')
+                    msg.channel.send("That's not one of the options")
+                    return mainMenu()
                 }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
             }
         )}
