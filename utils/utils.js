@@ -32,7 +32,7 @@ const Utils = {
             const filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === (message.author ? message.author : message).id;
           
             try {
-              const collected = await msg.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] });
+              const collected = await msg.awaitReactions(filter, { max: 1, time, errors: ['time'] });
               const reaction = collected.first();
               if (reaction.emoji.name === '✅') {
                 msg.edit({embed: confirmEmbed});
