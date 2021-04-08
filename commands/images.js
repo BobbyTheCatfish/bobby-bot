@@ -419,10 +419,11 @@ Module.addCommand({name: "amongus",
 .addCommand({name: 'animal',
     category: 'Images',
     process: async(msg, args)=>{
-        let animals = ['Cat','Dog','Shiba','Bird','Fox','Lizard','Owl']
-        if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals.join('\n')}\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
+        let animals = ['Cat','Dog','Shiba','Bird','Fox','Lizard','Owl','Panda','Red Panda','Koala','Pikachu']
+        if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals.join('\n')}\n(yes I know Pikachu isn't an animal but there was an API for it)\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
         let a = args.toLowerCase(),
         image
+
         if(a == animals[0].toLowerCase()) image = (await axios.get('https://aws.random.cat/meow')).data.file
         else if(a == animals[1].toLowerCase()) image = (await axios.get('https://dog.ceo/api/breeds/image/random')).data.message
         else if(a == animals[2].toLowerCase()) image = (await axios.get('http://shibe.online/api/shibes')).data[0]
@@ -430,6 +431,10 @@ Module.addCommand({name: "amongus",
         else if(a == animals[4].toLowerCase()) image = (await axios.get('https://randomfox.ca/floof/')).data.image
         else if(a == animals[5].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url
         else if(a == animals[6].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return Module.commands.get('animal').exec(msg, args)}
+        else if(a == animals[7].toLowerCase()) image = (await axios.get('https://some-random-api.ml/img/panda')).data.link
+        else if(a == animals[8].toLowerCase()) image = (await axios.get('https://some-random-api.ml/img/red_panda')).data.link
+        else if(a == animals[9].toLowerCase()) image = (await axios.get('https://some-random-api.ml/img/koala')).data.link
+        else if(a == animals[10].toLowerCase()) image = (await axios.get('https://some-random-api.ml/img/pikachu')).data.link
         if(!image) return msg.channel.send("That's not one of the animals!")
         try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.')}
     }
