@@ -262,8 +262,10 @@ Module.addCommand({name: "ban",
         let s = []
         let err = []
         let mutedUsers = msg.mentions.members
+        let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
+        if(dbFetch == 'disabled') return msg.channel.send("The mute command was disabled when using `!config` to remove the muted role.")
         if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
-        const muteRole = msg.guild.roles.cache.find(r => r.name.toLowerCase() === "muted");
+        const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
         if(!muteRole) return msg.channel.send(`I couldn't find the muted role.`)
         mutedUsers.forEach(m => {
             if(m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
@@ -275,7 +277,7 @@ Module.addCommand({name: "ban",
         let embed = u.embed().setTitle(`Mute Resulst:`)
         if(s.length > 0) embed.addFields({name: "Successfully muted", value: s.join('\n')})
         if(err.length > 0) embed.addFields({name: "Failed to add role", value: err.join('\n')})
-        return msg.channel.send({embed, disableMentions: "all"});    
+        return msg.channel.send({embed, disableMentions: "all"});
     }
 })
 .addCommand({name:'unmute',
@@ -286,9 +288,11 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let s = []
         let err = []
-        let mutedUser = msg.mentions.members.first();
-        if(!mutedUser) return msg.channel.send(`You need to specify who to unmute`)
-        const muteRole = msg.guild.roles.cache.find(r => r.name.toLowerCase() === "muted");
+        let mutedUsers = msg.mentions.members
+        let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
+        if(dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.")
+        if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
+        const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
         if(!muteRole) return msg.channel.send(`I couldn't find the muted role to remove.`)
         msg.mentions.members.forEach(m => {
             if(!m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
@@ -311,7 +315,7 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to mute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD')) m.voice.setMute(true).then(console.log(`${`!`.cyan} ${u.time()}${msg.member.displayName.yellow} muted ${m.user.username.red}`))
+        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(true)
     }
 })
 .addCommand({name:'unmuteall',
@@ -322,7 +326,7 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD')) m.voice.setMute(false).then(console.log(`${`!`.cyan} ${u.time()}${msg.member.displayName.yellow} unmuted ${m.user.username.red}`))
+        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(false)
     }
 })
 .addCommand({name:'nick',
