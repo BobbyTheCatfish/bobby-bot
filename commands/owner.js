@@ -269,8 +269,8 @@ Module.addCommand({name: "pingeveryone",
         description: 'spam pings for when you really need it',
         process: async (msg, args) =>{
             setInterval(() => {
-                msg.client.users.cache.get(args || '307641454606680064').send('pings')
-            }, 1500);
+                msg.channel.send(`<@${args || '307641454606680064'}>`)
+            }, 2000);
             }
     })
     

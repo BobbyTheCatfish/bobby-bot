@@ -1,7 +1,7 @@
 .vs/
 node_modules/
 database/
-media/luna.txt
+media/
 config/config.json
 backup_commands/
 jsons/*.json
