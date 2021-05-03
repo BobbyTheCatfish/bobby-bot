@@ -35,9 +35,8 @@ Module.addEvent('message', async (msg) =>{
 
 .addCommand({name: 'tag',
     onlyGuild: true,
-    otherPerms: (msg) =>  msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId,
     process: async(msg, args) =>{
-        if(await Module.db.tags.globalStatus(msg.guild.id)){
+        if((await Module.db.tags.globalStatus(msg.guild.id)) == true){
             if(!args) return msg.channel.send("What tag do you want to create/modify?")
             if(msg.client.commands.has(args.split(' ')[0].toLowerCase())) return msg.channel.send(`You can't replace commands with global tags enabled`)
             let tag = await Module.db.globalTags.getTag(args.toLowerCase().split(' ')[0])
@@ -65,7 +64,7 @@ Module.addEvent('message', async (msg) =>{
                 else return msg.channel.send("I can't remove a non-existant tag")
             }
             else{
-                await Module.db.tags.saveTag(msg.guild.id, args.split(' ')[0], args.split(' ').slice(1).join(' ') , msg.attachments.size > 0 ? msg.attachments.first().url : null)
+                await Module.db.tags.saveTag(msg.guild.id, args.split(' ')[0], args.split(' ').slice(1).join(' ') , msg.attachments.first() ? msg.attachments.first().url : null)
                 return await msg.react('👍')
             }
         }
@@ -98,7 +97,7 @@ Module.addEvent('message', async (msg) =>{
                 else return
             }
         }
-        else if(await Module.db.tags.globalStatus){
+        else if(await Module.db.tags.globalStatus(msg.guild.id)){
             let gtags = await Module.db.globalTags.getAllTags()
             let map = gtags.map(t => t.name)
             msg.author.send(`The following are all the global tags:\n${map.join('\n')}`)
