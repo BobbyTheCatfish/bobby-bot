@@ -2,6 +2,8 @@ const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Jimp = require('jimp'),
     axios = require('axios'),
+    schedule = require('node-schedule'),
+    fs = require('fs'),
     readError = 'I ran into an error while getting the image.'
 async function getTarget(msg, suffix, keywords=false, interaction = null){
     let target,
@@ -418,8 +420,8 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: 'animal',
     category: 'Images',
-    process: async(msg, args)=>{
-        let randomApiAnimals = ['Dog','Cat','Panda','Fox','Red panda','Koala','Bird','Racoon','Kangaroo','Whale','Pikachu']
+    process: async(msg, args, i=0)=>{
+        let randomApiAnimals = ['Dog','Cat','Panda','Fox','Red Panda','Koala','Bird','Raccoon','Kangaroo','Whale','Pikachu']
         let otherAnimals = ['Shiba','Lizard','Owl']
         let animals = randomApiAnimals.concat(otherAnimals)
         if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals[0]}\n${animals.join("\n")}\n\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
@@ -428,7 +430,7 @@ Module.addCommand({name: "amongus",
         if(randomApiAnimals.includes(u.properCase(args))) image = (await axios.get(`https://some-random-api.ml/img/${a.replace(/bird/gi, 'birb').replace(/ /g, '_')}`)).data.link
         else if(a == otherAnimals[0].toLowerCase()) image = (await axios.get('http://shibe.online/api/shibes')).data[0]
         else if(a == otherAnimals[1].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url
-        else if(a == otherAnimals[2].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return Module.commands.get('animal').exec(msg, args)}
+        else if(a == otherAnimals[2].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return i < 5 ? Module.commands.get('animal').exec(msg, args, i++) : msg.channel.send('I ran into an error while running that command. Please try again.')}
         
         if(!image) return msg.channel.send("That's not one of the animals!")
         try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.')}
@@ -437,8 +439,7 @@ Module.addCommand({name: "amongus",
 .addCommand({name: 'luna',
     category: 'Images',
     process: async(msg, args)=>{
-        let fs = require('fs'),
-            file = fs.readFileSync('media/luna.txt', 'utf8')
+        let file = fs.readFileSync('media/luna.txt', 'utf8')
         msg.channel.send(u.rand(file.split('\n')))
     }
 })
@@ -452,7 +453,6 @@ Module.addCommand({name: "amongus",
             for(x of msg.attachments) files.push(x.url)
             fs.appendFile('media/luna.txt', `\n${files.join('\n')}`)
         }
-        const fs = require('fs')
         file = fs.appendFile('media/luna.txt', `\n${args}`, function (err) {
             if (err) throw err;
           })
@@ -473,5 +473,14 @@ Module.addCommand({name: "amongus",
     else(int.createResponse(`Here's your filter`))
   }
 })
-
+.addEvent('ready', () =>{
+    const rule = new schedule.RecurrenceRule()
+    rule.hour = 12
+    rule.minute = 00
+    const huddyChannel = Module.client.channels.cache.get('786033226850238525')
+    const job = schedule.scheduleJob(rule, function(){
+        file = fs.readFileSync('media/luna.txt', 'utf8')
+        huddyChannel.send(`Daily Luna Pic\n${u.rand(file.split('\n'))}`)
+      });
+})
 module.exports = Module
