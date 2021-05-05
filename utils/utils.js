@@ -147,6 +147,7 @@ const Utils = {
     },
     parse: async (msg) => {
         try {
+            
           let prefix = await Utils.prefix(msg),
             message = msg.content,
             parse;
@@ -158,7 +159,8 @@ const Utils = {
                 parse = parse.trim().split(" ");
                 return {
                     command: parse.shift().toLowerCase(),
-                    suffix: parse.join(" ")
+                    suffix: parse.join(" "),
+                    params: parse
                 };
             } else return null;
         } catch(e) {
