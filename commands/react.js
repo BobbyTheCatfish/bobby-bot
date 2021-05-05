@@ -20,9 +20,14 @@ Module.addEvent('message', async (msg) =>{
                         if(temp[1]) replaceContent = replaceContent.replace(match[0], temp[Math.floor(Math.random() * temp.length)])
                     }
                     replaceContent = replaceContent.replace(/<@author>/ig, `<@${msg.author.id}>`).replace(/<@authorname>/ig, msg.member.displayName)
-                    if ((/(<@target>)|(<@targetname>)/i).test(replaceContent)) {
+                    if ((/(<@target>)|(<@targetname>)/i).test(read.text)) {
                         if (msg.mentions.members.first()) replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, msg.mentions.members.first().displayName);
                         else return msg.reply("You need to `@mention` a user with that tag!").then(u.clean);
+                    }
+                    if((/<content>/i).test(read.text)){
+                        let args = (await u.parse(msg)).suffix 
+                        if(args) replaceContent = replaceContent.replace(/<content>/ig, args)
+                        else return msg.reply("You need to give me some text to work with").then(u.clean)
                     }
                 }
                 if(read.file && read.text) return msg.channel.send(replaceContent, {files: [read.file]})
@@ -46,6 +51,7 @@ Module.addEvent('message', async (msg) =>{
                     return await msg.react('🗑️')
                 }
                 else{
+                    if(msg.attachments.first()?.size >= 8000000) return msg.channel.send("That file is too large to use in other servers.")
                     await Module.db.globalTags.saveTag(msg.guild.id, msg.author.id, args.split(' ')[0], args.split(' ').slice(1).join(' '), msg.attachments.size > 0 ? msg.attachments.first().url : null)
                     return await msg.react('👍')
                 }
@@ -55,15 +61,16 @@ Module.addEvent('message', async (msg) =>{
         else{
             if(!(msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId)) return
             if(!args) return msg.channel.send("What tag do you want to create/modify?")
-            if(args.split(' ')[0].toLowerCase() == 'tag' || args.split(' ')[0].toLowerCase() == 'tags') return msg.channel.send("You can't replace the tag command.")
+            if(args.split(' ')[0].toLowerCase() == 'tag' || args.split(' ')[0].toLowerCase() == 'tags') return msg.channel.send("You can't replace the tag command.").then(u.clean)
             if(!args.split(' ')[1] && msg.attachments.size == 0){
                 if(await Module.db.tags.getTag(msg.guild.id, args)){
                     await Module.db.tags.removeTag(msg.guild.id, args.split(' ')[0])
                     return await msg.react('🗑️')
                 }
-                else return msg.channel.send("I can't remove a non-existant tag")
+                else return msg.channel.send("That tag doesn't exist.").then(u.clean)
             }
             else{
+                if(msg.attachments.first()?.size >= 8000000) return msg.channel.send("That file is too large.").then(u.clean)
                 await Module.db.tags.saveTag(msg.guild.id, args.split(' ')[0], args.split(' ').slice(1).join(' ') , msg.attachments.first() ? msg.attachments.first().url : null)
                 return await msg.react('👍')
             }
