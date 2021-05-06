@@ -49,7 +49,7 @@ Module.addCommand({name: "amongus",
             const canvas = new Jimp(353, 458, 0x00000000);
             const avatar = await Jimp.read(colorSelected);
             try{await Jimp.read(target)}catch(e){
-                if(interaction) return readError
+                if(interaction) return {errMsg: readError, image: null}
                 else return msg.channel.send("I couldn't read that file.")
             }
             const mask = await Jimp.read("./media/amongians/mask.png");
@@ -61,8 +61,8 @@ Module.addCommand({name: "amongus",
             avatar.blit(canvas, 0,0)
             avatar.blit(topLayer, 0, 0)
             let output = await avatar.getBufferAsync(Jimp.MIME_PNG)
-            msg.channel.send({files: [output]});
-            if(interaction) return null
+            if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} is looking pretty sus 😳`}
+            return msg.channel.send({files: [output]});
         }catch (error) {console.log(error)}
     }
 })
@@ -73,7 +73,7 @@ Module.addCommand({name: "amongus",
         {
             let target = await getTarget(msg, args, false, interaction);
             try{await Jimp.read(target)} catch(e){
-                if(interaction.target) return readError
+                if(interaction.target) return {errMsg: readError, image: null}
                 else return msg.channel.send("I couldn't read that file.")
             }
             const img = await Jimp.read(target);
@@ -88,9 +88,9 @@ Module.addCommand({name: "amongus",
             canvas.blit(img, 272, 272);
             img.color([{apply: "spin", params: [120]}]);
             canvas.blit(img, 8, 8);
-
-            await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
-            if(interaction.target) return null
+            let output = await canvas.getBufferAsync(Jimp.MIME_PNG)
+            if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} andywarhol'd`}
+            await msg.channel.send({files: [output]})
         } catch (error) {console.log(error);msg.channel.send('I ran into an error. I\'ve let my developer know')}
     }
 })
@@ -99,7 +99,7 @@ Module.addCommand({name: "amongus",
     process: async (msg, args) =>{
         let target = await u.getMention(msg, false, true)
         if(msg.guild) target = target.user
-        return msg.channel.send(`\`${target.username}\`:`,{files: [target.displayAvatarURL({format: 'png', dynamic: true, size: 1024})]})
+        return msg.channel.send(`\`${msg.client.users.cache.get(interaction.target).username}\`:`,{files: [target.displayAvatarURL({format: 'png', dynamic: true, size: 1024})]})
     }
 })
 .addCommand({name: "blur",
@@ -114,11 +114,11 @@ Module.addCommand({name: "amongus",
             else if(response) return msg.channel.send(response)
             if(interaction.target){
                 let target = await getTarget(msg, args, false, interaction)
-                try{await Jimp.read(target)}catch(e){return readError}
+                try{await Jimp.read(target)}catch(e){return {errMsg: readError, image: null}}
                 let image = await Jimp.read(target)
                 image.blur(deg)
-                await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-                return `Here's your filter! (Blur amount: ${deg})`
+                let output = await image.getBufferAsync(Jimp.MIME_PNG)
+                return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} blurred ${deg}x`}
             }
             let processed = false;
             for (m of await msg.channel.messages.fetch({limit: 100}))
@@ -143,7 +143,7 @@ Module.addCommand({name: "amongus",
     process: async (msg, args, interaction = {target: null, input: null}) =>{
         let target = await getTarget(msg, args, false, interaction)
         try{await Jimp.read(target)}catch(e){
-            if(interaction.target) return readError
+            if(interaction.target) return {errMsg: readError, image: null}
             return msg.channel.send(readError)
         }
         let image = await Jimp.read(target)
@@ -152,9 +152,9 @@ Module.addCommand({name: "amongus",
           { apply: "saturate", params: [47.7] },
           { apply: "hue", params: [227] }
         ])
-        
-        await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
-        if(interaction.target) return null
+        let output = await image.getBufferAsync(Jimp.MIME_PNG)
+        if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} blurpled`}
+        await msg.channel.send({files: [output]});
     }
 })
 .addCommand({name: "color",
@@ -195,17 +195,15 @@ Module.addCommand({name: "amongus",
         color = Math.floor(color) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
   
         if(color > 360 || color < -360) {
-            if(interaction.target) return "That's out of range! Try using a number between -360 and 360"
+            if(interaction.target) return {errMsg: "That's out of range! Try using a number between -360 and 360", image: null}
             return msg.channel.send("That's out of range! Try using a number between -360 and 360.")
         }
         
         let image = await Jimp.read(target)
         image.color([{ apply: "hue", params: [color] }]);
-        if(interaction.target){
-            msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-            return `Hue: ${color}`
-        }
-        await msg.channel.send(`Hue: ${color}`,{files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
+        let output = await image.getBufferAsync(Jimp.MIME_PNG)
+        if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} colored to a hue of ${color}`}
+        await msg.channel.send(`Hue: ${color}`,{files: [output]});
     }
 })
 .addCommand({name: "crop",
@@ -213,11 +211,11 @@ Module.addCommand({name: "amongus",
     process: async (msg, args, interaction = {target: null, input: null}) =>{
         if(interaction.target){
             let target = await getTarget(msg, args, false, interaction)
-            try{await Jimp.read(target)}catch{return readError}
+            try{await Jimp.read(target)}catch{return {errMsg: readError, image: null}}
             const cropped = await Jimp.read(target)
             cropped.autocrop({cropOnlyFrames: false, cropSymmetric: false, tolerance: .01})
-            await msg.channel.send({files: [await cropped.getBufferAsync(Jimp.MIME_PNG)]})
-            return null
+            let output = await cropped.getBufferAsync(Jimp.MIME_PNG)
+            if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} cropped`}
         }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
@@ -256,9 +254,9 @@ Module.addCommand({name: "amongus",
         canvas.blit(left, 0, 4);
         canvas.blit(right, 248, 4);
         canvas.blit(avatar, 120, 0);
-  
-        await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]});
-        if(interaction.target) return null
+        let output = await canvas.getBufferAsync(Jimp.MIME_PNG)
+        if(interaction.target) return {errMsg: null, image: output}
+        await msg.channel.send({files: [output]});
     }
 })
 .addCommand({name: "invert",
@@ -266,13 +264,14 @@ Module.addCommand({name: "amongus",
     process: async (msg, args, interaction = {target: null, input: null}) =>{
         let target = await getTarget(msg, null, false, interaction)
         try{await Jimp.read(target)}catch(e){
-            if(interaction.target) return readError
+            if(interaction.target) return {errMsg: readError, image: null}
             return msg.channel.send(readError)
         }
         let image = await Jimp.read(target)
         image.invert()
-        await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
-        if(interaction.target) return null
+        let output = await image.getBufferAsync(Jimp.MIME_PNG)
+        if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} inverted`}
+        await msg.channel.send({files: [output]});
     }
 })
 .addCommand({name: "mirror",
@@ -280,13 +279,13 @@ Module.addCommand({name: "amongus",
     process: async (msg, direction, interaction = {target: null, input: null}) =>{
         if(interaction.target){
             let target = await getTarget(msg, direction, false, interaction)
-            try{await Jimp.read(target)}catch{return readError}
+            try{await Jimp.read(target)}catch{return {errMsg: readError, image: null}}
             const image = await Jimp.read(target)
             if(interaction.input == 'y') image.flip(false, true)
             if(interaction.input == 'xy') image.flip(true, true)
             else image.flip(true, false)
-            await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-            return null
+            let output = await image.getBufferAsync(Jimp.MIME_PNG)
+            return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} mirrored ${interaction.input == 'y' ? 'vertically': interaction.input == 'xy' ? 'horizontally and vertically' : 'horizontally'}`}
         }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
@@ -314,7 +313,7 @@ Module.addCommand({name: "amongus",
     process: async (msg, args, interaction = {target: null, input: null}) =>{
         let target = await getTarget(msg, null, false, interaction)
         try{await Jimp.read(target)}catch(e){
-            if(interaction.target) return readError
+            if(interaction.target) return {errMsg: readError, image: null}
             return msg.channel.send(readError)
         }
         const img = await Jimp.read(target);
@@ -333,8 +332,9 @@ Module.addCommand({name: "amongus",
     
         img.color([{apply: "spin", params: [120]}]);
         canvas.blit(img, 8, 8);
-        await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]});
-        if(interaction.target) return null
+        let output = await canvas.getBufferAsync(Jimp.MIME_PNG)
+        if(interaction.target) return {errMsg: null, image: output, title: `Popart of ${msg.client.users.cache.get(interaction.target).username}`}
+        await msg.channel.send({files: [output]});
     }
 })
 .addCommand({name: "removebg",
@@ -362,9 +362,11 @@ Module.addCommand({name: "amongus",
         }
         if(!interaction.target){
             let processed = false;
-            for (m of await msg.channel.messages.fetch({limit: 100}))
+            let messages = await msg.channel.messages.fetch({limit: 50})
+            for (m of messages)
             {
-                if (m.author.bot) continue;
+                if(!m.author) continue
+                if (m.author?.bot) continue;
                 if (m.attachments.size > 0)
                 {
                     let target = m.attachments.first().url
@@ -378,12 +380,13 @@ Module.addCommand({name: "amongus",
         }
         else{
             let target = await getTarget(msg, args, false, interaction)
-            try{await Jimp.read(target)}catch{return readError}
+            try{await Jimp.read(target)}catch{return {errMsg: readError, image: null}}
             image = await Jimp.read(target)
         }
         removebackground(image).then(async()=>{
-            await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-            if(interaction.target) return null
+            let output = await image.getBufferAsync(Jimp.MIME_PNG)
+            if(interaction.target) return {errMsg: null, image: output, title: 'Removed Background'}
+            await msg.channel.send({files: [output]})
         })
     }
 })
@@ -393,12 +396,12 @@ Module.addCommand({name: "amongus",
         let deg = parseInt(interaction.input ?? args, 10) || (10 * (Math.floor(Math.random() * (34 + 34) -34)));
         if(interaction.target){
             let target = getTarget(msg, args, false, interaction)
-            try{await Jimp.read(target)}catch{return readError}
+            try{await Jimp.read(target)}catch{return {errMsg: readError, image: null}}
             const image = await Jimp.read(target)
             image.rotate(-deg)
             image.autocrop({cropOnlyFrames: false, tolerance: 0, leaveBorder: 3})
-            await msg.channel.send(`\`Rotated ${deg}°\``, {files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-            return null
+            let output = await image.getBufferAsync(Jimp.MIME_PNG)
+            return {errMsg: null, image: output, title: `Rotated ${deg}°`}
         }
         let processed = false;
         for (m of await msg.channel.messages.fetch({limit: 100}))
@@ -469,8 +472,11 @@ Module.addCommand({name: "amongus",
     let cmd = int.data.options[0].name.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
     let newArgs = {target: int.data.options[0].options[0].value, input: int.data.options[0].options[1]?.value}
     let process = await int.client.commands.get(cmd).process(int, '', newArgs)
-    if(process) int.createResponse(process)
-    else(int.createResponse(`Here's your filter`))
+    if(process.errMsg) int.createResponse(process.errMsg)
+    else if(process.image) int.client.channels.cache.get('839684190157144064').send({files: [process.image]}).then(img =>{
+        int.createResponse({embeds: [u.embed().setImage(img.attachments.first().url).setTitle(process.title || '')]})
+    })
+
   }
 })
 .addEvent('ready', () =>{
