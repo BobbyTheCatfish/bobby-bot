@@ -171,7 +171,7 @@ const Utils = {
     prefix: async (msg) => {
         try {
             if(msg.channel.parentID == '813847559252344862') return '>'
-            if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
+            else if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
             else return config.prefix;
         } catch(e) {
             Utils.errorHandler(e, msg.content);

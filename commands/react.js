@@ -21,7 +21,7 @@ Module.addEvent('message', async (msg) =>{
                     }
                     replaceContent = replaceContent.replace(/<@author>/ig, `<@${msg.author.id}>`).replace(/<@authorname>/ig, msg.member.displayName)
                     if ((/(<@target>)|(<@targetname>)/i).test(read.text)) {
-                        if (msg.mentions.members.first()) replaceContent = replaceContent.replace(/<@target>/ig, `<@${target.id}>`).replace(/<@targetname>/ig, msg.mentions.members.first().displayName);
+                        if (msg.mentions.users.first()) replaceContent = replaceContent.replace(/<@target>/ig, `<@${msg.mentions.members.first().id}>`).replace(/<@targetname>/ig, msg.mentions.members.first().displayName);
                         else return msg.reply("You need to `@mention` a user with that tag!").then(u.clean);
                     }
                     if((/<content>/i).test(read.text)){
