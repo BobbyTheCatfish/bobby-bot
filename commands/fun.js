@@ -84,7 +84,6 @@ Module.addCommand({name: "8ball",
              　.  。　                     ඞ   。　    .      •
              •              ${args} was${impostor != 0 ? ' not' : ''} The Impostor    ⋆
             .             　 。　  ⋆                     .                     .`)
-          
     }
 })
 .addCommand({name: "info",
