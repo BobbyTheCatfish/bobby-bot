@@ -77,9 +77,9 @@ const Augur = require('augurbot'),
         if(oldEmoji.guild){
             let enabled = await flags(oldEmoji.guild)
             if(enabled?.includes('eu')){
-                let embed = u.embed().setTitle(`The emoji \`:${emoji.name}:\` was updated`).setColor(med)
+                let embed = u.embed().setTitle(`The emoji \`:${oldEmoji.name}:\` was updated`).setColor(med)
                 if(oldEmoji.name != newEmoji.name) embed.addField(`Name`,`Was: ${oldEmoji.name}\nIs: ${newEmoji.name}`);
-                (await logChannel(emoji.guild)).send({embed})
+                (await logChannel(oldEmoji.guild)).send({embed})
             }
         }
     })
