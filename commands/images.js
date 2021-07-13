@@ -4,6 +4,11 @@ const Augur = require('augurbot'),
     axios = require('axios'),
     schedule = require('node-schedule'),
     fs = require('fs'),
+    ffmpegPath = require('@ffmpeg-installer/ffmpeg').path,
+    ffmpeg = require('fluent-ffmpeg'),
+    {getVideoDurationInSeconds} = require('get-video-duration')
+    http = require('https'),
+    {Readable} = require('stream')
     readError = 'I ran into an error while getting the image.'
 async function getTarget(msg, suffix, keywords=false, interaction = null){
     let target,
@@ -30,7 +35,7 @@ async function getTarget(msg, suffix, keywords=false, interaction = null){
         }
         
 }
-
+ffmpeg.setFfmpegPath(ffmpegPath)
 const Module = new Augur.Module();
 Module.addCommand({name: "amongus",
     category: "Images",
@@ -99,7 +104,7 @@ Module.addCommand({name: "amongus",
     process: async (msg, args) =>{
         let target = await u.getMention(msg, false, true)
         if(msg.guild) target = target.user
-        return msg.channel.send(`\`${msg.client.users.cache.get(interaction.target).username}\`:`,{files: [target.displayAvatarURL({format: 'png', dynamic: true, size: 1024})]})
+        return msg.channel.send(`\`${target.username}\`:`,{files: [target.displayAvatarURL({format: 'png', dynamic: true, size: 1024})]})
     }
 })
 .addCommand({name: "blur",
@@ -425,7 +430,7 @@ Module.addCommand({name: "amongus",
     category: 'Images',
     process: async(msg, args, i=0)=>{
         let randomApiAnimals = ['Dog','Cat','Panda','Fox','Red Panda','Koala','Bird','Raccoon','Kangaroo','Whale','Pikachu']
-        let otherAnimals = ['Shiba','Lizard','Owl']
+        let otherAnimals = ['Shiba','Lizard']
         let animals = randomApiAnimals.concat(otherAnimals)
         if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals[0]}\n${animals.join("\n")}\n\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
         let a = args.toLowerCase(),
@@ -433,10 +438,9 @@ Module.addCommand({name: "amongus",
         if(randomApiAnimals.includes(u.properCase(args))) image = (await axios.get(`https://some-random-api.ml/img/${a.replace(/bird/gi, 'birb').replace(/ /g, '_')}`)).data.link
         else if(a == otherAnimals[0].toLowerCase()) image = (await axios.get('http://shibe.online/api/shibes')).data[0]
         else if(a == otherAnimals[1].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url
-        else if(a == otherAnimals[2].toLowerCase()) {image = (await axios.get('http://pics.floofybot.moe/owl')).data.image; if(!image.endsWith('png')) return i < 5 ? Module.commands.get('animal').exec(msg, args, i++) : msg.channel.send('I ran into an error while running that command. Please try again.')}
         
-        if(!image) return msg.channel.send("That's not one of the animals!")
-        try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.')}
+        if(!image) return msg.channel.send("That's not one of the animals!").then(u.clean)
+        try{msg.channel.send({files: [image]})}catch{msg.channel.send('Something broke while sending it (it was probably too large). Please try again.').then(u.clean)}
     }
 })
 .addCommand({name: 'luna',
@@ -488,5 +492,37 @@ Module.addCommand({name: "amongus",
         file = fs.readFileSync('media/luna.txt', 'utf8')
         huddyChannel.send(`Daily Luna Pic\n${u.rand(file.split('\n'))}`)
       });
+})
+.addCommand({name: 'removetiktok',
+    process: async (msg, args) =>{
+        try{
+            if(!msg.attachments.first()?.url.endsWith('.mp4') && !(u.validUrl(args) && args.endsWith('.mp4'))) return msg.channel.send("I need a video to remove the watermark from")
+            http.get(msg.attachments.first()?.url || args, async function(res){
+                let data = []
+                res.on('data', function(chunk){
+                    data.push(chunk)
+                }).on('end', async function(){
+                    //let buffer = Buffer.concat(data)
+                    //let stream = Readable.from(buffer)
+                    //let video = ffmpeg(stream)
+                    let video = ffmpeg(Readable.from(Buffer.concat(data)))
+                    let duration = await getVideoDurationInSeconds(msg.attachments.first()?.url || args)
+                    video.setDuration(duration-4.01).format('webm').output(`${msg.id}.webm`)
+                    .on('start', async function(){
+                        msg.channel.send("Working on it... (may take a minute or two)")
+                    }).on('end', async function(){
+                        await msg.channel.send({files: [`${msg.id}.webm`]})
+                        setTimeout(() => {
+                            fs.unlinkSync(`${msg.id}.webm`)
+                        }, 5000);
+                    }).on('error', function(err){
+                        console.log(err)
+                    }).run()
+                })
+            })
+        } catch(e){
+            return u.errorHandler(e, msg)
+        }
+    }
 })
 module.exports = Module
