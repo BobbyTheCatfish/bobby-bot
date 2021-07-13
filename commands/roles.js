@@ -10,7 +10,7 @@ Module.addCommand({name: "inventory",
         let inventory = msg.guild.roles.cache.filter(r => msg.member.roles.cache.find(e => e.name.toLowerCase()+' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
         let embed = u.embed().setAuthor(msg.member.displayName, msg.member.user.displayAvatarURL({format: 'png'}))
             .setTitle("Equippable Color Inventory")
-            .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`);
+            .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`).setFooter('Use !equip none to unequip any roles.');
         if(!inventory) return msg.channel.send("You don't have any colors in your inventory!").then(u.clean)
         else return msg.channel.send({embed, disableMentions: "all"});
     }
@@ -19,6 +19,27 @@ Module.addCommand({name: "inventory",
     onlyGuild: true,
     process: async(msg, args)=>{
         let words = args.split(' ')
+        //stuff for huddy's server
+        if(msg.guild.id == '779497076564164620'){
+            let regex = /COLOR\ \d*/
+            if(!args){
+                let embed = u.embed().setTitle('Available Colors').setDescription(`Do \`!equip <number>\` for the color\nThis message will self destruct in 30 seconds.\n${msg.guild.roles.cache.filter(r => regex.exec(r.name)).sort((a, b) => a.name.replace('COLOR', '') - b.name.replace('COLOR', '')).map(r=>r).join('\n')}`)
+                return msg.channel.send({embed, disableMentions: 'all'}).then(u.clean(msg, 30000))
+            }
+            if(words[0].toLowerCase() == 'none'){
+                msg.member.roles.cache.forEach(role =>{if(regex.exec(role.name)) msg.member.roles.remove(role)})
+                return await msg.react('👌')
+            }
+            else{
+                let number = args
+                if(isNaN(number) || number < 1) return msg.channel.send("That's not a valid number!")
+                let role = msg.guild.roles.cache.find(r => r.name == `COLOR ${number}`)
+                if(!role) return msg.channel.send('I couldn\'t find that role.')
+                msg.member.roles.cache.forEach(role=>{if(regex.exec(role.name)) msg.member.roles.remove(role)})
+                await msg.member.roles.add(role)
+                return await msg.react('👌').then(u.clean(msg))
+            }
+        }
         if(words[0].toLowerCase() == 'none'){
             msg.member.roles.cache.forEach(role =>{if(role.name.toLowerCase().endsWith('colors')) msg.member.roles.remove(role)})
             await msg.react('👌')
