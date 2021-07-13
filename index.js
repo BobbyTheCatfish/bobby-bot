@@ -14,7 +14,7 @@ const {AugurClient} = require('augurbot'),
   })
 
   client.login();
-
+  require('discord-buttons')(client)
   // LAST DITCH ERROR HANDLING
   process.on("unhandledRejection", (error, p) => p.catch(e => u.errorHandler(e, "Unhandled Rejection")));
   process.on("uncaughtException", (error) => u.errorHandler(error, "Uncaught Exception"));

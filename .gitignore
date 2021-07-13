@@ -8,6 +8,7 @@ jsons/*.json
 commands/dms.js
 commands/eval.js
 commands/thalesGameNights.js
+commands/pipeVoice.js
 .DS_Store
 *.code-workspace
 *-.js
