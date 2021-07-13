@@ -98,6 +98,7 @@ Module.addCommand({name: "inventory",
                     msg.channel.send({embed, disableMentions: 'all'}).then(async message =>{
                         await Module.db.reactionRoles.saveReactionRoles(message, things, removeOnUnreact)
                         await u.react(message, things.map(t => t.id || t.name))
+                        await message.pin()
                     })
                 })
             })

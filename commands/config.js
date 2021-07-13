@@ -86,7 +86,7 @@ Module.addCommand({name: 'config',
                             msg.channel.send("I couldn't find that channel. Please try again.")
                             return botLobby()
                         }
-                        else if(await Module.db.guildconfig.saveErrorChannel(msg.guild.id, channel?.id) == null) {
+                        else if(await Module.db.guildconfig.saveBotLobby(msg.guild.id, channel?.id) == null) {
                             msg.channel.send("I had a problem saving that.")
                             return mainMenu()
                         }
@@ -352,7 +352,7 @@ Module.addCommand({name: 'config',
         }
         let mutedPrompt = async() =>{
             let currentRole = await Module.db.guildconfig.getMutedRole(msg.guild.id),
-                embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.\nThe current role is <@&${currentRole}>`)
+                embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.${currentRole ? `\nThe current role is <@&${currentRole}>`: ''}`)
             msg.channel.send({embed, disableMentions: 'all'}).then(async m=>{
                 await m.channel.awaitMessages(roleFilter, options).then(async collected =>{
                     let content = collected.first().content
