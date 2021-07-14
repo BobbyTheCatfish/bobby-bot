@@ -507,6 +507,7 @@ Module.addCommand({name: "amongus",
                     //let video = ffmpeg(stream)
                     let video = ffmpeg(Readable.from(Buffer.concat(data)))
                     let duration = await getVideoDurationInSeconds(msg.attachments.first()?.url || args)
+                    if(duration < 4) return msg.channel.send("That's not a tiktok video (its shorter than 4 seconds)").then(u.clean)
                     video.setDuration(duration-4.01).format('webm').output(`${msg.id}.webm`)
                     .on('start', async function(){
                         msg.channel.send("Working on it... (may take a minute or two)")
