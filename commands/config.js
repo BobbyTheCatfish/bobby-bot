@@ -1,11 +1,11 @@
 /*THINGS TO ADD
-    memer activity log channel
-    memer actiivty log toggles
+    member activity log channel
+    member actiivty log toggles
     change exclusive SBs to arrays
     add main property to sb, only one can have it per guild
     able to set sb exclusive to category
     language filter
-    muted role
+    //muted role
 
 
     in the distant future
@@ -13,29 +13,40 @@
     enable/disable commands
     
 */
+//N C D U CD CU DU CDU
+//0 1 2 3 4  5  6  7
+//0000000
 let events = [
-    ['Channel Created','cc'],
-    ['Channel Deleted','cd'],
-    ['Channel Updated','cu'],
-    ['Message Delete','md'],
-    ['Message Bulk Delete','mbd'],
-    ['Message Pinned','mp'],
-    ['Emoji Create','ec'],
-    ['Emoji Delete','ed'],
-    ['Emoji Update','eu'],
-    ['Member Joined','mj'],
-    ['Member Left','ml'],
-    ['Member Update','mu'],
-    ['Member Banned','mb'],
-    ['Member Unbanned','mub'],
-    ['Inegrations Update','iu'],
-    ['Server Update','su'],
-    ['Invite Created','ic'],
-    ['Invite Deleted','id'],
-    ['Role Created','rc'],
-    ['Role Deleted','rd'],
-    ['Role Updated','ru'],
-    ['Enable All', 'ea']
+    
+        ['Channel Created', 1, 'channel'],
+        ['Channel Deleted', 2, 'channel'],
+        ['Channel Updated', 3, 'channel'],
+
+        ['Message Delete', 1, 'message'],
+        ['Messages Bulk Deleted', 2, 'message'],
+        ['Message Pinned', 3, 'message'],
+
+        ['Emoji Created', 1, 'emoji'],
+        ['Emoji Deleted', 2, 'emoji'],
+        ['Emoji Updated', 3, 'emoji'],
+
+        ['Member Joined', 1, 'member'],
+        ['Member Left', 2, 'member'],
+        ['Member Updated', 3, 'member'],
+
+        ['Member Banned', 1, 'other'],
+        ['Member Unbanned', 2, 'other'],
+        ['Inegrations Updated', 3, 'other'],
+
+        ['Invite Created', 2, 'server'],
+        ['Invite Deleted', 3, 'server'],
+        ['Server Updated', 1, 'server'],
+
+        ['Role Created', 1, 'role'],
+        ['Role Deleted', 2, 'role'],
+        ['Role Updated', 3, 'role'],
+
+        ['Enable All', 7, 'all'] //777777
 ]
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
@@ -314,15 +325,15 @@ Module.addCommand({name: 'config',
                         let content = collected.first().content
                         let filtered = events.find(e => e[0].toLowerCase() == content.toLowerCase())
                         if(content.toLowerCase() == 'all'){
-                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, events.map(r => r[1]))
+                            let mapped = u.encodeLogEvents(events.map(r => {return {int: r[1], category: r[2]}}))
+                            await Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, mapped)
                             return mainMenu()
                         }
                         else if(content.toLowerCase() == 'done'){
-                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, enabledEvents.map(r => r[1]))
+                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, enabledEvents.map(r => {return {int: r[1], category: r[2]}}))
                             return mainMenu()
                         }
                         else if(filtered){
-                            if(filtered[1] == 'ea') enabledEvents = events
                             enabledEvents.push(filtered)
                             return flags(channel, false, enabledEvents)
                         }

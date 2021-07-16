@@ -526,4 +526,7 @@ Module.addCommand({name: "amongus",
         }
     }
 })
+.addCommand({name: 'e', ownerOnly: true, process: async(msg, args)=>{
+    return console.log(await u.decodeLogEvents(msg.guild))
+}})
 module.exports = Module

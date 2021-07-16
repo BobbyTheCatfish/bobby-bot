@@ -5,6 +5,7 @@ const FileSync = require("lowdb/adapters/FileSync");
 const db = require(`../${config.db.model}`);
 const validUrl = require('valid-url');
 const errorLog = new Discord.WebhookClient(config.error.id, config.error.token)
+
 const Utils = {
 
     clean: async (message, t = 20000)=>{
@@ -232,6 +233,74 @@ const Utils = {
     
         embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));
         errorLog.send(embed);
+    },
+    encodeLogEvents: (flags) => {
+        let reduce = function(flags) {
+            let numbers =  flags.map(f => f.int)
+            let reduced = numbers.reduce(function(a, b){return a+b})
+            if(numbers.length > 1) reduced++
+            return reduced.toString()
+        }
+        let channel = reduce(flags.filter(f => f.category == 'channel'))
+        let message = reduce(flags.filter(f => f.category == 'message'))
+        let emoji = reduce(flags.filter(f => f.category == 'emoji'))
+        let member = reduce(flags.filter(f => f.category == 'member'))
+        let other = reduce(flags.filter(f => f.category == 'other'))
+        let server = reduce(flags.filter(f => f.category == 'server'))
+        let role = reduce(flags.filter(f => f.category == 'role'))
+        return parseInt(channel + message + emoji + member + other + server + role)
+    },
+    decodeLogEvents: async(guild) =>{
+        let events = [
+    
+            ['Channel Created', 1, 'channel'],
+            ['Channel Deleted', 2, 'channel'],
+            ['Channel Updated', 3, 'channel'],
+    
+            ['Message Delete', 1, 'message'],
+            ['Messages Bulk Deleted', 2, 'message'],
+            ['Message Pinned', 3, 'message'],
+    
+            ['Emoji Created', 1, 'emoji'],
+            ['Emoji Deleted', 2, 'emoji'],
+            ['Emoji Updated', 3, 'emoji'],
+    
+            ['Member Joined', 1, 'member'],
+            ['Member Left', 2, 'member'],
+            ['Member Updated', 3, 'member'],
+    
+            ['Member Banned', 1, 'other'],
+            ['Member Unbanned', 2, 'other'],
+            ['Inegrations Updated', 3, 'other'],
+    
+            ['Invite Created', 2, 'server'],
+            ['Invite Deleted', 3, 'server'],
+            ['Server Updated', 1, 'server'],
+    
+            ['Role Created', 1, 'role'],
+            ['Role Deleted', 2, 'role'],
+            ['Role Updated', 3, 'role'],
+    
+            ['Enable All', 7, 'all'] //777777
+    ]
+        let decrypt = function(int, category){
+            let filtered = events.filter(f => f[2] == category)
+            if(int == 0) return []
+            if(int == 7) return filtered.map(f => f[0])
+            if(int <= 3) return filtered.find(f => f[1] == int)[0]
+            if(int == 4) return filtered.filter(f =>  f[1] == 1 || f[1] == 2).map(f => f[0])
+            if(int == 5) return filtered.filter(f =>  f[1] == 1 || f[1] == 3).map(f => f[0])
+            if(int == 6) return filtered.filter(f =>  f[1] == 2 || f[1] == 3).map(f => f[0])
+        }
+        let bytefield = (await guild.client.db.guildconfig.getLogFlags(guild.id)).toString()
+        let channel = decrypt(bytefield[0], 'channel')
+        let message = decrypt(bytefield[1], 'message')
+        let emoji = decrypt(bytefield[2], 'emoji')
+        let member = decrypt(bytefield[3], 'member')
+        let other = decrypt(bytefield[4], 'other')
+        let server = decrypt(bytefield[5], 'server')
+        let role = decrypt(bytefield[6], 'role')
+        return channel.concat(message, emoji, member, other, server, role)
     }
 };
 

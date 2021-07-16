@@ -1,9 +1,10 @@
 const GuildConfig = require('../schemas/guildconfig'),
     Tags = require('../schemas/tags'),
     GTags = require('../schemas/globalTags'),
-    rRoles = require('../schemas/reactionRoles')
+    rRoles = require('../schemas/reactionRoles'),
     config = require("../config/config.json"),
-    mongoose = require("mongoose");
+    mongoose = require("mongoose")
+const u = require('./utils')
 
 const {Collection} = require("discord.js");
 

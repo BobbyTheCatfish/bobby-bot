@@ -1,7 +1,8 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Module = new Augur.Module()
-    const flags = async(guild) => await Module.db.guildconfig.getLogFlags(guild.id)
+    const flags = async(guild) => await u.decodeLogEvents(guild)
+    //const flags = async(guild) => await Module.db.guildconfig.getLogFlags(guild.id)
     const logChannel = async (guild)=> Module.client.channels.cache.get(await Module.db.guildconfig.getLogChannel(guild.id))
     let cu = ['n','p','po','pl','po','ns','s','t','b']
     let gu = ['afkc','afkt','ba','dmn','d','ds','ecf','i','mfa','n','p','psc','pt','puc','r','rc','s','sc','vu','vl','v','wc','we']
@@ -11,7 +12,7 @@ const Augur = require('augurbot'),
     Module.addEvent('channelCreate', async channel =>{
         if(channel.guild){
             let enabled = await flags(channel.guild)
-            if(enabled?.includes('cc')){
+            if(enabled?.includes('Channel Created')){
                 let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was created`).setColor(low);
                 (await logChannel(channel.guild)).send({embed})
             }
@@ -20,7 +21,7 @@ const Augur = require('augurbot'),
     .addEvent('channelDelete', async channel =>{
         if(channel.guild){
             let enabled = await flags(channel.guild)
-            if(enabled?.includes('cd')){
+            if(enabled?.includes('Channel Deleted')){
                 let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was deleted`).setColor(high);
                 (await logChannel(channel.guild)).send({embed})
             }
@@ -29,7 +30,7 @@ const Augur = require('augurbot'),
     .addEvent('channelUpdate', async (oldChannel, newChannel) =>{
         if(oldChannel.guild){
             let enabled = await flags(oldChannel.guild)
-            if(enabled?.includes('cu')){
+            if(enabled?.includes('Channel Updated')){
                 let embed = u.embed().setTitle(`\`#${oldChannel.name}\` was updated`).setColor(med)
                 if(oldChannel.name != newChannel.name) embed.addField(`Name`,`Old: ${oldChannel.name}\nNew: ${newChannel.name}`)
                 if(oldChannel.parent != newChannel.parent) embed.addField(`Category`,`Old: ${oldChannel.category}\nNew: ${newChannel.category}`)
@@ -49,7 +50,7 @@ const Augur = require('augurbot'),
     .addEvent('channelPinsUpdate', async channel =>{
         if(channel.guild){
             let enabled = await flags(channel.guild)
-            if(enabled?.includes('mp')){
+            if(enabled?.includes('Message Pinned')){
                 let embed = u.embed().setTitle(`A message was pinned (or unpinned) in \`#${channel.name}\``).setColor(low);
                 (await logChannel(channel.guild)).send({embed})
             }
@@ -58,7 +59,7 @@ const Augur = require('augurbot'),
     .addEvent('emojiCreate', async emoji =>{
         if(emoji.guild){
             let enabled = await flags(emoji.guild)
-            if(enabled?.includes('ec')){
+            if(enabled?.includes('Emoji Created')){
                 let embed = u.embed().setTitle(`The emoji \`:${emoji.name}:\` was created`).setImage(emoji.url).setColor(low);
                 (await logChannel(emoji.guild)).send({embed})
             }
@@ -67,7 +68,7 @@ const Augur = require('augurbot'),
     .addEvent('emojiDelete', async emoji =>{
         if(emoji.guild){
             let enabled = await flags(emoji.guild)
-            if(enabled?.includes(('ed'))){
+            if(enabled?.includes(('Emoji Deleted'))){
                 let embed = u.embed().setTitle(`The emoji \`:${emoji.name}:\` was deleted`).setImage(emoji.url).setColor(high);
                 (await logChannel(emoji.guild)).send({embed})
             }
@@ -76,7 +77,7 @@ const Augur = require('augurbot'),
     .addEvent('emojiUpdate', async (oldEmoji, newEmoji)=>{
         if(oldEmoji.guild){
             let enabled = await flags(oldEmoji.guild)
-            if(enabled?.includes('eu')){
+            if(enabled?.includes('Emoji Updated')){
                 let embed = u.embed().setTitle(`The emoji \`:${oldEmoji.name}:\` was updated`).setColor(med)
                 if(oldEmoji.name != newEmoji.name) embed.addField(`Name`,`Was: ${oldEmoji.name}\nIs: ${newEmoji.name}`);
                 (await logChannel(oldEmoji.guild)).send({embed})
@@ -85,42 +86,42 @@ const Augur = require('augurbot'),
     })
     .addEvent('guildBanAdd', async (guild, user)=>{
         let enabled = await flags(guild)
-        if(enabled?.includes('mb')){
+        if(enabled?.includes('Member Banned')){
             let embed = u.embed().setTitle(`\`${user.name}\` was banned`).setColor(high);
             (await logChannel(guild)).send({embed})
         }
     })
     .addEvent('guidBanRemove', async (guild, user)=>{
         let enabled = await flags(guild)
-        if(enabled?.includes('mub')){
+        if(enabled?.includes('Member Unbanned')){
             let embed = u.embed().setTitle(`\`${user.name}\` was unbanned`).setColor(high);
             (await logChannel(guild)).send({embed})
         }
     })
     .addEvent('guildIntegrationUpdate', async guild =>{
         let enabled = await flags(guild)
-        if(enabled?.includes('iu')){
+        if(enabled?.includes('Integrations Updated')){
             let embed = u.embed().setTitle('An integration was updated').setDescription("Unfortunately, I don't have a way to check what was modified").setColor(med);
             (await logChannel(guild)).send({embed})
         }
     })
     .addEvent('guildMemberAdd', async member =>{
         let enabled = await flags(member.guild)
-        if(enabled?.includes('mj')){
+        if(enabled?.includes('Member Joined')){
             let embed = u.embed().setTitle(`\`${member.displayName}\` joined the server`).setColor(low);
             (await logChannel(member.guild)).send({embed})
         }
     })
     .addEvent('guildMemberRemove', async member =>{
         let enabled = await flags(member.guild)
-        if(enabled?.includes('ml')){
+        if(enabled?.includes('Member Left')){
             let embed = u.embed().setTitle(`\`${member.displayName}\` left the server`).setColor(med);
             (await logChannel(member.guild)).send({embed})
         }
     })
     .addEvent('guildMemberUpdate', async(oldMember, newMember)=>{
         let enabled = await flags(oldMember.guild)
-        if(enabled?.includes('mu')){
+        if(enabled?.includes('Member Updated')){
             let embed = u.embed().setTitle(`\`${oldMember.user.tag}\` was updated`).setColor(med)
             if(oldMember.nickname != newMember.nickname) embed.addField(`Nickname`,`Was: ${oldMember.nickname ? oldMember.nickname : 'None'}\nIs: ${newMember.nickname?newMember.nickname:'None'}`).setColor(med)
             if(oldMember.roles.cache != newMember.roles.cache){
@@ -134,7 +135,7 @@ const Augur = require('augurbot'),
     })
     .addEvent('guildUpdate', async (oldGuild, newGuild)=>{
         let enabled = await flags(oldGuild)
-        if(enabled?.includes('su')){
+        if(enabled?.includes('Server Updated')){
             let embed = u.embed().setTitle(`The server was modified`).setColor(high)
             if(oldGuild.afkChannelID != newGuild.afkChannelID) embed.addField(`AFK Channel`,`Was: ${oldGuild.afkChannel ? oldGuild.afkChannel: 'None'}\nIs: ${newGuild.afkChannel ? newGuild.afkChannel : 'None'}`)
             if(oldGuild.afkTimeout != newGuild.afkTimeout) embed.addField(`AFK Timeout`,`Was: ${oldGuild.afkTimeout}\nIs: ${newGuild.afkTimeout}`)
@@ -166,7 +167,7 @@ const Augur = require('augurbot'),
     .addEvent('inviteCreate', async invite =>{
         if(invite.guild){
             let enabled = await flags(invite.guild)
-            if(enabled?.includes('ic')){
+            if(enabled?.includes('Invite Created')){
                 let embed = u.embed().setTitle(`An invite was created: \`${invite}\``).setColor(low).addField('Created by', invite.inviter.tag)
                 if(invite.temporary){
                     if(invite.maxUses > 0) embed.addField('Max Uses',invite.maxUses)
@@ -182,7 +183,7 @@ const Augur = require('augurbot'),
         if(invite.guild){
             if(invite.expiresAt > new Date())
             {let enabled = await flags(invite.guild)
-            if(enabled?.includes('id')){
+            if(enabled?.includes('Invite Deleted')){
                 let embed = u.embed().setTitle(`An invite was deleted: \`${invite}\``).setColor(med);
                 (await logChannel(invite.guild)).send({embed})
             }}
@@ -191,7 +192,7 @@ const Augur = require('augurbot'),
     .addEvent('messageDeleteBulk', async messages =>{
         if(messages.first().guild){
             let enabled = await flags(messages.first().guild)
-            if(enabled?.includes('mbd')){
+            if(enabled?.includes('Messages Bulk Deleted')){
                 let embed = u.embed().setTitle(`Messages were bulk deleted in \`#${messages.first().channel.name}\``).setColor(med);
                 (await logChannel(messages.first().guild)).send({embed})
             }
@@ -199,21 +200,21 @@ const Augur = require('augurbot'),
     })
     .addEvent('roleCreate', async role =>{
         let enabled = await flags(role.guild)
-        if(enabled?.includes('rc') && role.name != 'Heckerman'){
+        if(enabled?.includes('Role Created') && role.name != 'Heckerman'){
             let embed = u.embed().setTitle(`The \`${role.name}\` role was created`).setDescription(`${role}`).setColor(low);
             (await logChannel(role.guild)).send({embed})
         }
     })
     .addEvent('roleDelete', async role =>{
         let enabled = await flags(role.guild)
-        if(enabled?.includes('rd')){
+        if(enabled?.includes('Role Deleted')){
             let embed = u.embed().setTitle(`The \`${role.name}\` role was deleted`).setColor(high);
             (await logChannel(role.guild)).send({embed})
         }
     })
     .addEvent('roleUpdate', async (oldRole, newRole)=>{
         let enabled = await flags(oldRole.guild)
-        if(enabled?.includes('ru') && oldRole.name != 'Heckerman'){
+        if(enabled?.includes('Role Updated') && oldRole.name != 'Heckerman'){
             let embed = u.embed().setTitle(`The \`${oldRole.name}\` role was modified`).setColor(med)
             if(oldRole.hexColor != newRole.hexColor) embed.addField(`Color`,`Was: ${oldRole.hexColor}\nIs: ${newRole.hexColor}`).setColor(newRole.hexColor)
             if(oldRole.hoist != newRole.hoist) embed.addField(`Hoist`, `Was: ${oldRole.hoist}\nIs: ${newRole.hoist}`)
