@@ -292,7 +292,8 @@ const Utils = {
             if(int == 5) return filtered.filter(f =>  f[1] == 1 || f[1] == 3).map(f => f[0])
             if(int == 6) return filtered.filter(f =>  f[1] == 2 || f[1] == 3).map(f => f[0])
         }
-        let bytefield = (await guild.client.db.guildconfig.getLogFlags(guild.id)).toString()
+        let bytefield = (await guild.client.db.guildconfig.getLogFlags(guild.id))?.toString()
+        if(!bytefield) return []
         let channel = decrypt(bytefield[0], 'channel')
         let message = decrypt(bytefield[1], 'message')
         let emoji = decrypt(bytefield[2], 'emoji')
