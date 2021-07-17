@@ -330,7 +330,9 @@ Module.addCommand({name: 'config',
                             return mainMenu()
                         }
                         else if(content.toLowerCase() == 'done'){
-                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, enabledEvents.map(r => {return {int: r[1], category: r[2]}}))
+                            let mapped = '0000000'
+                            if(enabledEvents.length > 0) u.encodeLogEvents(enabledEvents.map(r => {return {int: r[1], category: r[2]}}))
+                            Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, mapped)
                             return mainMenu()
                         }
                         else if(filtered){
@@ -349,8 +351,8 @@ Module.addCommand({name: 'config',
                 await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'none'){
-                        await Module.db.guildconfig.saveLogChannel(msg.guild.id)
-                        return channelPrompt()
+                        await Module.db.guildconfig.saveLogChannel(msg.guild.id, null, '0000000')
+                        return mainMenu()
                     }
                     let channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
                     if(!channel){

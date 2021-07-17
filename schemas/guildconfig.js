@@ -70,7 +70,7 @@ const GuildConfigSchema = new mongoose.Schema({
                 type: String,
             },
             flags: {
-                type: Array,
+                type: String,
             },
         },
     },

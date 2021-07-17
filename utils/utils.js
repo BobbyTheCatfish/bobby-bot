@@ -248,7 +248,7 @@ const Utils = {
         let other = reduce(flags.filter(f => f.category == 'other'))
         let server = reduce(flags.filter(f => f.category == 'server'))
         let role = reduce(flags.filter(f => f.category == 'role'))
-        return parseInt(channel + message + emoji + member + other + server + role)
+        return channel + message + emoji + member + other + server + role
     },
     decodeLogEvents: async(guild) =>{
         let events = [
@@ -292,7 +292,7 @@ const Utils = {
             if(int == 5) return filtered.filter(f =>  f[1] == 1 || f[1] == 3).map(f => f[0])
             if(int == 6) return filtered.filter(f =>  f[1] == 2 || f[1] == 3).map(f => f[0])
         }
-        let bytefield = (await guild.client.db.guildconfig.getLogFlags(guild.id))?.toString()
+        let bytefield = await guild.client.db.guildconfig.getLogFlags(guild.id)
         if(!bytefield) return []
         let channel = decrypt(bytefield[0], 'channel')
         let message = decrypt(bytefield[1], 'message')
