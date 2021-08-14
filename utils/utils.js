@@ -4,7 +4,7 @@ const colors = require('colors');
 const FileSync = require("lowdb/adapters/FileSync");
 const db = require(`../${config.db.model}`);
 const validUrl = require('valid-url');
-const errorLog = new Discord.WebhookClient(config.error.id, config.error.token)
+const errorLog = new Discord.WebhookClient({id: config.error.id, token: config.error.token})
 
 const Utils = {
 
@@ -213,7 +213,6 @@ const Utils = {
     errorHandler: async (error, msg = null) => {
         if (!error) return;
         console.error(Date());
-    
         let embed = Utils.embed().setTitle(error.name);
     
         if (msg instanceof Discord.Message) {

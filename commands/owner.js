@@ -362,11 +362,11 @@ Module.addCommand({name: "pingeveryone",
     //Add DBs on ready and create
     .addEvent('ready',async()=>{
         Module.client.user.setActivity("Bobbby's screams coming from the basement because i'm torturing him 🙂🎉",{type: "LISTENING"})
-        for(x of Module.client.guilds.cache.array())
+        for(x of Module.client.guilds.cache.map(g => g.id))
         {
-            const foundGuild = await Module.db.guildconfig.getConfig(x.id)
             try {
-                if(!foundGuild)await Module.db.guildconfig.createConfig(x.id)
+                const foundGuild = await Module.db.guildconfig.getConfig(x)
+                if(!foundGuild)await Module.db.guildconfig.createConfig(x)
             } catch (error) {
                 u.errorHandler('Guild Config Create onReady', error)
             }

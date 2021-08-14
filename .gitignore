@@ -9,6 +9,7 @@ commands/dms.js
 commands/eval.js
 commands/thalesGameNights.js
 commands/pipeVoice.js
+/twitch
 .DS_Store
 *.code-workspace
 *-.js

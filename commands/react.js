@@ -4,7 +4,7 @@ const Augur = require('augurbot'),
 
 const Module = new Augur.Module();
 
-Module.addEvent('message', async (msg) =>{
+Module.addEvent('messageCreate', async (msg) =>{
     let parsed = await u.parse(msg)
     if(parsed && msg.guild){
         let read = (await Module.db.tags.getTag(msg.guild.id, parsed.command.toLowerCase()))
@@ -30,7 +30,7 @@ Module.addEvent('message', async (msg) =>{
                         else return msg.reply("You need to give me some text to work with").then(u.clean)
                     }
                 }
-                if(read.file && read.text) return msg.channel.send(replaceContent, {files: [read.file]})
+                if(read.file && read.text) return msg.channel.send({content: replaceContent, files: [read.file]})
                 else if(read.text) return msg.channel.send(replaceContent)
                 else return msg.channel.send({files: [read.file]})
             }

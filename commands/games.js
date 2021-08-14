@@ -211,7 +211,6 @@ Module.addCommand({name: "playing",
         if(!findEntry.get("p1").value()){
             let player1 = msg.author,
                 player2 = msg.mentions.users.first()
-            
             if(!player2) return msg.channel.send("Who do you want to play against?")
             if(player1.id == player2.id) return msg.channel.send("You can't play against yourself, silly!")
             if(player2.bot) return msg.channel.send("You can't play against a bot. They're too good at the game")
@@ -274,9 +273,9 @@ Module.addCommand({name: "playing",
                             embed2 = u.embed().setDescription(`${sendToOpp.username}'s board:\n${r2}`),
                             embed3 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}`),
                             embed4 = u.embed().setDescription(`${sendTo.username}'s board:\n${r2}`)
-                        sendTo.send('You won!', {embed: embed1});
+                        sendTo.send({content: 'You won!', embed: embed1});
                         sendTo.send({embed: embed2})
-                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`,{embed: embed3});
+                        sendToOpp.send({content: `${sendTo.username} won! Better luck nex time.`, embed: embed3});
                         sendToOpp.send({embed: embed4})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
@@ -383,13 +382,13 @@ Module.addCommand({name: "playing",
                     findEntry.get('board').assign({[y-1]: boardVal[y-1].substr(0, index)+`${turn == '1' ? 'o' : 'x'}`+boardVal[y-1].substr(index+1)}).write()
                     newEmbed = u.embed().setTitle('The Board').setDescription(await replace(findEntry.get('board').value())).setFooter(`To place your piece, (O), do \`!t xy\` (example: \`!b a1\`)`)
                     if(await win(boardVal, turn)){
-                        sendTo.send('You won!', {embed: newEmbed});
+                        sendTo.send({content: 'You won!', embed: newEmbed});
                         sendToOpp.send(`${sendTo.username} won! Better luck nex time.`, {embed: embed2});
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                     else if(await tie(boardVal)){
-                        sendTo.send('It looks like this game is a draw.',{embed: newEmbed})
-                        sendToOpp.send('It looksl ike this game is a draw', {embed: newEmbed})
+                        sendTo.send({content: 'It looks like this game is a draw.', embed: newEmbed})
+                        sendToOpp.send({content: 'It looks like this game is a draw.', embed: newEmbed})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }

@@ -466,8 +466,8 @@ Module.addCommand({name: "amongus",
         return msg.channel.send('Luna Pic(s) Added 🐱')
     }
 })
-.addInteraction({
-  id: "828084734134321162",
+.addInteractionCommand({
+  commandId: "828084734134321162",
   name: 'filter',
   syntax: "filter source value",
   category: "Images",
