@@ -161,7 +161,7 @@ Module.addCommand({name: "playing",
                 return embed
             } catch (error) {u.errorHandler(error, 'Playing currentPlayers Function')}
         }
-        if (suffix) msg.channel.send({embed: currentPlayers(suffix), disableMentions: 'all'})
+        if (suffix) msg.channel.send({embeds: [currentPlayers(suffix)], disableMentions: 'all'})
         else{
             // List *all* games played
             let games = new u.Collection()
@@ -185,7 +185,7 @@ Module.addCommand({name: "playing",
                 
             if (gameList.length > 0)  for (let i = 0; i < Math.min(gameList.length, 25); i++) embed.addField(gameList[i].game, gameList[i].people, gameList[i].people, true)
             else embed.setDescription("Well, this is awkward... Nobody is playing anything.")
-            msg.channel.send({embed, disableMentions: "all"})
+            msg.channel.send({embeds: [embed], disableMentions: "all"})
         }
     }
 })
@@ -235,10 +235,10 @@ Module.addCommand({name: "playing",
                     p1embed2 = u.embed().setTitle(`${player2.username}'s Board`).setDescription(replace(await findEntry.get('p2Rows').value().join('\n').replace(/[a-e]/g, '0'))),
                     p2embed2 = u.embed().setTitle(`${player1.username}'s Board`).setDescription(replace(await findEntry.get('p1Rows').value().join('\n').replace(/[a-e]/g, '0')))
 
-                player1.send(`It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`,{embed: p1embed1})
-                player1.send({embed: p1embed2})
-                player2.send(`It's ${findEntry.get('turn').value() == '2' ? 'your' : player1.username+'\'s' } turn`,{embed: p2embed1})
-                return player2.send({embed: p2embed2})
+                player1.send({content: `It's ${findEntry.get('turn').value() == '1' ? 'your' : player2.username+'\'s' } turn`, embeds: [p1embed1]})
+                player1.send({embeds: [p1embed2]})
+                player2.send({content: `It's ${findEntry.get('turn').value() == '2' ? 'your' : player1.username+'\'s' } turn`, embeds: [p2embed1]})
+                return player2.send({embeds: [p2embed2]})
             }
             else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
             else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
@@ -273,10 +273,10 @@ Module.addCommand({name: "playing",
                             embed2 = u.embed().setDescription(`${sendToOpp.username}'s board:\n${r2}`),
                             embed3 = u.embed().setTitle(`Final Boards`).setDescription(`Your Board:\n${r1}`),
                             embed4 = u.embed().setDescription(`${sendTo.username}'s board:\n${r2}`)
-                        sendTo.send({content: 'You won!', embed: embed1});
-                        sendTo.send({embed: embed2})
-                        sendToOpp.send({content: `${sendTo.username} won! Better luck nex time.`, embed: embed3});
-                        sendToOpp.send({embed: embed4})
+                        sendTo.send({content: 'You won!', embeds: [embed1]});
+                        sendTo.send({embeds: [embed2]})
+                        sendToOpp.send({content: `${sendTo.username} won! Better luck nex time.`, embeds: [embed3]});
+                        sendToOpp.send({embeds: [embed4]})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
@@ -286,8 +286,8 @@ Module.addCommand({name: "playing",
                     otherPEmbed = u.embed().setTitle(`Your board`).setDescription(replace(findRows.value().join('\n'))),
                     sunk
                 if(hit && !(findEntry.get(turn == 1 ?'p2Rows' : 'p1Rows').value()).join('').split('').includes(hit)) sunk = ['Patrol Boat','Submarine','Destroyer','Battleship','Carrier'][letterArray.indexOf(hit)]
-                sendTo.send((hit ? `Hit! 💥 ${sunk ? `You sunk their ${sunk}!` : ''}` : 'Miss!'),{embed: newTrackEmbed})
-                sendToOpp.send((`${x.toUpperCase()}${y}... ${hit ? `Hit!💥 ${sunk ? `Your ${sunk} was destroyed!` : ''}` : 'Miss!'}`),{embed: otherPEmbed})
+                sendTo.send({content: (hit ? `Hit! 💥 ${sunk ? `You sunk their ${sunk}!` : ''}` : 'Miss!'), embeds: [newTrackEmbed]})
+                sendToOpp.send((`${x.toUpperCase()}${y}... ${hit ? `Hit!💥 ${sunk ? `Your ${sunk} was destroyed!` : ''}` : 'Miss!'}`),{embeds: [otherPEmbed]})
                 return findEntry.assign({turn: turn == '1' ? '2' : '1'}).write()
             }
             else if(args.toLowerCase() == 'quit'){
@@ -341,8 +341,8 @@ Module.addCommand({name: "playing",
                 let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
                 let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
     
-                player1.send(`${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
-                player2.send(`${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
+                player1.send({content: `${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`, embeds: [p1embed]})
+                player2.send({content: `${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`, embeds: [p2embed]})
             } 
             else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
             else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)
@@ -382,19 +382,19 @@ Module.addCommand({name: "playing",
                     findEntry.get('board').assign({[y-1]: boardVal[y-1].substr(0, index)+`${turn == '1' ? 'o' : 'x'}`+boardVal[y-1].substr(index+1)}).write()
                     newEmbed = u.embed().setTitle('The Board').setDescription(await replace(findEntry.get('board').value())).setFooter(`To place your piece, (O), do \`!t xy\` (example: \`!b a1\`)`)
                     if(await win(boardVal, turn)){
-                        sendTo.send({content: 'You won!', embed: newEmbed});
-                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`, {embed: embed2});
+                        sendTo.send({content: 'You won!', embeds: [newEmbed]});
+                        sendToOpp.send(`${sendTo.username} won! Better luck nex time.`, {embeds: [embed2]});
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                     else if(await tie(boardVal)){
-                        sendTo.send({content: 'It looks like this game is a draw.', embed: newEmbed})
-                        sendToOpp.send({content: 'It looks like this game is a draw.', embed: newEmbed})
+                        sendTo.send({content: 'It looks like this game is a draw.', embeds: [newEmbed]})
+                        sendToOpp.send({content: 'It looks like this game is a draw.', embeds: [newEmbed]})
                         return db.get('Games').remove(findEntry.get('p1').value() == msg.author.id ? {p1: msg.author.id} : {p2: msg.author.id}).write()
                     }
                 }
                 catch (e) {return u.errorHandler(e, 'TTT game error')}
-                sendP1.send(turn == '1' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP2.username} put a piece at ${x.toUpperCase()}${y}.`,{embed: newEmbed})
-                sendP2.send(turn == '2' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP1.username} put a piece at ${x.toUpperCase()}${y}.`,{embed: newEmbed})
+                sendP1.send(turn == '1' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP2.username} put a piece at ${x.toUpperCase()}${y}.`,{embeds: [newEmbed]})
+                sendP2.send(turn == '2' ? `Piece placed at ${x.toUpperCase()}${y}` : `It's your turn! ${sendP1.username} put a piece at ${x.toUpperCase()}${y}.`,{embeds: [newEmbed]})
                 return findEntry.assign({turn: turn == '1' ? '2' : '1'}).write()
             }
             else return msg.author.send("That's not the right format! Try something like `!t a1`")
@@ -480,8 +480,8 @@ Module.addCommand({name: "playing",
                 let p1embed = u.embed().setTitle(`The Board`).setDescription(await replace(await findEntry.get('board').value())).setFooter(`Do \`!t xy\` to place an O (example: \`!t a1\`)`)
                 let p2embed = p1embed.setFooter(`Do \`!t xy\` to pace an X (example: \`!t a1\`)`)
     
-                player1.send(`${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`,{embed: p1embed})
-                player2.send(`${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`,{embed: p2embed})
+                player1.send({content: `${player1.id == msg.author.id ? `${player2.username} accepted the request!` : 'Confirmation recieved!'} Starting the game...\nIt's your turn!`, embeds: [p1embed]})
+                player2.send({content: `${player2.id == msg.author.id ? `${player1.username} accepted the request!` : 'Confirmation recieved!'} Starting the game... It's ${player1.username}'s turn.`, embeds: [p2embed]})
             } 
             else if(confirm == false) return player1.send(`${player1.username} didn't want to play.`)
             else return player1.send(`The request was canceled because ${player2.username} didn't respond in time!`)

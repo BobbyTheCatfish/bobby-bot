@@ -20,7 +20,7 @@ let postToBoard = async(reaction, user, force=false) =>{
                     if(msg.attachments.first()) embed.setImage(msg.attachments.first().url)
                     embed.addField('Channel', msg.channel).addField('Jump to post', msg.url).setTimestamp(msg.createdAt).setAuthor(msg.member.displayName, msg.author.avatarURL()).setFooter(reaction.emoji.name)
                     if(channel){
-                        channel.send({embed})
+                        channel.send({embeds: [embed]})
                         //Module.db.guildconfig.saveSBMessage(msg)
                     }
                     else u.errorHandler(`Starboard Send Error`, `Couldn't send to channel *${x.channel}* in guild *${msg.guild.name}*`)

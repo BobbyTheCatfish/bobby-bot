@@ -251,7 +251,7 @@ Module.addCommand({name: "pingeveryone",
                 .setTitle(`I am in the following \`${msg.client.guilds.cache?.array().length}\` servers:`)
                 .setDescription(`**${getGuilds}**`);
             if(!getGuilds) return msg.channel.send("I'm not in any servers... somehow").then(u.clean)
-            else return msg.channel.send({embed, disableMentions: "all"});
+            else return msg.channel.send({embeds: [embed], disableMentions: "all"});
         }
     })
 

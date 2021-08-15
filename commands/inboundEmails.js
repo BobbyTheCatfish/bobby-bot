@@ -45,7 +45,7 @@ async function getEmails () {
               author = Module.client.users.cache.get(from.id),
               embed = u.embed().setTitle(subject).setDescription(text).setAuthor(author.username, author.displayAvatarURL()).setTimestamp(date),
               channel = Module.client.channels.cache.get(''); //channel to send emails. could be dynamic
-              channel.send({embed});
+              channel.send({embeds: [embed]});
             for (atts of attachments) channel.send({
               files: [{
                 attachment: atts.content,

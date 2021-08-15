@@ -208,7 +208,7 @@ Module.addCommand({name: "amongus",
         image.color([{ apply: "hue", params: [color] }]);
         let output = await image.getBufferAsync(Jimp.MIME_PNG)
         if(interaction.target) return {errMsg: null, image: output, title: `${msg.client.users.cache.get(interaction.target).username} colored to a hue of ${color}`}
-        await msg.channel.send(`Hue: ${color}`,{files: [output]});
+        await msg.channel.send({content: `Hue: ${color}`, files: [output]});
     }
 })
 .addCommand({name: "crop",
@@ -419,7 +419,7 @@ Module.addCommand({name: "amongus",
                 const image = await Jimp.read(target)
                 image.rotate(-deg)
                 image.autocrop({cropOnlyFrames: false, tolerance: 0, leaveBorder: 3})
-                await m.channel.send(`\`Rotated ${deg}°\``,{files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
+                await m.channel.send({content: `\`Rotated ${deg}°\``, files: [await image.getBufferAsync(Jimp.MIME_PNG)]});
                 break
             }
         }
@@ -432,7 +432,7 @@ Module.addCommand({name: "amongus",
         let randomApiAnimals = ['Dog','Cat','Panda','Fox','Red Panda','Koala','Bird','Raccoon','Kangaroo','Whale','Pikachu']
         let otherAnimals = ['Shiba','Lizard']
         let animals = randomApiAnimals.concat(otherAnimals)
-        if(!args) return msg.channel.send({embed: u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals[0]}\n${animals.join("\n")}\n\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)})
+        if(!args) return msg.channel.send({embeds: [u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals[0]}\n${animals.join("\n")}\n\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)]})
         let a = args.toLowerCase(),
         image
         if(randomApiAnimals.includes(u.properCase(args))) image = (await axios.get(`https://some-random-api.ml/img/${a.replace(/bird/gi, 'birb').replace(/ /g, '_')}`)).data.link
@@ -467,17 +467,19 @@ Module.addCommand({name: "amongus",
     }
 })
 .addInteractionCommand({
-  commandId: "828084734134321162",
+  id: "828084734134321162",
   name: 'filter',
   syntax: "filter source value",
   category: "Images",
   process: async (int) => {
     //int.defer()
+    console.log('started')
     let cmd = int.data.options[0].name.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
     let newArgs = {target: int.data.options[0].options[0].value, input: int.data.options[0].options[1]?.value}
     let process = await int.client.commands.get(cmd).process(int, '', newArgs)
-    if(process.errMsg) int.createResponse(process.errMsg)
+    if(process.errMsg) int.client.interactionFailed(int, process.errMsg)
     else if(process.image) int.client.channels.cache.get('839684190157144064').send({files: [process.image]}).then(img =>{
+        console.log('ye')
         int.createResponse({embeds: [u.embed().setImage(img.attachments.first().url).setTitle(process.title || '')]})
     })
 

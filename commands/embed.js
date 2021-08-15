@@ -17,7 +17,7 @@ Module.addCommand({name: 'embed',
             let promptEmbed = u.embed().setTitle('What would you like to do?')
             .setDescription('Type in one of the following:\nSet Title\nSet Description\nAdd Field\nRemove Field\nSet Footer\nSet Timestamp\nSet Author\nSet Image\nSet Thumbnail\nSet Color\nPreview\nSend\nCancel')
             let options = ['title','description','add field','remove field','footer','timestamp','author','image','thumbnail','color','preview','send','cancel']
-            await msg.author.send({embed: promptEmbed}).then(async m => {
+            await msg.author.send({embeds: [promptEmbed]}).then(async m => {
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content.toLowerCase()
@@ -42,7 +42,7 @@ Module.addCommand({name: 'embed',
         let titlePrompt = async(msg, embed)=>{
             let urlPrompt = async(msg, embed, promptEmbed)=>{
                 promptEmbed.setTitle('What should the title URL be?')
-                await msg.author.send({embed: promptEmbed}).then(async m =>{
+                await msg.author.send({embeds: [promptEmbed]}).then(async m =>{
                     let resend = async(msg, embed, promptEmbed) =>{
                         await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                         .then(async collected =>{
@@ -60,7 +60,7 @@ Module.addCommand({name: 'embed',
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the title be?').setDescription('Type `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -75,7 +75,7 @@ Module.addCommand({name: 'embed',
         }
         let descriptionPrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What should the description be?').setDescription('Type `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -88,7 +88,7 @@ Module.addCommand({name: 'embed',
         let addFieldPrompt = async(msg, embed)=>{
             fieldDesc = async(msg, embed, title, promptEmbed)=>{
                 promptEmbed.setTitle('What should the field content be?')
-                msg.author.send({embed: promptEmbed}).then(async(m)=>{
+                msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                     await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                     .then(async collected =>{
                         let content = collected.first().content
@@ -114,7 +114,7 @@ Module.addCommand({name: 'embed',
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the field title be?')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let title = collected.first().content
@@ -138,7 +138,7 @@ Module.addCommand({name: 'embed',
                 await prompt(msg, newEmbed)
             }
             let promptEmbed = u.embed().setTitle("Which field do you want to delete?").setDescription("Please specify the field name. If there are multiple with the same name, all with the name will be deleted.").addFields(embed.fields)
-            msg.author.send({embed: promptEmbed}).then(async m =>{
+            msg.author.send({embeds: [promptEmbed]}).then(async m =>{
                 let resend = async (msg, embed) =>{
                     await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                     .then(async collected =>{
@@ -157,7 +157,7 @@ Module.addCommand({name: 'embed',
         let footerPrompt = async(msg, embed)=>{
             icon = async(msg, embed, title, promptEmbed)=>{
                 promptEmbed.setTitle('What should the footer icon be?').setDescription('Type `none` for none. You can use a file or link')
-                msg.author.send({embed: promptEmbed}).then(async m =>{
+                msg.author.send({embeds: [promptEmbed]}).then(async m =>{
                     let resend = async(msg, embed, title, promptEmbed) =>{
                         await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
                         .then(async collected =>{
@@ -184,7 +184,7 @@ Module.addCommand({name: 'embed',
                 })
             }
             let promptEmbed = u.embed().setTitle('What should the footer text be?').setDescription('Type `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let text = collected.first().content
@@ -198,7 +198,7 @@ Module.addCommand({name: 'embed',
         }
         let timestampPrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What should the timestamp be?').setDescription('Examples:\n`now`\n`December 17, 1995 03:24:00`\n1995-12-17T03:24:00`\n1995, 11, 17`\n`1995, 11, 17, 3, 24, 0`\nType `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = new Date(collected.first().content)
@@ -212,7 +212,7 @@ Module.addCommand({name: 'embed',
         let authorPrompt = async(msg, embed)=>{
             authorIcon = async(msg, embed, name, promptEmbed)=>{
                 promptEmbed.setTitle("What should the author icon be?").setDescription("Type `none` for none. You can use a link or a file.")
-                msg.author.send({embed: promptEmbed}).then(async (m)=>{
+                msg.author.send({embeds: [promptEmbed]}).then(async (m)=>{
                     let resend = async(msg ,embed, name, promptEmbed)=>{
                         await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
                         .then(async collected =>{
@@ -233,7 +233,7 @@ Module.addCommand({name: 'embed',
             }
             authorUrl = async(msg, embed, name, icon, promptEmbed) =>{
                 promptEmbed.setTitle("What should the author URL be?")
-                msg.author.send({embed: promptEmbed}).then(async m=>{
+                msg.author.send({embeds: [promptEmbed]}).then(async m=>{
                     let resend = async(msg, embed, name, icon, promptEmbed) =>{
                         m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                         .then(async collected =>{
@@ -265,7 +265,7 @@ Module.addCommand({name: 'embed',
         }
         let imagePrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What do you want to set as the image?').setDescription('Type `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async m=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async m=>{
                 let resend = async(msg, embed) =>{
                     await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
                     .then(async collected =>{
@@ -290,7 +290,7 @@ Module.addCommand({name: 'embed',
         }
         let thumbnailPrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What do you want to set as the thumbail?').setDescription('Type `none` for none')
-            msg.author.send({embed: promptEmbed}).then(async m=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async m=>{
                 let resend = async(msg, embed)=>{
                     await m.channel.awaitMessages(imageFilter, {max: 1, time, errors: ['time']})
                     .then(async collected =>{
@@ -313,7 +313,7 @@ Module.addCommand({name: 'embed',
         }
         let colorPrompt = async(msg, embed)=>{
             let promptEmbed = u.embed().setTitle('What color do you want the embed to be?').setDescription('Type `none` for default')
-            msg.author.send({embed: promptEmbed}).then(async (m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async (m)=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -324,14 +324,14 @@ Module.addCommand({name: 'embed',
             })
         }
         let previewPrompt = async(msg,embed)=>{
-            msg.author.send({embed})
+            msg.author.send({embeds: [embed]})
             setTimeout(async() => {
                 await prompt(msg, embed)
             }, 5000);
         }
         let sendEmbed = async(msg, embed) =>{
             let promptEmbed = u.embed().setTitle('What channel do you want me to send the embed to?').setDescription('Type the ID or name')
-            msg.author.send({embed: promptEmbed}).then(async(m)=>{
+            msg.author.send({embeds: [promptEmbed]}).then(async(m)=>{
                 let resend = async(msg, embed)=>{
                     await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                     .then(async collected =>{
@@ -343,7 +343,7 @@ Module.addCommand({name: 'embed',
                         }
                         else if(channel.length > 1){
                             promptEmbed.setTitle('Looks like there are multiple channels with that name. Which one do you want to send it in?').setDescription(`Each of the following is a number representing the order of the channel. Please select the correct one\n${channel.rawPosition.join('\n')} `)
-                            author.send({embed: promptEmbed}).then(async ms=>{
+                            author.send({embeds: [promptEmbed]}).then(async ms=>{
                                 let resend2 = async(msg, embed)=>{
                                     await ms.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                                     .then(async coll => {
@@ -358,7 +358,7 @@ Module.addCommand({name: 'embed',
                                 await resend2(msg, embed)
                             })
                         }
-                        try{channel.send({embed})} catch{msg.author.send(`I couldn't send a message in that channel. Please change my permissions for that channel or select a different channel.`);await resend(msg, embed)}
+                        try{channel.send({embeds: [embed]})} catch{msg.author.send(`I couldn't send a message in that channel. Please change my permissions for that channel or select a different channel.`);await resend(msg, embed)}
                     })
                 }
                 await resend(msg, embed)

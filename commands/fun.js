@@ -94,7 +94,7 @@ Module.addCommand({name: "8ball",
         .setDescription(`***in the voice of my creator***\nHi! I'm BobbyTheCatfish. I've been building Bobby Bot as a side project to learn some coding skills. My 'main' focus is my YouTube channel, which is linked in this command, so take a look and maybe even subscribe!`)
         .setThumbnail(msg.client.users.cache.get(Module.config.ownerId).avatarURL())
         .setURL('https://www.youtube.com/channel/UCw8DLllFiJOmevgDznFiQZw')
-        msg.channel.send({embed})
+        msg.channel.send({embeds: [embed]})
     }
 })
 .addCommand({name: "personal",
@@ -160,7 +160,7 @@ Module.addCommand({name: "8ball",
                     .setTitle(decodeURI(body.title))
                     .setURL(`https://www.strawpoll.me/${body.id}`)
                     .setDescription("Vote now!\n" + body.options.map(o => "· " + decodeURI(o)).join("\n"));
-                msg.channel.send(embed);
+                msg.channel.send({embeds: [embed]});
                 }
             });
         }

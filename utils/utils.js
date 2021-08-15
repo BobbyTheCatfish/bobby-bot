@@ -26,7 +26,7 @@ const Utils = {
         
     },
     confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)=>{
-            let msg = await (message.channel ? message.channel : message).send({embed: promptEmbed, disableMentions: "all"})
+            let msg = await (message.channel ? message.channel : message).send({embeds: [promptEmbed], disableMentions: "all"})
             await msg.react('✅');
             await msg.react('🛑');
             
@@ -36,14 +36,14 @@ const Utils = {
               const collected = await msg.awaitReactions(filter, { max: 1, time, errors: ['time'] });
               const reaction = collected.first();
               if (reaction.emoji.name === '✅') {
-                msg.edit({embed: confirmEmbed});
+                msg.edit({embeds: [confirmEmbed]});
                 return true;
               } else {
-                msg.edit({embed: cancelEmbed});
+                msg.edit({embeds: [cancelEmbed]});
                 return false;
               }
             } catch(error) {
-              msg.edit({embed: timeoutEmbed});
+              msg.edit({embes: [timeoutEmbed]});
               return null
             }
     },
@@ -116,7 +116,7 @@ const Utils = {
             let totalPages = Math.ceil(elements.length / perPage);
             if (totalPages > 1){
                 let embed = pager(elements, page, message).setFooter(`Page ${page + 1} / ${totalPages}. React with ⏪ and ⏩ to navigate.`);
-                let m = await message.channel.send({embed});
+                let m = await message.channel.send({embeds: [embed]});
                 await m.react("⏪");
                 await m.react("⏩");
                 let reactions;
@@ -133,17 +133,17 @@ const Utils = {
                         if (page < 0 || page >= totalPages) page = (page + totalPages) % totalPages;
                         reactions.first().remove(message.author.id);
                         embed = pager(elements, page, message).setFooter(`Page ${page + 1} / ${totalPages}. React with ⏪ and ⏩ to navigate.`);
-                        m = await m.edit({embed});
+                        m = await m.edit({embeds: [embed]});
                     }
                 } while (reactions.size > 0);
 
                 embed.setFooter(`Page ${page + 1} / ${totalPages}`);
-                m.edit({embed});
+                m.edit({embed: [embed]});
                 for (const [rid, r] of m.reactions.cache){
                     if (!r.me) continue;
                     else r.remove();
                 }
-            } else await message.channel.send({embed: pager(elements, page, message)});
+            } else await message.channel.send({embeds: [pager(elements, page, message)]});
         } catch(e) { Utils.alertError(e, message); }
     },
     parse: async (msg) => {
@@ -231,7 +231,7 @@ const Utils = {
         if (stack.length > 1024) stack = stack.slice(0, 1000);
     
         embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Desktop\//gi, ''));
-        errorLog.send(embed);
+        errorLog.send({embeds: [embed]});
     },
     encodeLogEvents: (flags) => {
         let reduce = function(flags) {

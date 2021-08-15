@@ -43,7 +43,7 @@ Module.addCommand({name: "get",
                     {name: 'Last message at', value: object.lastMessage ? object.lastMessage.createdAt : 'Unknown', inline: true}
                 )
                 
-                return msg.channel.send({embed, disableMentions: "all"})
+                return msg.channel.send({embeds: [embed], disableMentions: "all"})
             }
             else
             {
@@ -62,7 +62,7 @@ Module.addCommand({name: "get",
                     embed.addFields({name: `Unverified: ${msg.guild.members.cache.size - msg.guild.roles.cache.get('771907940470358046').members.size}`, value: `${unverifiedPpl}`})
                 }
                 if(!object) return msg.channel.send("While theoretically impossible, it appears that there aren't any members in your server...").then(u.clean)
-                else return msg.channel.send({embed, disableMentions: "all"});
+                else return msg.channel.send({embeds: [embed], disableMentions: "all"});
             }
         }
         else if(words == 'roles' || words == 'role')
@@ -172,7 +172,7 @@ Module.addCommand({name: "get",
                             {name: 'Lat pin at', value: object.lastPinAt || 'N/A', inline: true},
                         )
                     }
-                return msg.channel.send({embed, disableMentions: "all"})
+                return msg.channel.send({embeds: [embed], disableMentions: "all"})
 
             }
             else
@@ -182,7 +182,7 @@ Module.addCommand({name: "get",
                 if(!vc) vc = ' '
                 let embed = u.embed().setTitle(`There are \`${msg.guild.channels.cache.filter(b=> b.type !='category').array().length}\` channels in your server.`).setDescription(`${object} \n${vc}`)
                 if(!object) return msg.channel.send("no channels found")
-                else return msg.channel.send({embed, disableMentions: 'all'})
+                else return msg.channel.send({embeds: [embed], disableMentions: 'all'})
             }
         }
         else if(words == 'categories'||words == 'category')
@@ -203,14 +203,14 @@ Module.addCommand({name: "get",
                     {name: 'Viewable', value: object.viewable, inline: true},
                     {name: 'Children', value: `**Text:** \n${textChildren} \n\n**Voice:**\n ${voiceChildren}` || 'None', inline: true},
                 )
-                return msg.channel.send({embed, disableMentions: 'all'})
+                return msg.channel.send({embeds: [embed], disableMentions: 'all'})
             }
             else
             {
                 let object = msg.guild.channels.cache.filter(b => b.type == 'category').sort((a, d) => d.rawPosition - a.rawPosition).map(c => c.name).reverse().join(`\n`)
                 let embed = u.embed().setTitle(`There are \`${msg.guild.channels.cache.filter(b =>b.type == 'category').array().length}\` categories in your server`).setDescription(`\`\`\`${object}\`\`\``)
                 if(!object) return msg.channel.send("Looks like you don't have any categories.")
-                else return msg.channel.send({embed, disableMentions: 'all'})
+                else return msg.channel.send({embeds: [embed], disableMentions: 'all'})
             }
         }
         else if(words == 'bans' || words == 'ban' || words == 'banned')
@@ -229,7 +229,7 @@ Module.addCommand({name: "get",
                     {name: 'Partial user', value: object.user.partial , inline: true},
                     {name: 'Ban reason', value: object.reason ? object.reason : 'None given', inline: true}
                 ).setThumbnail(object.user.displayAvatarURL({size: 64}))
-                msg.channel.send({embed, disableMentions: 'all'})
+                msg.channel.send({embeds: [embed], disableMentions: 'all'})
             }
             else
             {
@@ -237,7 +237,7 @@ Module.addCommand({name: "get",
                     {
                         let object = banned.map(u => u.user).join('\n');
                         let embed = u.embed().setTitle(`There ${banned.array().length == 1 ? 'is' : 'are'} \`${banned.array().length}\` banned user${banned.array().length == 1 ? '' : 's'} in your server`).setDescription(object)
-                        return msg.channel.send(embed)
+                        return msg.channel.send({embeds: [embed]})
                     })
             }
         }
@@ -281,7 +281,7 @@ Module.addCommand({name: "get",
                     {name: 'Widget Channel', value: object.widgetChannel?object.widgetChannel:'None' , inline: true},
                 ).setThumbnail(object.iconURL({size: 128}))
                 if(object.discoverySplashURL) embed.setImage(object.discoverySplashURL())
-                return msg.channel.send({embed, disableMentions: 'all'})
+                return msg.channel.send({embeds: [embed], disableMentions: 'all'})
         }
         else return msg.channel.send("That's not a valid get command. Try specifying member, role, emoji, channel, category, ban, or guild.").then(u.clean)
     }

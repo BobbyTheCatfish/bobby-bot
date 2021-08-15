@@ -67,7 +67,7 @@ Module.addEvent('guildMemberAdd', async member => {
         let rolesArray = []
         let customOrRandom = async(msg, welcome)=>{
             let promptEmbed = u.embed().setTitle("Do you want a custom message or a randomized one?").setDescription("Randomized messages can include a rules channel and emoji")
-            msg.channel.send({embed: promptEmbed}).then(async m=>{
+            msg.channel.send({embeds: [promptEmbed]}).then(async m=>{
                 let choices = ['🔀','🇨']
                 let reactionFilter = (reaction, user) => choices.includes(reaction.emoji.name) && user.id == msg.author.id
                 for(x of choices) await m.react(x)
@@ -82,7 +82,7 @@ Module.addEvent('guildMemberAdd', async member => {
         }
         let welcomeChannel = async(msg, welcome, custom = false)=>{
             let promptEmbed = u.embed().setTitle('What channel should I send it in?').setDescription('Type it in the format of #channel-name\nType `none` to disable welcome messages')
-            msg.channel.send({embed: promptEmbed}).then( async m=>{
+            msg.channel.send({embeds: [promptEmbed]}).then( async m=>{
                 await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -102,7 +102,7 @@ Module.addEvent('guildMemberAdd', async member => {
         }
         let customMessage = async(msg, channel)=>{
             let promptEmbed = u.embed().setTitle("What do you want the message to say?").setDescription("Type `<@member>` in place of mentioning the new member")
-            msg.channel.send({embed: promptEmbed}).then(async m=>{
+            msg.channel.send({embeds: [promptEmbed]}).then(async m=>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     await role(msg, collected.first().content, channel)
@@ -111,7 +111,7 @@ Module.addEvent('guildMemberAdd', async member => {
         }
         let role = async(msg, welcome, custom = false)=>{
             let promptEmbed = u.embed().setTitle("What roles should I add?").setDescription(`Type \`done\` to stop adding roles. You can add up to 5. (${5-rolesArray.length} left)`)
-            msg.channel.send({embed: promptEmbed}).then(async m=>[
+            msg.channel.send({embeds: [promptEmbed]}).then(async m=>[
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -152,7 +152,7 @@ Module.addEvent('guildMemberAdd', async member => {
 
         let emoji = async(msg, welcome)=>{
             let promptEmbed = u.embed().setTitle('What emoji should I use?').setDescription('Type `none` for none')
-            msg.channel.send({embed: promptEmbed}).then(async m =>{
+            msg.channel.send({embeds: [promptEmbed]}).then(async m =>{
                 await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
@@ -176,7 +176,7 @@ Module.addEvent('guildMemberAdd', async member => {
                 finished(msg, newWelcome)
             }
             let promptEmbed = u.embed().setTitle("What is the rule channel?").setDescription("Type `none` for none")
-            msg.channel.send({embed: promptEmbed}).then(async m=>{
+            msg.channel.send({embeds: [promptEmbed]}).then(async m=>{
                 await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
                 .then(async collected=>{
                     let content = collected.first().content
@@ -203,7 +203,7 @@ Module.addEvent('guildMemberAdd', async member => {
                     welcomeRoleArray.push(`<@&${x}>`)
                 }
                 let finalEmbed = u.embed().setTitle(`The following will be sent in #${msg.guild.channels.cache.get(welcome.channel).name} every time someone joins`).setDescription(`${welcomeString.replace(/<@member>/gi, msg.member)}${welcomeRoleArray.size > 0? `\n\n**The following roles will be assigned:**\n${welcomeRoleArray.join('\n')}`:''}`)
-                msg.channel.send({embed: finalEmbed})
+                msg.channel.send({embeds: [finalEmbed]})
                 if(Module.db.welcome.saveWelcome(msg.guild.id, welcome.channel, welcome.role, null, null, welcome.welcome) == null) return msg.channel.send("I ran into an error while saving.").then(u.errorHandler(msg, 'welcome saving'))
             }
             else{
@@ -213,7 +213,7 @@ Module.addEvent('guildMemberAdd', async member => {
                     welcomeRoleArray.push(`<@&${x}>`)
                 }
                 let finalEmbed = u.embed().setTitle(`The following will be sent in #${msg.guild.channels.cache.get(welcome.channel).name} every time someone joins`).setDescription(`${welcomeString}${welcomeRoleArray.size > 0?`\n\n**The following roles will be assigned:**\n ${welcomeRoleArray.join('\n')}`: ''}`)     
-                msg.channel.send({embed: finalEmbed})   
+                msg.channel.send({embeds: [finalEmbed]})   
                 if(Module.db.welcome.saveWelcome(msg.guild.id, welcome.channel, welcome.role, welcome.emoji, welcome.ruleChannel, null) == null) return msg.channel.send("I ran into an error while saving.").then(u.errorHandler(msg ,'welcome saving'))
             }
         }

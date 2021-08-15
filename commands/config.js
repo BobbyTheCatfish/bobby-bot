@@ -52,6 +52,7 @@ const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Module = new Augur.Module(),
     {onlyEmoji} = require('emoji-aware')
+    function timedOut (m) {m.channel.send({embeds: [u.embed().setTitle('Timed out').setDescription('You ran out of time!')]})}
 
 Module.addCommand({name: 'config',
     onlyOwner: true,
@@ -67,7 +68,7 @@ Module.addCommand({name: 'config',
             let errorChannel = async () =>{
                 let currentChannel = await Module.db.guildconfig.getErrorChannel(msg.guild.id)
                 let embed = u.embed().setTitle("What channel should I send errors to?").setDescription(`Type it in the format of #channel-name\nType \`none\` to disable error messages\n${currentChannel ? `The current error channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no error channel set up right now.'}`)
-                msg.channel.send({embed}).then(async m=>{
+                msg.channel.send({embeds: [embed]}).then(async m=>{
                     await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                         let content = collected.first().content,
                             channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
@@ -80,16 +81,16 @@ Module.addCommand({name: 'config',
                             return mainMenu()
                         }
                         let newEmbed = u.embed().setTitle(`Error log channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Errors will be ${channel ? `sent to ${channel}` : 'contained to my logs'}`)
-                        msg.channel.send(newEmbed)
+                        msg.channel.send({embeds: [newEmbed]})
                         return mainMenu()
 
-                    }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                    }).catch(()=> timedOut(m))
                 })
             }
             let botLobby = async () =>{
                 let currentChannel = await Module.db.guildconfig.getBotLobby(msg.guild.id)
                 let embed = u.embed().setTitle("What channel should I send large bits of text to?").setDescription(`Type it in the format of #channel-name\nType \`none\` to disable error messages\n${currentChannel ? `The current error channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no error channel set up right now.'}`)
-                msg.channel.send({embed}).then(async m=>{
+                msg.channel.send({embeds:[embed]}).then(async m=>{
                     await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                         let content = collected.first().content,
                             channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
@@ -102,14 +103,14 @@ Module.addCommand({name: 'config',
                             return mainMenu()
                         }
                         let newEmbed = u.embed().setTitle(`Bot lobby channel ${channel ? 'saved' : 'disabled'}`).setDescription(`Large text dumps will be ${!channel ? 'sent in the channel they\'re sent in' : `sent to ${(channel)}`}`)
-                        msg.channel.send(newEmbed)
+                        msg.channel.send({embeds: [newEmbed]})
                         return mainMenu()
-                    }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                    }).catch(()=> timedOut(m))
                 })
             }
 
             let embed = u.embed().setTitle('What channel do you want to configure?').setDescription('Options:\nError Channel\nBot Lobby')
-            msg.channel.send({embed}).then(async m=>{
+            msg.channel.send({embeds: [embed]}).then(async m=>{
                 await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase().startsWith('error')) return errorChannel()
@@ -117,7 +118,7 @@ Module.addCommand({name: 'config',
                     msg.channel.send("That's not one of the options")
                     return channelPrompt()
                     
-                }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                }).catch(()=> timedOut(m))
             })
         }
         let starPrompt = async() =>{
@@ -125,7 +126,7 @@ Module.addCommand({name: 'config',
             let  createBoard = async () =>{
                 let channelPrompt = async () =>{
                     let embed =  u.embed().setTitle('What channel should I send messages to?').setDescription('Type in the format of #channel-name')
-                    msg.channel.send({embed}).then(async m =>{
+                    msg.channel.send({embeds: [embed]}).then(async m =>{
                         await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                             let channel = msg.guild.channels.cache.get(collected.first().content.replace(/[^0-9]/g, ''))
                             if(!channel){
@@ -133,12 +134,12 @@ Module.addCommand({name: 'config',
                                 return channelPrompt(msg)
                             }
                             return reactions(channel.id)
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 let reactions = async (channel, reactionz = []) =>{
                     let embed = u.embed().setTitle("What reactions should trigger the board?").setDescription("Defaults are ⭐ and 🌟.\n🌟 will always send to the main starboard if a mod reacts with it\n\nType `done` when you're done")
-                    msg.channel.send({embed}).then(async m =>{
+                    msg.channel.send({embeds: [embed]}).then(async m =>{
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content
                             if(content.toLowerCase() == 'done'){
@@ -152,13 +153,13 @@ Module.addCommand({name: 'config',
                             }
                             reactionz.push(content)
                             return reactions(channel,reactionz)
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                     
                 }
                 let singleChannel = async (channel, reactions) =>{
                     let embed = u.embed().setTitle("Should this board only be able to be triggered from a certain channel?").setDescription("Type in the format of #channel-name. Type `none` for none ")
-                    msg.channel.send({embed}).then(async m =>{
+                    msg.channel.send({embeds: [embed]}).then(async m =>{
                         await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                             let content = collected.first().content
                             let channel2 = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
@@ -168,12 +169,12 @@ Module.addCommand({name: 'config',
                             }
                             return toStar(channel, reactions, channel2?.id)
                         })
-                    }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                    }).catch(()=> timedOut(m))
                 }
 
                 let toStar = async (channel, reactions, singleChannel) =>{
                     let embed = u.embed().setTitle(`How many reactions are needed to be sent to ${msg.guild.channels.cache.get(channel)?.name}?`).setDescription(`The default is 5. Reacting with 🌟 while having the Manage Server permission will automatically put this on <#${channel}>.`)
-                    msg.channel.send({embed}).then(async m=>{
+                    msg.channel.send({embeds: [embed]}).then(async m=>{
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content
                             if(isNaN(content) || content > 100 || content < 1){
@@ -183,11 +184,11 @@ Module.addCommand({name: 'config',
                             else if(await Module.db.guildconfig.saveStarBoard(msg.guild.id, channel, reactions, singleChannel, Math.round(content)) != null){
                                 let embed = u.embed().setTitle(`${msg.guild.channels.cache.get(channel).name} is now a starboard!`).setFooter(reactions.join(' '))
                                 if(singleChannel) embed.setDescription(`Only messages in ${msg.guild.channels.cache.get(singleChannel)} will appear on this starboard.`)
-                                msg.channel.send({embed})
+                                msg.channel.send({embeds: [embed]})
                             }
                             else msg.channel.send("I had a problem saving the starboard.")
                             return mainMenu()
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 await channelPrompt()
@@ -195,7 +196,7 @@ Module.addCommand({name: 'config',
             let manageBoard = async () =>{
                 let selectionPrompt = async () =>{
                     let embed = u.embed().setTitle("Which starboard do you want to manage?").setDescription(`${existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e=> e.channel).join('>\n<#')}>` : 'There are no boards to manage.'}`)
-                    msg.channel.send({embed}).then(async m=>{
+                    msg.channel.send({embeds: [embed]}).then(async m=>{
                         await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                             let content = collected.first().content.replace(/[^0-9]/g, '')
                             let findBoard = existingBoards.find(b => b.channel == content)
@@ -207,12 +208,12 @@ Module.addCommand({name: 'config',
                             msg.channel.send("That's not one of the options. Please try again.")
                             return selectionPrompt()
                             
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 let initialPrompt = async (channel) =>{
                     let embed = u.embed().setTitle('What do you want to manage?').setDescription('The options are:\Reactions\nChannel Exclusivity\nReaction Amount\nDelete\nDone')
-                    msg.channel.send({embed}).then(async m=>{
+                    msg.channel.send({embeds: [embed]}).then(async m=>{
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             if(content == 'reactions') return reactionPrompt(channel)
@@ -220,13 +221,13 @@ Module.addCommand({name: 'config',
                             if(content == 'reaction') return toStarPrompt(channel)
                             if(content == 'delete') return deletePrompt(channel)
                             if(content == 'done') return msg.channel.send("Modification Complete")
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 let reactionPrompt = async (channel) =>{
                     let addEmoji = async(channel, emoji=[])=>{
                         let embed = u.embed().setTitle('What emoji do you want to add?').setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\n4${emoji.join('\n')}\nType \`done\` when you're finished`)
-                        msg.channel.send({embed}).then(async m=>{
+                        msg.channel.send({embeds: [embed]}).then(async m=>{
                             await m.channel.awaitMessages(contentFilter, options).then(async collected=>{
                                 let content = collected.first().content
                                 if(content.toLowerCase() == 'done'){
@@ -241,12 +242,12 @@ Module.addCommand({name: 'config',
                                 }
                                 emoji.push(findEmoji.id)
                                 return addEmoji(channel. emoji)
-                            }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                            }).catch(()=> timedOut(m))
                         })
                     }
                     let removeEmoji = async(channel)=>{
                         let embed = u.embed().setTitle("Which one do you waant to remove?").setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\nType \`done\` when you're done`)
-                        msg.channel.send({embed}).then(async m=>{
+                        msg.channel.send({embeds: [embed]}).then(async m=>{
                             await m.channel.awaitMessages(contentFilter, options).then(async collected=>{
                                 let content = collected.first().content,
                                 match,
@@ -261,23 +262,23 @@ Module.addCommand({name: 'config',
                                 let newArray = channel.reactions.filter(r =>r != foundEmoji)
                                 Module.db.guildconfig.saveStarBoard(msg.guild.id, channel.channel, newArray, channel.toStar)
                                 return removeEmoji(channel)
-                            }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                            }).catch(()=> timedOut(m))
                         })
                     }
                     let embed = u.embed().setTitle('Do you want to add or remove reactions?').setDescription(`${existingBoards ? `Current reaction(s):\n${existingBoards.map(e=>e.reactions).join('\n')} `: 'There are no starboards set up.'}`)
-                    msg.channel.send({embed}).then(async m=>{
+                    msg.channel.send({embeds: [embed]}).then(async m=>{
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             if(content == 'add') return addEmoji(msg, channel)
                             else if(content == 'remove') return removeEmoji(msg, channel)
                             msg.channel.send("That's not one of the options.")
                             return manageBoard()
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 let singleChannelPrompt = async (channel) =>{
                     let embed = u.embed().setTitle('Which channel should this board watch for reactions?').setDescription('Type in the format of #channel-nname\nType `all` to disable exclusivity')
-                    msg.channel.send({embed}).then(async m=>{
+                    msg.channel.send({embeds: [embed]}).then(async m=>{
                         await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             let chanel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))?.id
@@ -288,7 +289,7 @@ Module.addCommand({name: 'config',
                             }
                             msg.channel.send("I couldn't find that channel. Please try again.")
                             return singleChannelPrompt(channel)
-                        }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                        }).catch(()=> timedOut(m))
                     })
                 }
                 let toStarPrompt = async (channel) =>{
@@ -305,14 +306,14 @@ Module.addCommand({name: 'config',
                 }
             }
             let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e => e.channel).join('>\n<#')}>` : 'There are no starboards currently set up')
-            msg.channel.send({embed}).then(async m =>{
+            msg.channel.send({embeds: [embed]}).then(async m =>{
                 await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'create') return createBoard()
                     else if(content.toLowerCase() == 'manage') return manageBoard()
                     msg.channel.send("That's not one of the options. Please try again.")
                     return starPrompt()
-                }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                }).catch(()=> timedOut(m))
             })
         }
 
@@ -320,7 +321,7 @@ Module.addCommand({name: 'config',
             let flags = async(channel, firstTime = true, enabledEvents=[]) =>{
                 let embed = u.embed().setTitle('What would you like to monitor?').setDescription(`Type \`done\` when you're done.\n\nEnabled:\n${enabledEvents.map(e => e[0]).join('\n')}`)
                 if(firstTime) embed.setDescription(`The following are the options. Type \`done\` when you're done.\n\n${events.map(e=>e[0]).join('\n')}`)
-                msg.channel.send({embed}).then(async m=>{
+                msg.channel.send({embeds: [embed]}).then(async m=>{
                     await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                         let content = collected.first().content
                         let filtered = events.find(e => e[0].toLowerCase() == content.toLowerCase())
@@ -342,12 +343,12 @@ Module.addCommand({name: 'config',
                         msg.channel.send("That's not one of the options. Please try again.")
                         return flags(channel, false, enabledEvents)
                         
-                    }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                    }).catch(()=> timedOut(m))
                 })
             }
             let currentChannel = await Module.db.guildconfig.getLogChannel(msg.guild.id)
             let embed = u.embed().setTitle('What channel should I send the logs in?').setDescription(`Type \`none\` to disable log prompts.\nType it in the format of #channel-name\n${currentChannel ? `The current log channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no logging channel set up'}`)
-            msg.channel.send({embed}).then(async m=>{
+            msg.channel.send({embeds: [embed]}).then(async m=>{
                 await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'none'){
@@ -360,13 +361,13 @@ Module.addCommand({name: 'config',
                         return logPrompt()
                     }
                     return flags(channel.id)
-                }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                }).catch(()=> timedOut(m))
             })
         }
         let mutedPrompt = async() =>{
             let currentRole = await Module.db.guildconfig.getMutedRole(msg.guild.id),
                 embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.${currentRole ? `\nThe current role is <@&${currentRole}>`: ''}`)
-            msg.channel.send({embed, disableMentions: 'all'}).then(async m=>{
+            msg.channel.send({embeds: [embed], disableMentions: 'all'}).then(async m=>{
                 await m.channel.awaitMessages(roleFilter, options).then(async collected =>{
                     let content = collected.first().content
                     let role = msg.guild.roles.cache.get(content.replace(/[^0-9]/g, ''))
@@ -375,17 +376,17 @@ Module.addCommand({name: 'config',
                         return mutedPrompt()
                     }
                     await Module.db.guildconfig.saveMutedRole(msg.guild.id, role?.id || 'disabled')
-                    embed = u.embed().setTitle('Muted role saved').setDescription(role ? `The role ${role} will be assigned to people when \`!mute\` is used.` : "The muted role has been disabled, so `!mute` will not work.")
+                    embeds = [u.embed().setTitle('Muted role saved').setDescription(role ? `The role ${role} will be assigned to people when \`!mute\` is used.` : "The muted role has been disabled, so `!mute` will not work.")]
                     m.channel.send({embed, disableMentions: 'all'})
                     return mainMenu()
-                }).catch((e)=> {m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}); console.log(e)})
+                }).catch((e)=> {timedOut(m); console.log(e)})
             })
         }
 
         let mainMenu = async () => {
             let choices = ['Channels', 'Starboards', 'Logging', 'Muted Role', 'Done'],
                 embed = u.embed().setTitle('What do you want to configure?').setDescription(`Options:\n${choices.join('\n')}`)
-            msg.channel.send({embed}).then(async m=>{
+            msg.channel.send({embeds: [embed]}).then(async m=>{
                 await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
                     let content = collected.first().content.toLowerCase()
                     if(content == choices[0].toLowerCase()) return channelPrompt()
@@ -395,7 +396,7 @@ Module.addCommand({name: 'config',
                     if(content == choices[4].toLowerCase()) return collected.first().react('👍')
                     msg.channel.send("That's not one of the options")
                     return mainMenu()
-                }).catch(()=> m.channel.send({embed: u.embed().setTitle('Timed out').setDescription('You ran out of time!')}))
+                }).catch(()=> timedOut(m))
             }
         )}
         return mainMenu()

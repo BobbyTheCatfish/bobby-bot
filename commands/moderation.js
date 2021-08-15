@@ -35,7 +35,7 @@ Module.addCommand({name: "ban",
                     msg.channel.send("I ran into an error while banning them.")
                     logChannel ? logChannel.send(`An error occured while trying to ban ${target}: ${e}`) : console.log(e)
                 }
-                if (logChannel && msg.channel != logChannel) logChannel.send(confirmEmbed)
+                if (logChannel && msg.channel != logChannel) logChannel.send({embeds: [confirmEmbed]})
                 if(msg.guild.id == '765669316217143315')return console.log(`🔔 ${u.time()}${target.user.username.yellow} was banned by ${msg.author.username.red} for ${reason.cyan}`)
             }
             return
@@ -62,11 +62,11 @@ Module.addCommand({name: "ban",
                         msg.guild.member(m).ban(`${msg.author.username} batch banned them and others for ${reason.substr(0,400)}`);
                         console.log(`🔔 ${u.time()}${m.user.username.yellow} was banned by ${msg.author.username.red} for ${reason.cyan}`)
                     }catch(e){
-                        msg.channel.send({embed: u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`), disableMentions: "all"}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embed: u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`), disableMentions: "all"})
+                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], disableMentions: "all"}).then(m => u.clean(m))
+                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], disableMentions: "all"})
                     }
                 });
-                if(logChannel && msg.channel != logChannel) logChannel.send(confirmEmbed);
+                if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [confirmEmbed]});
                 return 
                 
             }
@@ -107,7 +107,7 @@ Module.addCommand({name: "ban",
                     msg.channel.send("I ran into an error while kicking them.")
                     logChannel ? logChannel.send(`An error occured while trying to kick ${target}: ${e}`) : console.log(e)
                 }
-                if (logChannel && msg.channel != logChannel) logChannel.send(confirmEmbed)
+                if (logChannel && msg.channel != logChannel) logChannel.send({embeds: [confirmEmbed]})
                 return console.log(`🔔 ${u.time()}${target.user.username.yellow} was kicked by ${msg.author.username.red} for ${reason.cyan}`)
             }
             return
@@ -135,10 +135,10 @@ Module.addCommand({name: "ban",
                         console.log(`🔔 ${u.time()}${m.user.username.yellow} was kicked by ${msg.author.username.red} for ${reason.cyan}`)
                     }catch(e){
                         msg.channel.send({embed: u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`), disableMentions: "all"}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embed: u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`), disableMentions: "all"})
+                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], disableMentions: "all"})
                     }
                 });
-                if(logChannel && msg.channel != logChannel) logChannel.send(confirmEmbed);
+                if(logChannel && msg.channel != logChannel) logChannel.send(({embeds: [confirmEmbed]}));
                 return 
                 
             }
@@ -159,8 +159,8 @@ Module.addCommand({name: "ban",
         if(isNaN(deleteCount) || !deleteCount || deleteCount < 2 || deleteCount > 200) return msg.channel.send("Please provide a number between 2 and 200 for the number of messages to delete")
         else msg.channel.bulkDelete(deleteCount).catch(error => errorChannel ? errorChannel.send(`I couldn't delete messages in ${msg.channel} because of: ${error}`) : msg.reply(`Couldn't delete messages because of: ${error}`));
         let embed = u.embed().setTitle(`${deleteCount} messages deleted by ${msg.member.displayName}`)
-        if(logChannel && logChannel != msg.channel && deleteCount > 9) return logChannel.send({embed})
-        else return msg.channel.send({embed}).then(u.clean)
+        if(logChannel && logChannel != msg.channel && deleteCount > 9) return logChannel.send({embeds: [embed]})
+        else return msg.channel.send({embeds: [embed]}).then(u.clean)
     }
 })
 .addCommand({name: "dcall",
@@ -197,7 +197,7 @@ Module.addCommand({name: "ban",
                 let attachment = msg.attachments.first();
                 if (attachment.height <= 1 && attachment.width <= 1) return msg.channel.send('You need to upload a picture. If you feel this is a mistake, try uploading manually.')
                 if(!keywords || keywords.length < 2) return msg.channel.send(validName)
-                return msg.guild.emojis.create(attachment.url, words[1]).then(e => msg.channel.send({embed: u.embed().setImage(e.url)})).then(msg.channel.send('`:' + keywords.replace(/ /g, '-') + ':` was successfuly added!')).catch(error => msg.reply(`Couldn't create emoji because of: ${error}`));
+                return msg.guild.emojis.create(attachment.url, words[1]).then(e => msg.channel.send({embeds: [u.embed().setImage(e.url)]})).then(msg.channel.send('`:' + keywords.replace(/ /g, '-') + ':` was successfuly added!')).catch(error => msg.reply(`Couldn't create emoji because of: ${error}`));
             }
             else if(msg.content.endsWith('.png') || msg.content.endsWith('.jpg') || msg.content.endsWith('.gif'))
             {
@@ -277,7 +277,7 @@ Module.addCommand({name: "ban",
         let embed = u.embed().setTitle(`Mute Resulst:`)
         if(s.length > 0) embed.addFields({name: "Successfully muted", value: s.join('\n')})
         if(err.length > 0) embed.addFields({name: "Failed to add role", value: err.join('\n')})
-        return msg.channel.send({embed, disableMentions: "all"});
+        return msg.channel.send({embeds: [embed], disableMentions: "all"});
     }
 })
 .addCommand({name:'unmute',
@@ -304,7 +304,7 @@ Module.addCommand({name: "ban",
         let embed = u.embed().setTitle(`Unmute Resulst:`)
         if(s.length > 0) embed.addFields({name: "Successfully unmuted", value: s.join('\n')})
         if(err.length > 0) embed.addFields({name: "Failed to remove role", value: err.join('\n')})
-        return msg.channel.send({embed, disableMentions: "all"});    
+        return msg.channel.send({embeds: [embed], disableMentions: "all"});    
     }
 })
 .addCommand({name:'muteall',
