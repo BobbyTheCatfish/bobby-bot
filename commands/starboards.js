@@ -36,7 +36,7 @@ Module.addEvent('messageReactionAdd', async(reaction, user) =>{
             if(reaction.message.guild){
                 if(reaction.message.createdTimestamp > (Date.now() - 3 * 24 * 60 * 60000)){
                     let member = reaction.message.guild.members.cache.get(user.id)
-                    if(member.hasPermission('MANAGE_GUILD') && reaction.emoji.name == '🌟') return await postToBoard(reaction, member, true)
+                    if(member.permissions.has('MANAGE_GUILD') && reaction.emoji.name == '🌟') return await postToBoard(reaction, member, true)
                     else await postToBoard(reaction, user) 
                 }
             }

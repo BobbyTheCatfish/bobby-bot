@@ -59,17 +59,21 @@ Module.addCommand({name: 'config',
     onlyGuild: true,
     category: "Mod",
     process: async (msg, suffix) =>{
-        let time = 5000 * 60,
-            options = {max: 1, time, errors: ['time']}
+        
         let contentFilter = m => m.content && m.author == msg.author
         let channelFilter = m => m.content && (m.guild.channels.cache.get(m.content.replace(/[^0-9]/g, '')) || m.content.toLowerCase() == 'none') && m.author == msg.author
         let roleFilter = m => m.content && (m.guild.roles.cache.get(m.content.replace(/[^0-9]/g, '')) || m.content.toLowerCase() == 'none') && m.author == msg.author
+        let time = 5000 * 60,
+        contentOptions = {filter: contentFilter, max: 1, time, errors: ['time']},
+        channelOptions = {filter: channelFilter, max: 1, time, errors: ['time']},
+        roleOptions = {filter: roleFilter, max: 1, time, errors: ['time']}
+
         let channelPrompt = async () =>{
             let errorChannel = async () =>{
                 let currentChannel = await Module.db.guildconfig.getErrorChannel(msg.guild.id)
                 let embed = u.embed().setTitle("What channel should I send errors to?").setDescription(`Type it in the format of #channel-name\nType \`none\` to disable error messages\n${currentChannel ? `The current error channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no error channel set up right now.'}`)
                 msg.channel.send({embeds: [embed]}).then(async m=>{
-                    await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                    await m.channel.awaitMessages(channelOptions).then(async collected =>{
                         let content = collected.first().content,
                             channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
                         if(!channel && content.toLowerCase() != 'none'){
@@ -91,7 +95,7 @@ Module.addCommand({name: 'config',
                 let currentChannel = await Module.db.guildconfig.getBotLobby(msg.guild.id)
                 let embed = u.embed().setTitle("What channel should I send large bits of text to?").setDescription(`Type it in the format of #channel-name\nType \`none\` to disable error messages\n${currentChannel ? `The current error channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no error channel set up right now.'}`)
                 msg.channel.send({embeds:[embed]}).then(async m=>{
-                    await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                    await m.channel.awaitMessages(channelOptions).then(async collected =>{
                         let content = collected.first().content,
                             channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
                         if(!channel && content.toLowerCase() != 'none'){
@@ -111,7 +115,7 @@ Module.addCommand({name: 'config',
 
             let embed = u.embed().setTitle('What channel do you want to configure?').setDescription('Options:\nError Channel\nBot Lobby')
             msg.channel.send({embeds: [embed]}).then(async m=>{
-                await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                await m.channel.awaitMessages(contentOptions).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase().startsWith('error')) return errorChannel()
                     else if(content.toLowerCase().startsWith('bot')) return botLobby()
@@ -127,7 +131,7 @@ Module.addCommand({name: 'config',
                 let channelPrompt = async () =>{
                     let embed =  u.embed().setTitle('What channel should I send messages to?').setDescription('Type in the format of #channel-name')
                     msg.channel.send({embeds: [embed]}).then(async m =>{
-                        await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(channelOptions).then(async collected =>{
                             let channel = msg.guild.channels.cache.get(collected.first().content.replace(/[^0-9]/g, ''))
                             if(!channel){
                                 msg.channel.send("I couldn't find that channel. Please try again.")
@@ -140,7 +144,7 @@ Module.addCommand({name: 'config',
                 let reactions = async (channel, reactionz = []) =>{
                     let embed = u.embed().setTitle("What reactions should trigger the board?").setDescription("Defaults are ⭐ and 🌟.\n🌟 will always send to the main starboard if a mod reacts with it\n\nType `done` when you're done")
                     msg.channel.send({embeds: [embed]}).then(async m =>{
-                        await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(contentOptions).then(async collected =>{
                             let content = collected.first().content
                             if(content.toLowerCase() == 'done'){
                                 if(reactionz.length == 0) reactionz = ['⭐','🌟']
@@ -160,7 +164,7 @@ Module.addCommand({name: 'config',
                 let singleChannel = async (channel, reactions) =>{
                     let embed = u.embed().setTitle("Should this board only be able to be triggered from a certain channel?").setDescription("Type in the format of #channel-name. Type `none` for none ")
                     msg.channel.send({embeds: [embed]}).then(async m =>{
-                        await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(channelOptions).then(async collected =>{
                             let content = collected.first().content
                             let channel2 = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))
                             if(!channel2 && content.toLowerCase() != 'none'){
@@ -175,7 +179,7 @@ Module.addCommand({name: 'config',
                 let toStar = async (channel, reactions, singleChannel) =>{
                     let embed = u.embed().setTitle(`How many reactions are needed to be sent to ${msg.guild.channels.cache.get(channel)?.name}?`).setDescription(`The default is 5. Reacting with 🌟 while having the Manage Server permission will automatically put this on <#${channel}>.`)
                     msg.channel.send({embeds: [embed]}).then(async m=>{
-                        await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(contentOptions).then(async collected =>{
                             let content = collected.first().content
                             if(isNaN(content) || content > 100 || content < 1){
                                 msg.channel.send("That's not a valid number. (Must be between 1 and 100")
@@ -197,7 +201,7 @@ Module.addCommand({name: 'config',
                 let selectionPrompt = async () =>{
                     let embed = u.embed().setTitle("Which starboard do you want to manage?").setDescription(`${existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e=> e.channel).join('>\n<#')}>` : 'There are no boards to manage.'}`)
                     msg.channel.send({embeds: [embed]}).then(async m=>{
-                        await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(channelOptions).then(async collected =>{
                             let content = collected.first().content.replace(/[^0-9]/g, '')
                             let findBoard = existingBoards.find(b => b.channel == content)
                             if(findBoard && !msg.guild.channels.cache.get(content)){
@@ -214,7 +218,7 @@ Module.addCommand({name: 'config',
                 let initialPrompt = async (channel) =>{
                     let embed = u.embed().setTitle('What do you want to manage?').setDescription('The options are:\Reactions\nChannel Exclusivity\nReaction Amount\nDelete\nDone')
                     msg.channel.send({embeds: [embed]}).then(async m=>{
-                        await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(contentOptions).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             if(content == 'reactions') return reactionPrompt(channel)
                             if(content == 'exclusivity') return singleChannelPrompt(channel)
@@ -228,7 +232,7 @@ Module.addCommand({name: 'config',
                     let addEmoji = async(channel, emoji=[])=>{
                         let embed = u.embed().setTitle('What emoji do you want to add?').setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\n4${emoji.join('\n')}\nType \`done\` when you're finished`)
                         msg.channel.send({embeds: [embed]}).then(async m=>{
-                            await m.channel.awaitMessages(contentFilter, options).then(async collected=>{
+                            await m.channel.awaitMessages(contentOptions).then(async collected=>{
                                 let content = collected.first().content
                                 if(content.toLowerCase() == 'done'){
                                     if(emoji.length == 0) emoji = ['⭐','🌟']
@@ -248,7 +252,7 @@ Module.addCommand({name: 'config',
                     let removeEmoji = async(channel)=>{
                         let embed = u.embed().setTitle("Which one do you waant to remove?").setDescription(`Current reactions:\n${existingBoards.map(e=>e.reactions).join('\n')}\nType \`done\` when you're done`)
                         msg.channel.send({embeds: [embed]}).then(async m=>{
-                            await m.channel.awaitMessages(contentFilter, options).then(async collected=>{
+                            await m.channel.awaitMessages(contentOptions).then(async collected=>{
                                 let content = collected.first().content,
                                 match,
                                 regex = /<:.*:(.*)>/g
@@ -267,7 +271,7 @@ Module.addCommand({name: 'config',
                     }
                     let embed = u.embed().setTitle('Do you want to add or remove reactions?').setDescription(`${existingBoards ? `Current reaction(s):\n${existingBoards.map(e=>e.reactions).join('\n')} `: 'There are no starboards set up.'}`)
                     msg.channel.send({embeds: [embed]}).then(async m=>{
-                        await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(contentOptions).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             if(content == 'add') return addEmoji(msg, channel)
                             else if(content == 'remove') return removeEmoji(msg, channel)
@@ -279,7 +283,7 @@ Module.addCommand({name: 'config',
                 let singleChannelPrompt = async (channel) =>{
                     let embed = u.embed().setTitle('Which channel should this board watch for reactions?').setDescription('Type in the format of #channel-nname\nType `all` to disable exclusivity')
                     msg.channel.send({embeds: [embed]}).then(async m=>{
-                        await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                        await m.channel.awaitMessages(contentOptions).then(async collected =>{
                             let content = collected.first().content.toLowerCase()
                             let chanel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))?.id
                             if(content == 'all') chanel = ''
@@ -307,7 +311,7 @@ Module.addCommand({name: 'config',
             }
             let embed = u.embed().setTitle('Do you want to create or manage a starboard?').setDescription(existingBoards ? `Current starboard(s):\n<#${existingBoards.map(e => e.channel).join('>\n<#')}>` : 'There are no starboards currently set up')
             msg.channel.send({embeds: [embed]}).then(async m =>{
-                await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                await m.channel.awaitMessages(contentOptions).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'create') return createBoard()
                     else if(content.toLowerCase() == 'manage') return manageBoard()
@@ -322,7 +326,7 @@ Module.addCommand({name: 'config',
                 let embed = u.embed().setTitle('What would you like to monitor?').setDescription(`Type \`done\` when you're done.\n\nEnabled:\n${enabledEvents.map(e => e[0]).join('\n')}`)
                 if(firstTime) embed.setDescription(`The following are the options. Type \`done\` when you're done.\n\n${events.map(e=>e[0]).join('\n')}`)
                 msg.channel.send({embeds: [embed]}).then(async m=>{
-                    await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                    await m.channel.awaitMessages(contentOptions).then(async collected =>{
                         let content = collected.first().content
                         let filtered = events.find(e => e[0].toLowerCase() == content.toLowerCase())
                         if(content.toLowerCase() == 'all'){
@@ -349,7 +353,7 @@ Module.addCommand({name: 'config',
             let currentChannel = await Module.db.guildconfig.getLogChannel(msg.guild.id)
             let embed = u.embed().setTitle('What channel should I send the logs in?').setDescription(`Type \`none\` to disable log prompts.\nType it in the format of #channel-name\n${currentChannel ? `The current log channel is ${msg.guild.channels.cache.get(currentChannel)}` : 'There is no logging channel set up'}`)
             msg.channel.send({embeds: [embed]}).then(async m=>{
-                await m.channel.awaitMessages(channelFilter, options).then(async collected =>{
+                await m.channel.awaitMessages(channelOptions).then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'none'){
                         await Module.db.guildconfig.saveLogChannel(msg.guild.id, null, '0000000')
@@ -367,8 +371,8 @@ Module.addCommand({name: 'config',
         let mutedPrompt = async() =>{
             let currentRole = await Module.db.guildconfig.getMutedRole(msg.guild.id),
                 embed = u.embed().setTitle(`What should the role be?`).setDescription(`Type \`none\` to get rid of the muted role.${currentRole ? `\nThe current role is <@&${currentRole}>`: ''}`)
-            msg.channel.send({embeds: [embed], disableMentions: 'all'}).then(async m=>{
-                await m.channel.awaitMessages(roleFilter, options).then(async collected =>{
+            msg.channel.send({embeds: [embed], allowedMentions: {parse: []}}).then(async m=>{
+                await m.channel.awaitMessages(roleOptions).then(async collected =>{
                     let content = collected.first().content
                     let role = msg.guild.roles.cache.get(content.replace(/[^0-9]/g, ''))
                     if(!role && content.toLowerCase() != 'none'){
@@ -377,7 +381,7 @@ Module.addCommand({name: 'config',
                     }
                     await Module.db.guildconfig.saveMutedRole(msg.guild.id, role?.id || 'disabled')
                     embeds = [u.embed().setTitle('Muted role saved').setDescription(role ? `The role ${role} will be assigned to people when \`!mute\` is used.` : "The muted role has been disabled, so `!mute` will not work.")]
-                    m.channel.send({embed, disableMentions: 'all'})
+                    m.channel.send({embed, allowedMentions: {parse: []}})
                     return mainMenu()
                 }).catch((e)=> {timedOut(m); console.log(e)})
             })
@@ -387,7 +391,7 @@ Module.addCommand({name: 'config',
             let choices = ['Channels', 'Starboards', 'Logging', 'Muted Role', 'Done'],
                 embed = u.embed().setTitle('What do you want to configure?').setDescription(`Options:\n${choices.join('\n')}`)
             msg.channel.send({embeds: [embed]}).then(async m=>{
-                await m.channel.awaitMessages(contentFilter, options).then(async collected =>{
+                await m.channel.awaitMessages(contentOptions).then(async collected =>{
                     let content = collected.first().content.toLowerCase()
                     if(content == choices[0].toLowerCase()) return channelPrompt()
                     if(content == choices[1].toLowerCase()) return starPrompt()

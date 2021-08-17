@@ -62,7 +62,7 @@ Module.addCommand({name: "8ball",
     category: "Fun",
     process: async (msg, args) =>{
         let flip = Math.floor(Math.random()*2)
-        if(msg.guild?.id == '408747484710436877' && msg.member.hasPermission('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
+        if(msg.guild?.id == '408747484710436877' && msg.member.permissions.has('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
         if(args.toLowerCase() == 'heads'){
             if(flip >=1) return msg.react('💀').then(msg.react('🎉'))
             else return msg.react('🪱').then(msg.react('❌'))

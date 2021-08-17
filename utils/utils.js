@@ -26,14 +26,14 @@ const Utils = {
         
     },
     confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)=>{
-            let msg = await (message.channel ? message.channel : message).send({embeds: [promptEmbed], disableMentions: "all"})
+            let msg = await (message.channel ? message.channel : message).send({embeds: [promptEmbed], allowedMentions: {parse: []}})
             await msg.react('✅');
             await msg.react('🛑');
             
             const filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === (message.author ? message.author : message).id;
           
             try {
-              const collected = await msg.awaitReactions(filter, { max: 1, time, errors: ['time'] });
+              const collected = await msg.awaitReactions({filter, max: 1, time, errors: ['time'] });
               const reaction = collected.first();
               if (reaction.emoji.name === '✅') {
                 msg.edit({embeds: [confirmEmbed]});
@@ -122,10 +122,7 @@ const Utils = {
                 let reactions;
 
                 do{
-                    reactions = await m.awaitReactions(
-                    (reaction, user) => (user.id == message.author.id) && ["⏪", "⏩"].includes(reaction.emoji.name),
-                    { time: 300000, max: 1 });
-
+                    reactions = await m.awaitReactions({filter: (reaction, user) => (user.id == message.author.id) && ["⏪", "⏩"].includes(reaction.emoji.name), time: 300000, max: 1 });
                     if (reactions.size > 0){
                         let react = reactions.first().emoji.name;
                         if (react == "⏪") page--;
@@ -171,7 +168,7 @@ const Utils = {
     },
     prefix: async (msg) => {
         try {
-            if(msg.channel.parentID == '813847559252344862') return '>'
+            if(msg.channel.parentId == '813847559252344862') return '>'
             else if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
             else return config.prefix;
         } catch(e) {

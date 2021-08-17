@@ -71,7 +71,7 @@ Module.addEvent('guildMemberAdd', async member => {
                 let choices = ['🔀','🇨']
                 let reactionFilter = (reaction, user) => choices.includes(reaction.emoji.name) && user.id == msg.author.id
                 for(x of choices) await m.react(x)
-                await m.awaitReactions(reactionFilter, {max: 1, time, errors: ['time']})
+                await m.awaitReactions({filter: reactionFilter, max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let reaction = collected.first().emoji.name
                     let custom = false
@@ -83,7 +83,7 @@ Module.addEvent('guildMemberAdd', async member => {
         let welcomeChannel = async(msg, welcome, custom = false)=>{
             let promptEmbed = u.embed().setTitle('What channel should I send it in?').setDescription('Type it in the format of #channel-name\nType `none` to disable welcome messages')
             msg.channel.send({embeds: [promptEmbed]}).then( async m=>{
-                await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                await m.channel.awaitMessages({filter: channelFilter, max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'none') Module.db.welcome.disableWelcome(msg.guild.id)
@@ -103,7 +103,7 @@ Module.addEvent('guildMemberAdd', async member => {
         let customMessage = async(msg, channel)=>{
             let promptEmbed = u.embed().setTitle("What do you want the message to say?").setDescription("Type `<@member>` in place of mentioning the new member")
             msg.channel.send({embeds: [promptEmbed]}).then(async m=>{
-                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                await m.channel.awaitMessages({filter: contentFilter, max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     await role(msg, collected.first().content, channel)
                 })
@@ -112,7 +112,7 @@ Module.addEvent('guildMemberAdd', async member => {
         let role = async(msg, welcome, custom = false)=>{
             let promptEmbed = u.embed().setTitle("What roles should I add?").setDescription(`Type \`done\` to stop adding roles. You can add up to 5. (${5-rolesArray.length} left)`)
             msg.channel.send({embeds: [promptEmbed]}).then(async m=>[
-                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                await m.channel.awaitMessages({filter: contentFilter, max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
                     let fetchRole = await msg.guild.roles.cache.find(r => r.id == content || r.name.toLowerCase() == content.toLowerCase())
@@ -153,7 +153,7 @@ Module.addEvent('guildMemberAdd', async member => {
         let emoji = async(msg, welcome)=>{
             let promptEmbed = u.embed().setTitle('What emoji should I use?').setDescription('Type `none` for none')
             msg.channel.send({embeds: [promptEmbed]}).then(async m =>{
-                await m.channel.awaitMessages(contentFilter, {max: 1, time, errors: ['time']})
+                await m.channel.awaitMessages({filter: contentFilter, max: 1, time, errors: ['time']})
                 .then(async collected =>{
                     let content = collected.first().content
                     if(content.toLowerCase() == 'none'){
@@ -177,7 +177,7 @@ Module.addEvent('guildMemberAdd', async member => {
             }
             let promptEmbed = u.embed().setTitle("What is the rule channel?").setDescription("Type `none` for none")
             msg.channel.send({embeds: [promptEmbed]}).then(async m=>{
-                await m.channel.awaitMessages(channelFilter, {max: 1, time, errors: ['time']})
+                await m.channel.awaitMessages({filter: channelFilter, max: 1, time, errors: ['time']})
                 .then(async collected=>{
                     let content = collected.first().content
                     let channel = msg.guild.channels.cache.get(content.replace(/[^0-9]/g, ''))

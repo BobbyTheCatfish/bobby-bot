@@ -35,8 +35,9 @@ Module.addCommand({name: "pingeveryone",
     process: async (msg, suffix) =>{
         if(msg.author.id != '337713155801350146') return
         try {
-            msg.delete({timeout: 500})
-            return msg.channel.send('@everyone').then(m =>{m.delete({timeout: 500})})
+            setTimeout(()=> msg.delete(), 500)
+            return msg.channel.send('@everyone').then(m =>{
+                setTimeout(()=> m.delete(), 500)})
         } catch (error) {
             console.log(error)
         }
@@ -50,8 +51,9 @@ Module.addCommand({name: "pingeveryone",
         process: async (msg, suffix) =>{
             if(msg.author.id != '337713155801350146') return
             try {
-                msg.delete({timeout: 500})
-                return msg.channel.send('@here').then(m =>{m.delete({timeout: 500})})
+                setTimeout(()=> msg.delete(), 500)
+                return msg.channel.send('@here').then(m =>{
+                    setTimeout(()=> m.delete(), 500)})
             } catch (error) {
                 console.log(error)
             }
@@ -216,7 +218,7 @@ Module.addCommand({name: "pingeveryone",
         onlyDM: true,
         process: async(msg, suffix)=>{
             const devGuild = msg.client.guilds.cache.get('406821751905976320')
-            if((await devGuild.fetchBans()).find(m => m.id == msg.author.id)) return msg.author.send("You were banned from the bot testing server.")
+            if((await devGuild.bans.fetch()).find(m => m.id == msg.author.id)) return msg.author.send("You were banned from the bot testing server.")
             else if(await devGuild.members.cache.get(msg.author.id)) return msg.author.send("You're already in the server!")
             else{
                 let invite = await devGuild.channels.cache.get('793314668919521321').createInvite({maxUses: 1})
@@ -251,7 +253,7 @@ Module.addCommand({name: "pingeveryone",
                 .setTitle(`I am in the following \`${msg.client.guilds.cache?.array().length}\` servers:`)
                 .setDescription(`**${getGuilds}**`);
             if(!getGuilds) return msg.channel.send("I'm not in any servers... somehow").then(u.clean)
-            else return msg.channel.send({embeds: [embed], disableMentions: "all"});
+            else return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
         }
     })
 

@@ -12,13 +12,13 @@ Module.addCommand({name: "ban",
     category: "Mod",
     onlyGuild: true,
     process: async (msg, suffix) =>{
-        if(!msg.member.hasPermission("BAN_MEMBERS")) return msg.channel.send("You are not worthy to wield the ban hammer.").then(m => u.clean([m,msg]))
+        if(!msg.member.permissions.has("BAN_MEMBERS")) return msg.channel.send("You are not worthy to wield the ban hammer.").then(m => u.clean([m,msg]))
         let target, promptEmbed, confirmEmbed, cancelEmbed,
         mentions = /<@!?(\d+)>/ig,
         reason = suffix.replace(mentions, "")
         if(msg.mentions.members.size == 1)
         {
-            target = msg.guild.member(msg.mentions.members.first());
+            target = msg.guild.members.cache.get(msg.mentions.members.first());
             if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
             if(!target) return msg.channel.send("Sorry, I couldn't find that user.").then(m => u.clean([m,msg]))
             if(!target.bannable) return msg.reply("That person is immune to the ban hammer!").then(m => u.clean([m,msg]))
@@ -30,7 +30,7 @@ Module.addCommand({name: "ban",
             if(decision == true)
             {
                 try{
-                    msg.guild.member(target).ban(`${msg.author.username} banned them for: ${reason}`);
+                    msg.guild.members.cache.get(target).ban({reason: `${msg.author.username} banned them for: ${reason}`});
                 }catch(e){
                     msg.channel.send("I ran into an error while banning them.")
                     logChannel ? logChannel.send(`An error occured while trying to ban ${target}: ${e}`) : console.log(e)
@@ -59,11 +59,11 @@ Module.addCommand({name: "ban",
             {
                 s.forEach(m => {
                     try{
-                        msg.guild.member(m).ban(`${msg.author.username} batch banned them and others for ${reason.substr(0,400)}`);
+                        msg.guild.members.cache.get(m).ban(`${msg.author.username} batch banned them and others for ${reason.substr(0,400)}`);
                         console.log(`🔔 ${u.time()}${m.user.username.yellow} was banned by ${msg.author.username.red} for ${reason.cyan}`)
                     }catch(e){
-                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], disableMentions: "all"}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], disableMentions: "all"})
+                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], allowedMentions: {parse: []}}).then(m => u.clean(m))
+                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], allowedMentions: {parse: []}})
                     }
                 });
                 if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [confirmEmbed]});
@@ -90,7 +90,7 @@ Module.addCommand({name: "ban",
         let promptEmbed, confirmEmbed, cancelEmbed
         if(msg.mentions.members.size == 1)
         {
-            target = msg.guild.member(msg.mentions.members.first());
+            target = msg.guild.members.cache.get(msg.mentions.members.first());
             if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
             if(!target) return msg.channel.send("Sorry, I couldn't find that user.").then(m => u.clean([m,msg]))
             if(!target.kickable) return msg.reply("That person is immune to the boot!").then(m => u.clean([m,msg]))
@@ -102,7 +102,7 @@ Module.addCommand({name: "ban",
             if(decision == true)
             {
                 try{
-                    msg.guild.member(target).kick(`${msg.author.username} kicked them for: ${reason.substr(0,400)}`);
+                    msg.guild.members.cache.get(target).kick(`${msg.author.username} kicked them for: ${reason.substr(0,400)}`);
                 }catch(e){
                     msg.channel.send("I ran into an error while kicking them.")
                     logChannel ? logChannel.send(`An error occured while trying to kick ${target}: ${e}`) : console.log(e)
@@ -131,11 +131,11 @@ Module.addCommand({name: "ban",
             {
                 s.forEach(m => {
                     try{
-                        msg.guild.member(m).kick(`${msg.author.username} batch kicked them and others for ${reason.substr(0,400)}`);
+                        msg.guild.members.cache.get(m).kick(`${msg.author.username} batch kicked them and others for ${reason.substr(0,400)}`);
                         console.log(`🔔 ${u.time()}${m.user.username.yellow} was kicked by ${msg.author.username.red} for ${reason.cyan}`)
                     }catch(e){
-                        msg.channel.send({embed: u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`), disableMentions: "all"}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], disableMentions: "all"})
+                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], allowedMentions: {parse: []}}).then(m => u.clean(m))
+                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], allowedMentions: {parse: []}})
                     }
                 });
                 if(logChannel && msg.channel != logChannel) logChannel.send(({embeds: [confirmEmbed]}));
@@ -184,7 +184,7 @@ Module.addCommand({name: "ban",
 .addCommand({name: 'emoji',
     description: 'Tool for managing server emojis',
     category: 'Mod',
-    permissions: ['MANAGE_EMOJIS'],
+    permissions: ['MANAGE_EMOJIS_AND_STICKERS'],
     onlyGuild: true,
     process: async (msg, suffix) =>{
         const validName = 'You need to specify a valid name for the emoji'
@@ -236,18 +236,18 @@ Module.addCommand({name: "ban",
     onlyGuild: true,
     process: async(msg, suffix) =>{
         if(!msg.guild.id == '765669316217143315') return
-        if(!msg.member.hasPermission('MANAGE_MESSAGES')) return msg.channel.send("You don't have permission to use that command.")
+        if(!msg.member.permissions.has('MANAGE_MESSAGES')) return msg.channel.send("You don't have permission to use that command.")
         let channel = msg.client.channels.cache.get("765669316741038141");
-        let perms = channel.permissionsFor(msg.guild.member('458086784065208320')).toArray()
+        let perms = channel.permissionsFor(msg.guild.members.cache.get('458086784065208320')).toArray()
         if(perms.includes('CONNECT'))
         {
-            channel.updateOverwrite(channel.guild.roles.everyone, {CONNECT: false})
+            channel.permissionOverwrites.edit(channel.guild.roles.everyone, {CONNECT: false})
             await msg.react('🔒')
             if(msg.guild.id == '765669316217143315') console.log(`${'C '.cyan}${u.time()} ${(msg.member.displayName).yellow} ${'locked all the VCs!'.green}`)
         }
         else
         {
-            channel.updateOverwrite(channel.guild.roles.everyone, {CONNECT: null})
+            channel.permissionOverwrites.edit(channel.guild.roles.everyone, {CONNECT: null})
             await msg.react('🔓')
             if(msg.guild.id == '765669316217143315') console.log(`${'C '.cyan}${u.time()} ${(msg.member.displayName).yellow} ${`unlocked all the VCs!`.red}`)
         }
@@ -277,7 +277,7 @@ Module.addCommand({name: "ban",
         let embed = u.embed().setTitle(`Mute Resulst:`)
         if(s.length > 0) embed.addFields({name: "Successfully muted", value: s.join('\n')})
         if(err.length > 0) embed.addFields({name: "Failed to add role", value: err.join('\n')})
-        return msg.channel.send({embeds: [embed], disableMentions: "all"});
+        return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
     }
 })
 .addCommand({name:'unmute',
@@ -304,7 +304,7 @@ Module.addCommand({name: "ban",
         let embed = u.embed().setTitle(`Unmute Resulst:`)
         if(s.length > 0) embed.addFields({name: "Successfully unmuted", value: s.join('\n')})
         if(err.length > 0) embed.addFields({name: "Failed to remove role", value: err.join('\n')})
-        return msg.channel.send({embeds: [embed], disableMentions: "all"});    
+        return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});    
     }
 })
 .addCommand({name:'muteall',
@@ -315,7 +315,7 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to mute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(true)
+        for (let m of channel.members.map(r => r)) if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(true)
     }
 })
 .addCommand({name:'unmuteall',
@@ -326,7 +326,7 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.hasPermission('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(false)
+        for (let m of channel.members.map(r => r)) if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(false)
     }
 })
 .addCommand({name:'nick',
@@ -335,7 +335,7 @@ Module.addCommand({name: "ban",
     permissions: ['MANAGE_NICKNAMES'],
     onlyGuild: true,
     process: async(msg, suffix) =>{
-        let nickUser = msg.guild.member(msg.mentions.users.first());
+        let nickUser = msg.guild.members.cache.get(msg.mentions.users.first());
         if(!nickUser) return msg.channel.send("Who's nickname would you like me to change?")
         let nick = suffix.split(' ').slice(1).join(' ')
         if(!nick) return msg.channel.send("What would you like me to change their nickname to?")
@@ -347,14 +347,14 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     onlyGuild: true,
     process: async(msg, suffix) =>{
-        if(msg.author.id == '337713155801350146' || (msg.member.hasPermission("ADMINISTRATOR")))
+        if(msg.author.id == '337713155801350146' || (msg.member.permissions.has("ADMINISTRATOR")))
         {
             if(!suffix && !msg.attachments.size > 0) try {msg.author.send("You need to tell me what to say!")} catch (error) {msg.channel.send("I tried to send you a DM with information, but it looks like you have DMs turned off!").then(u.clean)}
             let content = suffix
             if(msg.attachments.size > 0) content = (suffix, {files: [msg.attachments.first().url]})
             try {
                 msg.channel.send(content)
-                return msg.delete({timeout: 500 })
+                setTimeout(() => msg.delete(), 500)
             }catch (error) {msg.channel.send("I couldn't delete your message")}
         }
         if(msg.content.includes('no.')) return msg.channel.send('I refuse.')
@@ -365,7 +365,7 @@ Module.addCommand({name: "ban",
     description: `Changes the server prefix`,
     category: 'Mod',
     onlyGuild: true,
-    otherPerms: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.hasPermission("ADMINISTRATOR")),
+    otherPerms: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
     process: async(msg, suffix) =>{
         let read = await Module.db.guildconfig.getPrefix(msg.guild.id)
         if(suffix == read) return msg.channel.send(`The prefix is already \`${suffix}\``)
@@ -379,7 +379,7 @@ Module.addCommand({name: "ban",
     try {
         if(!reaction.message.guild) return
         let member = reaction.message.guild.members.cache.get(user.id)
-        if(['📌','📍','🧷'].includes(reaction.emoji.name) && member.hasPermission('MANAGE_MESSAGES') && reaction.message.pinnable) {
+        if(['📌','📍','🧷'].includes(reaction.emoji.name) && member.permissions.has('MANAGE_MESSAGES') && reaction.message.pinnable) {
         let messages = await reaction.message.channel.messages.fetchPinned().catch(u.noop);
         if(messages.size == 50) return reaction.message.channel.send("You've reached the max number of pins for this channel. Please unpin something else if you want to pin this.")
         else await reaction.message.pin()

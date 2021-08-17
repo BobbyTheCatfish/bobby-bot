@@ -45,7 +45,7 @@ Module.addEvent('messageCreate', async (msg) =>{
             if(!args) return msg.channel.send("What tag do you want to create/modify?")
             if(msg.client.commands.has(args.split(' ')[0].toLowerCase())) return msg.channel.send(`You can't replace commands with global tags enabled`)
             let tag = await Module.db.globalTags.getTag(args.toLowerCase().split(' ')[0])
-            if(!tag || tag.user == msg.author.id || (tag.guildId == msg.guild.id && msg.member.hasPermission('ADMINISTRATOR'))){
+            if(!tag || tag.user == msg.author.id || (tag.guildId == msg.guild.id && msg.member.permissions.has('ADMINISTRATOR'))){
                 if(!args.split(' ')[1] && msg.attachments.size == 0){
                     await Module.db.globalTags.removeTag(args.split(' ')[0].toLowerCase())
                     return await msg.react('🗑️')
@@ -59,7 +59,7 @@ Module.addEvent('messageCreate', async (msg) =>{
             else return msg.channel.send("You don't have permission to modify that tag.")
         }
         else{
-            if(!(msg.member.hasPermission('ADMINISTRATOR') || msg.author.id == Module.config.ownerId)) return
+            if(!(msg.member.permissions.has('ADMINISTRATOR') || msg.author.id == Module.config.ownerId)) return
             if(!args) return msg.channel.send("What tag do you want to create/modify?")
             if(args.split(' ')[0].toLowerCase() == 'tag' || args.split(' ')[0].toLowerCase() == 'tags') return msg.channel.send("You can't replace the tag command.").then(u.clean)
             if(!args.split(' ')[1] && msg.attachments.size == 0){
@@ -80,7 +80,7 @@ Module.addEvent('messageCreate', async (msg) =>{
 .addCommand({name: 'tags',
     onlyGuild: true,
     process: async(msg,args)=>{
-        if(args.toLowerCase() == 'global' && ((msg.member && msg.member.hasPermission('ADMINISTRATOR')|| msg.author.id == Module.config.ownerId))){
+        if(args.toLowerCase() == 'global' && ((msg.member && msg.member.permissions.has('ADMINISTRATOR')|| msg.author.id == Module.config.ownerId))){
             if(!await Module.db.tags.globalStatus(msg.guild.id)){
                 let tags = await Module.db.tags.getAllTags(msg.guild.id),
                     list = []

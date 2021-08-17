@@ -37,12 +37,12 @@ const Augur = require('augurbot'),
                 if(oldChannel.permissionOverwrites != newChannel.permissionOverwrites) embed.addField(`Permission Overwrites`,`Coming Soon`)
                 if(oldChannel.permissionsLocked != newChannel.permissionsLocked) embed.addField(`Permissions Synced`,`Old: ${oldChannel.permissionsLocked}\nNew: ${newChannel.permissionsLocked}`)
                 if(oldChannel.position != newChannel.position) embed.addField(`Position`,`Old: ${oldChannel.position}\nNew: ${newChannel.position}`)
-                if(oldChannel.type == 'text'){
+                if(oldChannel.isText()) {
                     if(oldChannel.nsfw != newChannel.nsfw) embed.addField(`NSFW`,`Old: ${oldChannel.nsfw}\nNew: ${newChannel.nsfw}`)
                     if(oldChannel.rateLimitPerPerson != newChannel.rateLimitPerPerson) embed.addField(`Slowmode`,`Old: ${oldChannel.rateLimitPerPerson}\nNew: ${newChannel.rateLimitPerPerson}`)
                     if(oldChannel.topic != newChannel.topic) embed.addField(`Topic`,`Old: ${oldChannel.topic}\nNew: ${newChannel.topic}`)
                 }
-                if(oldChannel.type == 'voice' && oldChannel.bitrate != newChannel.bitrate) embed.addField(`Bitrate`,`Old: ${oldChannel.bitrate}\nNew: ${newChannel.bitrate}`);
+                if(oldChannel.isVoice() && oldChannel.bitrate != newChannel.bitrate) embed.addField(`Bitrate`,`Old: ${oldChannel.bitrate}\nNew: ${newChannel.bitrate}`);
                 if(embed.fields.length > 0) (await logChannel(oldChannel.guild)).send({embeds: [embed]})
             }
         }
@@ -130,14 +130,14 @@ const Augur = require('augurbot'),
                 if(added.length > 0) embed.addField(`Roles Added`,`${added.join('\n')}`)
                 if(removed.length > 0) embed.addField(`Roles Removed`, `${removed.join('\n')}`)
             }
-            if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed, disableMentions: 'all'})
+            if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed, allowedMentions: {parse: []}})
         }
     })
     .addEvent('guildUpdate', async (oldGuild, newGuild)=>{
         let enabled = await flags(oldGuild)
         if(enabled?.includes('Server Updated')){
             let embed = u.embed().setTitle(`The server was modified`).setColor(high)
-            if(oldGuild.afkChannelID != newGuild.afkChannelID) embed.addField(`AFK Channel`,`Was: ${oldGuild.afkChannel ? oldGuild.afkChannel: 'None'}\nIs: ${newGuild.afkChannel ? newGuild.afkChannel : 'None'}`)
+            if(oldGuild.afkChannelId != newGuild.afkChannelId) embed.addField(`AFK Channel`,`Was: ${oldGuild.afkChannel ? oldGuild.afkChannel: 'None'}\nIs: ${newGuild.afkChannel ? newGuild.afkChannel : 'None'}`)
             if(oldGuild.afkTimeout != newGuild.afkTimeout) embed.addField(`AFK Timeout`,`Was: ${oldGuild.afkTimeout}\nIs: ${newGuild.afkTimeout}`)
             if(oldGuild.banner != newGuild.banner) embed.addField(`Banner`,`No information`)
             if(oldGuild.defaultMessageNotifications != newGuild.defaultMessageNotifications) embed.addField(`Default Notifications`,`Was: ${oldGuild.defaultMessageNotifications}\nIs:${newGuild.defaultMessageNotifications}`)
@@ -151,15 +151,15 @@ const Augur = require('augurbot'),
             if(oldGuild.preferredLocale != newGuild.preferredLocale) embed.addField(`Preferred Locale`,`Was: ${oldGuild.preferredLocale}\nIs: ${newGuild.preferredLocale}`)
             if(oldGuild.premiumSubsciptionCount != newGuild.premiumSubsciptionCount) embed.addField(`Boosts`,`Was: ${oldGuild.premiumSubsciptionCount}\nIs: ${newGuild.premiumSubsciptionCount}`)
             if(oldGuild.premiumTier != newGuild.premiumTier) embed.addField(`Premium Tier`,`Was: ${oldGuild.premiumTier}\nIs: ${newGuild.premiumTier}`)
-            if(oldGuild.publicUpdatesChannelID != newGuild.publicUpdatesChannelID) embed.addField(`Public Updates Channel`,`Was: ${oldGuild.publicUpdatesChannel}\nIs: ${newGuild.publicUpdatesChannel}`)
+            if(oldGuild.publicUpdatesChannelId != newGuild.publicUpdatesChannelId) embed.addField(`Public Updates Channel`,`Was: ${oldGuild.publicUpdatesChannel}\nIs: ${newGuild.publicUpdatesChannel}`)
             if(oldGuild.region != newGuild.region) embed.addField(`Region`,`Was: ${oldGuild.region}\nIs: ${newGuild.region}`)
-            if(oldGuild.rulesChannelID != newGuild.rulesChannelID) embed.addField(`Rules Channel`,`Was: ${oldGuild.rulesChannel}\nIs: ${newGuild.rulesChannel}`)
+            if(oldGuild.rulesChannelId != newGuild.rulesChannelId) embed.addField(`Rules Channel`,`Was: ${oldGuild.rulesChannel}\nIs: ${newGuild.rulesChannel}`)
             if(oldGuild.splash != newGuild.splash) embed.addField(`Splash Image`,`No information`)
-            if(oldGuild.systemChannelID != newGuild.systemChannelID) embed.addField(`System Channel`,`Was: ${oldGuild.systemChannel}\nIs: ${newGuild.systemChannel}`)
+            if(oldGuild.systemChannelId != newGuild.systemChannelId) embed.addField(`System Channel`,`Was: ${oldGuild.systemChannel}\nIs: ${newGuild.systemChannel}`)
             if(oldGuild.vanityURLCode != newGuild.vanityURLCode) embed.addField(`Vanity URL`,`Was: ${oldGuild.vanityURLCode ? oldGuild.vanityURLCode : 'None'}\nIs: ${newGuild.vanityURLCode ? newGuild.vanityURLCode : 'None'}`)
             if(oldGuild.verificationLevel != newGuild.verificationLevel) embed.addField(`Verification Level`,`Was: ${oldGuild.verificationLevel}\nIs: ${newGuild.verificationLevel}`)
             if(oldGuild.verified != newGuild.verified) embed.addField(`Verified`,`Was: ${oldGuild.verified}\nIs: ${newGuild.verified}`)
-            if(oldGuild.widgetChannelID != newGuild.widgetChannelID) embed.addField(`Widget Channel`,`Was: ${oldGuild.widgetChannel}\nIs: ${newGuild.widgetChannel}`)
+            if(oldGuild.widgetChannelId != newGuild.widgetChannelId) embed.addField(`Widget Channel`,`Was: ${oldGuild.widgetChannel}\nIs: ${newGuild.widgetChannel}`)
             if(oldGuild.widgetEnabled != newGuild.widgetEnabled) embed.addField(`Widget Enabled`,`Was: ${oldGuild.widgetEnabled}\nIs: ${newGuild.widgetEnabled}`)
             if(embed.fields.length > 0) (await logChannel(oldGuild)).send({embeds: [embed]})
         }

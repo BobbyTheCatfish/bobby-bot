@@ -467,15 +467,16 @@ Module.addCommand({name: "amongus",
     }
 })
 .addInteractionCommand({
-  id: "828084734134321162",
+  commandId: "828084734134321162",
   name: 'filter',
   syntax: "filter source value",
   category: "Images",
   process: async (int) => {
     //int.defer()
     console.log('started')
-    let cmd = int.data.options[0].name.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
-    let newArgs = {target: int.data.options[0].options[0].value, input: int.data.options[0].options[1]?.value}
+    console.log(int.options.options)
+    let cmd = int.options._subcommand.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
+    let newArgs = {target: int.options[0].value, input: int.data.options[0].options[1]?.value}
     let process = await int.client.commands.get(cmd).process(int, '', newArgs)
     if(process.errMsg) int.client.interactionFailed(int, process.errMsg)
     else if(process.image) int.client.channels.cache.get('839684190157144064').send({files: [process.image]}).then(img =>{
