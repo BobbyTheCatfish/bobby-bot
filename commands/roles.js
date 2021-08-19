@@ -49,10 +49,10 @@ Module.addCommand({name: "inventory",
                 .setTitle("How to set up role color equiping")
                 .setAuthor("Bobby Bot", "https://images-ext-1.discordapp.net/external/PnqhQnz3eY98xD8GMtgLKTv9GJ7ZvVjqg5-oiGbSRjk/https/cdn.discordapp.com/avatars/469983220172324908/480bacea977058eed3ff1032470e8034.webp")
                 .setColor('#2e93ff')
-                .addFields({ name: 'Step 1:', value: 'Create a new role below all other ones. Make sure that it has the same name, followed by `Colors` (example: the new role for the role `Bob Boi` would be `Bob Boi Colors`)', inline: true },
+                .addFields([{ name: 'Step 1:', value: 'Create a new role below all other ones. Make sure that it has the same name, followed by `Colors` (example: the new role for the role `Bob Boi` would be `Bob Boi Colors`)', inline: true },
                 { name: 'Step 2', value: 'Set the color of the new role to the color of the old one', inline: false },
                 { name: 'Step 3', value: 'Set the color of the old role to the default color. This will make it transparent.', inline: false },
-                { name: 'Step 4', value: 'Repeat steps 1-3 for all the roles that you want to have equipable colors', inline: false })
+                { name: 'Step 4', value: 'Repeat steps 1-3 for all the roles that you want to have equipable colors', inline: false }])
                 .setImage("https://media.discordapp.net/attachments/727981742937342002/749339754113400892/roles.gif")
             return msg.channel.send({embeds: [embed]})
         }

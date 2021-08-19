@@ -275,8 +275,8 @@ Module.addCommand({name: "ban",
             }catch(e){err.push(`<@${m.user.id}>`)}
         });
         let embed = u.embed().setTitle(`Mute Resulst:`)
-        if(s.length > 0) embed.addFields({name: "Successfully muted", value: s.join('\n')})
-        if(err.length > 0) embed.addFields({name: "Failed to add role", value: err.join('\n')})
+        if(s.length > 0) embed.addField("Successfully muted", `${s.join('\n')}`)
+        if(err.length > 0) embed.addField("Failed to add role", `${err.join('\n')}`)
         return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
     }
 })
@@ -302,8 +302,8 @@ Module.addCommand({name: "ban",
             }catch(e){err.push(`<@${m.user.id}>`)}
         });
         let embed = u.embed().setTitle(`Unmute Resulst:`)
-        if(s.length > 0) embed.addFields({name: "Successfully unmuted", value: s.join('\n')})
-        if(err.length > 0) embed.addFields({name: "Failed to remove role", value: err.join('\n')})
+        if(s.length > 0) embed.addField("Successfully unmuted", s.join('\n'))
+        if(err.length > 0) embed.addField("Failed to remove role", err.join('\n'))
         return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});    
     }
 })

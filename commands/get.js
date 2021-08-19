@@ -1,9 +1,10 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     colors = require('colors')
-
+function toEpoch (time) {
+    return `<t:${Math.floor(time/1000)}>`
+}
 const Module = new Augur.Module();
-const voiceChannels = ['GUILD_VOICE', 'GUILD_STAGE_VOICE']
 Module.addCommand({name: "get",
     syntax: "<type>",
     description: "Gets info about the server/server members",
@@ -16,79 +17,63 @@ Module.addCommand({name: "get",
         msg.guild.members.fetch()
         if(words == 'members' || words == 'member' || words == 'user' || words == 'users') {
             if(keywords) {
-                const low = require('lowdb')
-                const FileSync = require('lowdb/adapters/FileSync')
-                const adapter = new FileSync('jsons/verify.json')
-                const db = low(adapter)
                 let object = msg.mentions.members.first() || (await msg.guild.members.fetch({query: keywords})).first() || msg.member
                 let embed = u.embed();
-                let abc = db.get("Verify").find({id: object.id});
-                if(msg.guild.id == '765669316217143315' && abc.get('email').value()) embed.addFields({name: 'Email', value: abc.get('email').value()?abc.get('email').value():'None'})
+                let a = object.presence?.activities
                 embed.setTitle(`${object.displayName  || 'Unknown'} (${object.user.tag  || ''})`)
-                .setColor(object.displayColor || '')
+                .setColor(object.displayColor || null)
                 .setThumbnail(object.user.displayAvatarURL({size: 32, dynamic: true}))
-                .addFields(
+                .addFields([
                     {name: 'Roles', value: object.roles.cache.map(r => r).sort((d, a) => a.rawPosition - d.rawPosition).join("\n") || 'None', inline: true},
-                    {name: 'Joined', value: object.joinedAt || 'Unknown', inline: true},
-                    {name: 'Account Created', value: object.user.createdAt || 'Unknown', inline: true},
-                    {name: 'Bannable', value: object.bannable, inline: true},
-                    {name: 'Kickable', value: object.kickable, inline: true},
-                    {name: 'Managable', value: object.manageable, inline: true},
-                    {name: 'Partial Member', value: object.partial, inline: true},
+                    {name: 'Joined', value: toEpoch(object.joinedTimestamp) || 'Unknown', inline: true},
+                    {name: 'Account Created', value: toEpoch(object.user.createdTimestamp) || 'Unknown', inline: true},
+                    {name: 'Partial Member', value: object.partial.toString(), inline: true},
+                    {name: 'Bot', value: object.user.bot.toString(), inline: true},
                     {name: 'ID', value: object.id || 'Unknown', inline: true},
-                    {name: 'Activity', value: object.presence?.status || 'Unknown', inline: true},
-                    {name: 'Bot', value: object.user.bot, inline: true},
-                )
-                
+                    {name: 'Activity', value: object.presence ? `${object.presence?.status}\n${a.length > 0 ? a.map(ac => `Type: \`${ac.type}\`\nStatus: ${ac.state ?? ac.name}`).join('\n') : ''}` : 'None'},
+                ])
                 return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
             else {
                 let object = msg.guild.memberCount
-                let bots = msg.guild.members.cache.filter(o => o.user.bot).values().length
+                let bots = msg.guild.members.cache.filter(o => o.user.bot).size
                 let embed = u.embed().setTitle(`There are \`${object}\` members in your server, \`${bots}\` of which are bots`)
-                .addFields(
-                    {name: 'Online', value: msg.guild.members.cache.filter(o => o.presence?.status == 'online').values().length},
-                    {name: 'Idle', value: msg.guild.members.cache.filter(o => o.presence?.status == 'idle').values().length},
-                    {name: 'Do Not Disturb', value: msg.guild.members.cache.filter(o => o.presence?.status == 'dnd').values().length},
-                    {name: 'Offline/Invis', value: msg.guild.members.cache.filter(o => o.presence?.status == 'offline').values().length},
-                )
-                if(msg.guild.id == '765669316217143315' && msg.guild.members.cache.size - msg.guild.roles.cache.get('771907940470358046').members.size > 0)
-                {
-                    let unverifiedPpl = msg.guild.members.cache.filter(m => !m.roles.cache.has('771907940470358046')).map(r=>r).join(`\n`)
-                    embed.addFields({name: `Unverified: ${msg.guild.members.cache.size - msg.guild.roles.cache.get('771907940470358046').members.size}`, value: `${unverifiedPpl}`})
-                }
+                .addFields([
+                    {name: 'Online', value: msg.guild.members.cache.filter(o => o.presence?.status == 'online').size.toString()},
+                    {name: 'Idle', value: msg.guild.members.cache.filter(o => o.presence?.status == 'idle').size.toString()},
+                    {name: 'Do Not Disturb', value: msg.guild.members.cache.filter(o => o.presence?.status == 'dnd').size.toString()},
+                    {name: 'Offline/Invis', value: msg.guild.members.cache.filter(o => o.presence?.status == 'offline').size.toString()},
+                ])
                 if(!object) return msg.channel.send("While theoretically impossible, it appears that there aren't any members in your server...").then(u.clean)
                 else return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
             }
         }
         else if(words == 'roles' || words == 'role') {
             if(keywords) {
-                let object = msg.guild.roles.cache.find(r => r.name.toLowerCase() == keywords.toLowerCase() || r.id == keywords)
-                if(keywords.toLowerCase() == 'everyone' || keywords.toLowerCase() == 'here') object = msg.guild.roles.everyone
+                let object = msg.guild.roles.cache.find(r => r.toString() == keywords || r.name.toLowerCase() == keywords.toLowerCase() || r.id == keywords)
                 if(!object) return msg.channel.send("Couldn't find that role.")
                 let hasRole = object.members.map(r => r).join(`\n`)
                 if(!hasRole) hasRole = 'Nobody'
+                console.log(keywords)
                 let embed = u.embed().setTitle(object.name)
-                    .setColor(object.hexColor)
-                    .addFields(
+                    .setColor(object.hexColor || null)
+                    .addFields([
                         {name: 'ID', value: object.id || 'Unknown', inline: true},
-                        {name: 'Created at', value: object.createdAt || 'Unknown', inline: true},
-                        {name: 'Deletable', value: object.deletable, inline: true},
-                        {name: 'Editable', value: object.editable, inline: true},
-                        {name: 'Hoisted', value: object.hoist, inline: true},
-                        {name: 'Mentionable', value: object.mentionable, inline: true},
-                        {name: 'Who has it', value: hasRole || 'Nobody', inline: true},
-                        {name: 'Position', value: object.position || 'Unknown', inline: true},
-                        {name: 'Color', value: object.hexColor || 'None', inline: true},
-                    )
-                return msg.channel.send({embed, allowedMentions: {parse: []}})
+                        {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown', inline: true},
+                        {name: 'Hoisted', value: object.hoist.toString(), inline: true},
+                        {name: 'Mentionable', value: object.mentionable.toString(), inline: true},
+                        {name: 'Who has it', value: msg.guild.roles.everyone == object ? 'Everyone' : hasRole || 'Nobody', inline: true},
+                        {name: 'Position', value: (msg.guild.roles.cache.size - object.position).toString() || 'Unknown', inline: true},
+                        {name: 'Color', value: object.hexColor.toString() || 'None', inline: true},
+                    ])
+                return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
                 
             }
             else {
                 let object = msg.guild.roles.cache.map(r => r).join("\n");
-                let embed = u.embed().setTitle(`There are \`${msg.guild.roles.cache.values().length}\` roles in your server.`).setDescription(object)
+                let embed = u.embed().setTitle(`There are \`${msg.guild.roles.cache.size}\` roles in your server.`).setDescription(object)
                 if(!object) return msg.channel.send("Looks like you don't have any roles.")
-                else return msg.channel.send({embed, allowedMentions: {parse: []}})
+                else return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
             
         }
@@ -99,17 +84,16 @@ Module.addCommand({name: "get",
                 let object = msg.guild.emojis.cache.find(e => `<:${e.name}:${e.id}>` == keywords.replace(' ', '') || e.name.toLowerCase().replace(/~ /g, '') == keywords.toLowerCase().replace(/~ /g, '') || e.id == keywords) || msg.client.emojis.cache.find(e => `<:${e.name}:${e.id}>` == keywords.replace(' ', ''))
                 if(!object) return msg.channel.send("Couldn't find that emoji.")
                 let embed = u.embed()
-                    .addFields(
+                    .addFields([
                         {name: 'Name', value: object.name || 'Unknown', inline: true},
                         {name: 'ID', value: object.id || 'Unknown', inline: true},
                         {name: 'Guild', value: object.guild.name || 'Unknown', inline: true},
                         {name: 'Created by', value: object.author || 'Unknown', inline: true},
                         {name: 'Animated', value: object.animated, inline: true},
                         {name: 'Available', value: object.available, inline: true},
-                        {name: 'Deletable', value: object.deletable, inline: true},
-                        {name: 'Created at', value: object.createdAt || 'Unknown', inline: true},
+                        {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown', inline: true},
                         {name: 'Exclusive to roles', value: object.roles.cache.map(r => r.name).join(`\n`) || 'None', inline: true},
-                    )
+                    ])
                 if(object.url) embed.setImage(object.url)
                 return msg.channel.send({embed, allowedMentions: {parse: []}})
             }
@@ -126,37 +110,29 @@ Module.addCommand({name: "get",
                 let object = msg.guild.channels.cache.filter(b => b.type != 'GUILD_CATEGORY').find(c => c.name.toLowerCase() == keywords.toLowerCase() || c.id == keywords)
                 if(!object) return msg.channel.send("I couldn't find that channel.")
                 let embed = u.embed().setTitle(`#${object.name}`)
-                    .addFields(
+                    .addFields([
                         {name: 'ID', value: object.id, inline: true},
                         {name: 'Category', value: object.parent || 'None', inline: true},
-                        {name: 'Created at', value: object.createdAt || 'Unknown', inline: true},
-                        {name: 'Deletable', value: object.deletable, inline: true},
-                        {name: 'Manageable', value: object.manageable, inline: true},
-                        {name: 'Viewable', value: object.viewable, inline: true},
-                    )
+                        {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown', inline: true},
+                        {name: 'Type', value: object.type, inline: true}
+                    ])
                     if(object.isVoice()) {
-                        embed.addFields(
+                        embed.addFields([
                             {name: 'Bitrate', value: object.bitrate || 'Unknown', inline: true},
-                            {name: 'Editable', value: object.editable, inline: true},
-                            {name: 'Joinable', value: object.joinable, inline: true},
                             {name: 'User Limit', value: object.userLimit || 'None', inline: true},
-                            {name: 'Speakable', value: object.speakable, inline: true},
-                            {name: 'Type', value: 'voice', inline: true},
-                            {name: 'Members in the VC', value: object.members.map(m => m).join('\n') || 'None', inline: true},
-                        )
+                            {name: 'Members in the VC', value: object.members.map(m => m).join('\n') || 'None', inline: true}
+                        ])
                     }
                     else if(object.isText()){
-                        embed.addFields(
+                        embed.addFields([
                             {name: 'Description' || 'Unknown', value: object.topic, inline: true},
                             {name: 'Last pin at', value: object.lastPinAt || 'N/A', inline: true},
                             {name: 'NSFW', value: object.nsfw ? 'true' : 'false' , inline: true},
-                            {name: 'Slowmode', value: object.rateLimitPerUser || 'None', inline: true},
-                            {name: 'Type', value: 'text', inline: true}
-                    )}
+                            {name: 'Slowmode', value: object.rateLimitPerUser || 'None', inline: true}
+                        ])
+                    }
                     else {
-                        embed.addFields(
-                            {name: 'Lat pin at', value: object.lastPinAt || 'N/A', inline: true},
-                        )
+                        embed.addField('Lat pin at', `${object.lastPinAt || 'N/A'}`, true)
                     }
                 return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
 
@@ -179,15 +155,12 @@ Module.addCommand({name: "get",
                 let textChildren = object.children.filter(b => b.isText()).map(c => c).sort((a, d) => a.rawPosition - d.rawPosition).join('\n')
                 let voiceChildren = object.children.filter(b => b.isVoice()).map(c => c).sort((a, d) => a.rawPosition - d.rawPosition).join('\n')
                 let embed = u.embed().setTitle(`${object.name}`)
-                .addFields(
+                .addFields([
                     {name: 'ID', value: object.id, inline: true},
-                    {name: 'Created at', value: object.createdAt || 'Unknown', inline: true},
-                    {name: 'Deletable', value: object.deletable, inline: true},
-                    {name: 'Manageable', value: object.manageable, inline: true},
+                    {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown', inline: true},
                     {name: 'Permissions', value: object.permissionOverwrites.map(p => p.type).join(`\n`) ||'None', inline: true},
-                    {name: 'Viewable', value: object.viewable, inline: true},
                     {name: 'Children', value: `**Text:** \n${textChildren} \n\n**Voice:**\n ${voiceChildren}` || 'None', inline: true},
-                )
+                ])
                 return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
             else
@@ -206,14 +179,14 @@ Module.addCommand({name: "get",
                 let object = get.find(b => b.user.username.toLowerCase() == keywords || b.user.id == keywords || b.user.tag.toLowerCase() == keywords.toLowerCase())
                 if(!object) return msg.channel.send("I couldn't find that user.")
                 let embed = u.embed().setTitle(object.user.username)
-                .addFields(
+                .addFields([
                     {name: 'ID', value: object.user.id || 'Unknown', inline: true},
-                    {name: 'Created at', value: object.user.createdAt , inline: true},
+                    {name: 'Created at', value: toEpoch(object.user.createdTimestamp) , inline: true},
                     {name: 'Activity', value: object.user.presence?.status , inline: true},
                     {name: 'Bot', value: object.user.bot, inline: true},
                     {name: 'Partial user', value: object.user.partial , inline: true},
                     {name: 'Ban reason', value: object.reason ? object.reason : 'None given', inline: true}
-                ).setThumbnail(object.user.displayAvatarURL({size: 64}))
+                ]).setThumbnail(object.user.displayAvatarURL({size: 64}))
                 msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
             else
@@ -231,12 +204,12 @@ Module.addCommand({name: "get",
             let object = msg.guild
             if(keywords && msg.author.id == '337713155801350146') object = msg.client.guilds.cache.find(g => g.name.toLowerCase().startsWith(keywords) || g.id == keywords) || msg.guild
             let embed = u.embed().setTitle(object.name)
-                .addFields(
+                .addFields([
                     {name: 'Owner', value: object.owner.displayName || 'Unknown' , inline: true},
                     {name: 'Description', value: object.description || 'None' , inline: true},
                     {name: 'Name Acronym', value: object.nameAcronym , inline: true},
                     
-                    {name: 'Created at', value: object.createdAt || 'Unknown' , inline: true}, 
+                    {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown' , inline: true}, 
                     {name: 'ID', value: object.id || 'Unknown' , inline: true},
                     {name: 'Region', value: object.region.toUpperCase() , inline: true},
                     
@@ -264,7 +237,7 @@ Module.addCommand({name: "get",
                     {name: 'System Channel', value: object.systemChannel?object.systemChannel:'None' , inline: true},
                     {name: 'Public Updates Channel', value: object.publicUpdatesChannel?object.publicUpdatesChannel:'None' , inline: true},
                     {name: 'Widget Channel', value: object.widgetChannel?object.widgetChannel:'None' , inline: true},
-                ).setThumbnail(object.iconURL({size: 128}))
+                ]).setThumbnail(object.iconURL({size: 128}))
                 if(object.discoverySplashURL) embed.setImage(object.discoverySplashURL())
                 return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
         }
