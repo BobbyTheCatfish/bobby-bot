@@ -34,7 +34,81 @@ const Augur = require('augurbot'),
                 let embed = u.embed().setTitle(`\`#${oldChannel.name}\` was updated`).setColor(med)
                 if(oldChannel.name != newChannel.name) embed.addField(`Name`,`Old: ${oldChannel.name}\nNew: ${newChannel.name}`)
                 if(oldChannel.parent != newChannel.parent) embed.addField(`Category`,`Old: ${oldChannel.category}\nNew: ${newChannel.category}`)
-                if(oldChannel.permissionOverwrites != newChannel.permissionOverwrites) embed.addField(`Permission Overwrites`,`Coming Soon`)
+                if(oldChannel.permissionOverwrites.cache != newChannel.permissionOverwrites.cache) {
+                    //let example = {
+                    //        id: p.id,
+                    //        allow: [
+                    //            'PERMS1',
+                    //            'PERMS2',
+                    //            'PERMS3',
+                    //        ],
+                    //        deny: [
+                    //            'PERMS1',
+                    //            'PERMS2',
+                    //            'PERMS3'
+                    //        ],
+                    //        type: 'role'
+                    //
+                    //    }
+                        function getDiff (array1, array2){
+                            return array1.filter(x => !JSON.stringify(array2).includes(JSON.stringify(x)))
+                        }
+                        let changes = []
+                        const perms = require('../jsons/perms.json').perms
+                        let old = oldChannel.permissionOverwrites.cache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
+                        let neww = newChannel.permissionOverwrites.cache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
+                        let diff = getDiff(old, neww).concat(getDiff(neww, old))
+                        if(diff.length > 1) {
+                            let difference = []
+                            for await(x of diff){
+                                if(JSON.stringify(old).includes(JSON.stringify(x))) x.version = 'old'
+                                if(JSON.stringify(neww).includes(JSON.stringify(x))) x.version = 'new'
+                            }
+                            for await(x of diff){
+                                if(difference.find(a => a.id == x.id)){
+                                    if(x.version == 'old') difference.find(a => a.id == x.id).oldPerms = {allow: x.allow, deny: x.deny}
+                                    else if(x.version == 'new') difference.find(a => a.id == x.id).newPerms = {allow: x.allow, deny: x.deny}
+                                }
+                                else{
+                                    if(x.version == 'old')  difference.push({id: x.id, type: x.type, oldPerms: {allow: x.allow, deny: x.deny},version: x.version})
+                                    else if(x.version == 'new')  difference.push({id: x.id, type: x.type, newPerms: {allow: x.allow, deny: x.deny},version: x.version})
+                                }
+                            }
+                            for await(overwrite of difference){
+                                let oldAllow = overwrite.oldPerms.allow
+                                let oldDeny = overwrite.oldPerms.deny
+                                let newAllow = overwrite.newPerms.allow
+                                let newDeny = overwrite.newPerms.deny
+                                for await(perm of perms){
+                                    let before, after
+                                    if(!oldDeny.includes(perm) && !oldAllow.includes(perm) && !newDeny.includes(perm) && !newAllow.includes(perm)) continue
+                                    if(oldDeny.includes(perm) && newDeny.includes(perm)) continue
+                                    if(oldAllow.includes(perm) && newAllow.includes(perm)) continue
+                                    if(oldDeny.includes(perm) && !oldAllow.includes(perm)) before = '❌'
+                                    if(!oldDeny.includes(perm) && oldAllow.includes(perm)) before = '✅'
+                                    if(!oldDeny.includes(perm) && !oldAllow.includes(perm)) before = '⬜'
+                                    if(newDeny.includes(perm) && !newAllow.includes(perm)) after = '❌'
+                                    if(!newDeny.includes(perm) && newAllow.includes(perm)) after = '✅'
+                                    if(!newDeny.includes(perm) && !newAllow.includes(perm)) after = '🗑️'
+                                    if(!before) console.log('no before')
+                                    if(!after) console.log('no after')
+                                    let change = `${u.properCase(perm.replace(/_/g, ' '))}: ${before} ➔ ${after}`
+                                    let find = changes.find(c => c?.id == overwrite.id)
+                                    //console.log(change)
+                                    //console.log(find)
+                                    if(find) find.text.push(change)
+                                    else changes.push({id: overwrite.id, type: overwrite.type, text: [change]})
+                                }
+                            }
+                            console.log(changes.map(c => `${c.type == 'member' ? `<@${c.id}>`: `<@&${c.id}>`}:\n${c.text.join('\n')}`).join('\n'))
+                        embed.addField(`Permission Overwrites`,`${changes.map(c => `${c.type == 'member' ? `<@${c.id}>`: `<@&${c.id}>`}:\n${c.text.join('\n')}`).join('\n')}`)
+                        } else if(diff.length == 1){
+                            let change
+                            if(JSON.stringify(old).includes(JSON.stringify(diff[0]))) change = 'removed'
+                            if(JSON.stringify(neww).includes(JSON.stringify(diff[0]))) change = 'added'
+                            embed.addField(`Permission Overwrites`, `<@${diff[0].type == 'role' ? '&' : ''}${diff[0].id}> ${change}`)
+                        }
+                }
                 if(oldChannel.permissionsLocked != newChannel.permissionsLocked) embed.addField(`Permissions Synced`,`Old: ${oldChannel.permissionsLocked}\nNew: ${newChannel.permissionsLocked}`)
                 if(oldChannel.position != newChannel.position) embed.addField(`Position`,`Old: ${oldChannel.position}\nNew: ${newChannel.position}`)
                 if(oldChannel.isText()) {
