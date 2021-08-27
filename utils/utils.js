@@ -233,7 +233,7 @@ const Utils = {
     encodeLogEvents: (flags) => {
         let reduce = function(flags) {
             let numbers =  flags.map(f => f.int)
-            let reduced = numbers.reduce(function(a, b){return a+b})
+            let reduced = numbers.length > 1 ? numbers.reduce(function(a, b){return a+b}) : numbers
             if(numbers.length > 1) reduced++
             return reduced.toString()
         }

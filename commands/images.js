@@ -6,9 +6,9 @@ const Augur = require('augurbot'),
     fs = require('fs'),
     ffmpegPath = require('@ffmpeg-installer/ffmpeg').path,
     ffmpeg = require('fluent-ffmpeg'),
-    {getVideoDurationInSeconds} = require('get-video-duration')
+    {getVideoDurationInSeconds} = require('get-video-duration'),
     http = require('https'),
-    {Readable} = require('stream')
+    {Readable} = require('stream'),
     readError = 'I ran into an error while getting the image.'
 async function getTarget(msg, suffix, keywords=false, interaction = null){
     let target,
@@ -457,45 +457,42 @@ Module.addCommand({name: "amongus",
         if(!args && !msg.attachments.first()) return msg.channel.send('No images provided')
         if(msg.attachments.first()){
             let files = []
-            for(x of msg.attachments) files.push(x.url)
-            fs.appendFile('media/luna.txt', `\n${files.join('\n')}`)
+            for(x of msg.attachments)files.push(x.url)
+            fs.appendFileSync('media/luna.txt', `\n${files.join('\n')}`)
+            for(x of files) petPic('luna', x)
         }
-        file = fs.appendFile('media/luna.txt', `\n${args}`, function (err) {
-            if (err) throw err;
-          })
+        else{
+            fs.appendFileSync('media/luna.txt', `\n${args}`)
+            for(x of args.split('\n')) petPic('luna', x)
+        }
         return msg.channel.send('Luna Pic(s) Added 🐱')
     }
 })
-.addInteractionCommand({
-  commandId: "828084734134321162",
-  name: 'filter',
-  syntax: "filter source value",
-  category: "Images",
-  process: async (int) => {
-    //int.defer()
-    console.log('started')
-    console.log(int.options.options)
-    let cmd = int.options._subcommand.replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
-    let newArgs = {target: int.options[0].value, input: int.data.options[0].options[1]?.value}
-    let process = await int.client.commands.get(cmd).process(int, '', newArgs)
-    if(process.errMsg) int.client.interactionFailed(int, process.errMsg)
-    else if(process.image) int.client.channels.cache.get('839684190157144064').send({files: [process.image]}).then(img =>{
-        console.log('ye')
-        int.createResponse({embeds: [u.embed().setImage(img.attachments.first().url).setTitle(process.title || '')]})
-    })
+.addCommand({name: 'goose',
+    category: 'Images',
+    process: async(msg, args) => {
+        let file = fs.readFileSync('media/goose.txt', 'utf8')
+        msg.channel.send(u.rand(file.split('\n')))
+    }
+})
+.addCommand({name: 'addgoose',
+    category: 'Images',
+    otherPerms: (msg) => ['337713155801350146', '602887436300714013'],
+    process: async(msg, args)=>{
+        if(!args && !msg.attachments.first()) return msg.channel.send('No images provided')
+        if(msg.attachments.first()){
+            let files = []
+            for(x of msg.attachments) files.push(x.url)
+            fs.appendFileSync('media/goose.txt', `\n${files.join('\n')}`)
+            for(x of files) petPic('goose', x)
+        }
+        else{
+            fs.appendFileSync('media/goose.txt', `\n${args}`)
+            for(x of args.split('\n')) petPic('goose', x)
+        }
+    }
+})
 
-  }
-})
-.addEvent('ready', () =>{
-    const rule = new schedule.RecurrenceRule()
-    rule.hour = 12
-    rule.minute = 00
-    const huddyChannel = Module.client.channels.cache.get('786033226850238525')
-    const job = schedule.scheduleJob(rule, function(){
-        file = fs.readFileSync('media/luna.txt', 'utf8')
-        huddyChannel.send(`Daily Luna Pic\n${u.rand(file.split('\n'))}`)
-      });
-})
 .addCommand({name: 'removetiktok',
     process: async (msg, args) =>{
         try{
@@ -529,7 +526,5 @@ Module.addCommand({name: "amongus",
         }
     }
 })
-.addCommand({name: 'e', ownerOnly: true, process: async(msg, args)=>{
-    return console.log(await u.decodeLogEvents(msg.guild))
-}})
+
 module.exports = Module

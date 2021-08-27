@@ -55,8 +55,9 @@ const Augur = require('augurbot'),
     function timedOut (m) {m.channel.send({embeds: [u.embed().setTitle('Timed out').setDescription('You ran out of time!')]})}
 
 Module.addCommand({name: 'config',
-    onlyOwner: true,
+    hidden: true,
     onlyGuild: true,
+    permissions: ['MANAGE_GUILD'],
     category: "Mod",
     process: async (msg, suffix) =>{
         
@@ -336,7 +337,7 @@ Module.addCommand({name: 'config',
                         }
                         else if(content.toLowerCase() == 'done'){
                             let mapped = '0000000'
-                            if(enabledEvents.length > 0) u.encodeLogEvents(enabledEvents.map(r => {return {int: r[1], category: r[2]}}))
+                            if(enabledEvents.length > 0) mapped = u.encodeLogEvents(enabledEvents.map(r => {return {int: r[1], category: r[2]}}))
                             Module.db.guildconfig.saveLogChannel(msg.guild.id, channel, mapped)
                             return mainMenu()
                         }
@@ -347,7 +348,7 @@ Module.addCommand({name: 'config',
                         msg.channel.send("That's not one of the options. Please try again.")
                         return flags(channel, false, enabledEvents)
                         
-                    }).catch(()=> timedOut(m))
+                    }).catch((err)=> {timedOut(m); console.log(err)})
                 })
             }
             let currentChannel = await Module.db.guildconfig.getLogChannel(msg.guild.id)
@@ -365,7 +366,7 @@ Module.addCommand({name: 'config',
                         return logPrompt()
                     }
                     return flags(channel.id)
-                }).catch(()=> timedOut(m))
+                }).catch((err)=> {timedOut(m); console.log(err)})
             })
         }
         let mutedPrompt = async() =>{

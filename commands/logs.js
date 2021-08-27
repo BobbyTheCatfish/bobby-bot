@@ -3,7 +3,78 @@ const Augur = require('augurbot'),
     Module = new Augur.Module()
     const flags = async(guild) => await u.decodeLogEvents(guild)
     //const flags = async(guild) => await Module.db.guildconfig.getLogFlags(guild.id)
-    const logChannel = async (guild)=> Module.client.channels.cache.get(await Module.db.guildconfig.getLogChannel(guild.id))
+    async function permDifferences(oldCache, newCache) {
+        function getDiff(a1, a2){
+            return a1.filter(x => !JSON.stringify(a2).includes(JSON.stringify(x)))
+        }
+        let changes = []
+        const {perms} = require('../jsons/perms.json')
+        let older = oldCache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
+        let newer = newCache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
+        let diff = getDiff(older, newer).concat(getDiff(newer, older))
+        if(diff.length > 1){
+            let difference = []
+            for await(x of diff){
+                if(JSON.stringify(older).includes(JSON.stringify(x))) x.version = 'old'
+                if(JSON.stringify(newer).includes(JSON.stringify(x))) x.version = 'new'
+                if(difference.find(a => a.id == x.id)){
+                    if(x.version == 'old') difference.find(a => a.id == x.id).oldPerms = {allow: x.allow, deny: x.deny}
+                    else if(x.version == 'new') difference.find(a => a.id == x.id).newPerms = {allow: x.allow, deny: x.deny}
+                }
+                else{
+                    if(x.version == 'old')  difference.push({id: x.id, type: x.type, oldPerms: {allow: x.allow, deny: x.deny},version: x.version})
+                    else if(x.version == 'new')  difference.push({id: x.id, type: x.type, newPerms: {allow: x.allow, deny: x.deny},version: x.version})
+                }
+            }
+            for await(overwrite of difference){
+                let oldAllow = overwrite.oldPerms.allow
+                let oldDeny = overwrite.oldPerms.deny
+                let newAllow = overwrite.newPerms.allow
+                let newDeny = overwrite.newPerms.deny
+                for await(perm of perms){
+                    let before, after
+                    if(!oldDeny.includes(perm) && !oldAllow.includes(perm) && !newDeny.includes(perm) && !newAllow.includes(perm)) continue
+                    if(oldDeny.includes(perm) && newDeny.includes(perm)) continue
+                    if(oldAllow.includes(perm) && newAllow.includes(perm)) continue
+                    if(oldDeny.includes(perm)) before = '❌'
+                    else if(oldAllow.includes(perm)) before = '✅'
+                    else if(!oldDeny.includes(perm) && !oldAllow.includes(perm)) before = '⬜'
+                    if(newDeny.includes(perm)) after = '❌'
+                    else if(newAllow.includes(perm)) after = '✅'
+                    else if(!newDeny.includes(perm) && !newAllow.includes(perm)) after = '🗑️'
+                    if(!before) console.log('no before')
+                    if(!after) console.log('no after')
+                    let change = `${u.properCase(perm.replace(/_/g, ' '))}: ${before} ➔ ${after}`
+                    let find = changes.find(c => c?.id == overwrite.id)
+                    if(find) find.text.push(change)
+                    else changes.push({id: overwrite.id, type: overwrite.type, text: [change]})
+                }
+            }
+            return changes.map(c => `${c.type == 'member' ? `<@${c.id}>`: `<@&${c.id}>`}:\n${c.text.join('\n')}`).join('\n')
+        } else if(diff.length == 1){
+            let change
+            if(JSON.stringify(old).includes(JSON.stringify(diff[0]))) change = 'removed'
+            if(JSON.stringify(neww).includes(JSON.stringify(diff[0]))) change = 'added'
+            return [`<@${diff[0].type == 'role' ? '&' : ''}${diff[0].id}> ${change}`]
+        }
+        else return []
+    }
+    async function send (guild, embed) {guild.channels.cache.get(await Module.db.guildconfig.getLogChannel(guild.id))?.send({embeds: [embed], allowedMentions: {parse: []}})}
+
+    async function getLogAction(guild, id, type, time, limit = 10){
+        let logs = await guild.fetchAuditLogs({type, limit})
+        let entry = logs.entries.find(e => e.target.id == id && time - e.createdAt.getTime() < 300)
+        if(!entry) return null
+        let member = guild.members.cache.get(entry.executor.id)
+        return {member, reason: entry.reason, target: entry.target}
+    }
+    function footer (embed, logAction){
+        let {member, reason} = logAction
+        embed.setFooter(`Action performed by ${member.displayName}${reason ? `\nReason: ${reason}`:''}`, member.user.displayAvatarURL({dynamic: true}))
+    }
+    function emojify(string){
+        string.replace('false', '❌').replace('true', '✅')
+    }
     let cu = ['n','p','po','pl','po','ns','s','t','b']
     let gu = ['afkc','afkt','ba','dmn','d','ds','ecf','i','mfa','n','p','psc','pt','puc','r','rc','s','sc','vu','vl','v','wc','we']
     let gmu = ['n','r']
@@ -13,8 +84,11 @@ const Augur = require('augurbot'),
         if(channel.guild){
             let enabled = await flags(channel.guild)
             if(enabled?.includes('Channel Created')){
-                let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was created`).setColor(low);
-                (await logChannel(channel.guild)).send({embeds: [embed]})
+                let time = new Date()
+                let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was created`).setColor(low)
+                let logAction = await getLogAction(channel.guild, channel.id, 'CHANNEL_CREATE', time)
+                if(logAction) embed = footer(embed, logAction);
+                await send(channel.guild, embed)
             }
         }
     })
@@ -22,8 +96,11 @@ const Augur = require('augurbot'),
         if(channel.guild){
             let enabled = await flags(channel.guild)
             if(enabled?.includes('Channel Deleted')){
-                let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was deleted`).setColor(high);
-                (await logChannel(channel.guild)).send({embeds: [embed]})
+                let time = new Date()
+                let embed = u.embed().setTitle(`The channel \`#${channel.name}\` was deleted`).setColor(high)
+                let logAction = await getLogAction(channel.guild, channel.id, 'CHANNEL_DELETE', time)
+                if(logAction) embed = footer(embed, logAction);
+                await send(channel.guild, embed)
             }
         }
     })
@@ -31,93 +108,27 @@ const Augur = require('augurbot'),
         if(oldChannel.guild){
             let enabled = await flags(oldChannel.guild)
             if(enabled?.includes('Channel Updated')){
-                let embed = u.embed().setTitle(`\`#${oldChannel.name}\` was updated`).setColor(med)
-                if(oldChannel.name != newChannel.name) embed.addField(`Name`,`Old: ${oldChannel.name}\nNew: ${newChannel.name}`)
-                if(oldChannel.parent != newChannel.parent) embed.addField(`Category`,`Old: ${oldChannel.category}\nNew: ${newChannel.category}`)
-                if(oldChannel.permissionOverwrites.cache != newChannel.permissionOverwrites.cache) {
-                    //let example = {
-                    //        id: p.id,
-                    //        allow: [
-                    //            'PERMS1',
-                    //            'PERMS2',
-                    //            'PERMS3',
-                    //        ],
-                    //        deny: [
-                    //            'PERMS1',
-                    //            'PERMS2',
-                    //            'PERMS3'
-                    //        ],
-                    //        type: 'role'
-                    //
-                    //    }
-                        function getDiff (array1, array2){
-                            return array1.filter(x => !JSON.stringify(array2).includes(JSON.stringify(x)))
-                        }
-                        let changes = []
-                        const perms = require('../jsons/perms.json').perms
-                        let old = oldChannel.permissionOverwrites.cache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
-                        let neww = newChannel.permissionOverwrites.cache.map(o => ({id: o.id, type: o.type, deny: o.deny.toArray(), allow: o.allow.toArray(), version: ''}))
-                        let diff = getDiff(old, neww).concat(getDiff(neww, old))
-                        if(diff.length > 1) {
-                            let difference = []
-                            for await(x of diff){
-                                if(JSON.stringify(old).includes(JSON.stringify(x))) x.version = 'old'
-                                if(JSON.stringify(neww).includes(JSON.stringify(x))) x.version = 'new'
-                            }
-                            for await(x of diff){
-                                if(difference.find(a => a.id == x.id)){
-                                    if(x.version == 'old') difference.find(a => a.id == x.id).oldPerms = {allow: x.allow, deny: x.deny}
-                                    else if(x.version == 'new') difference.find(a => a.id == x.id).newPerms = {allow: x.allow, deny: x.deny}
-                                }
-                                else{
-                                    if(x.version == 'old')  difference.push({id: x.id, type: x.type, oldPerms: {allow: x.allow, deny: x.deny},version: x.version})
-                                    else if(x.version == 'new')  difference.push({id: x.id, type: x.type, newPerms: {allow: x.allow, deny: x.deny},version: x.version})
-                                }
-                            }
-                            for await(overwrite of difference){
-                                let oldAllow = overwrite.oldPerms.allow
-                                let oldDeny = overwrite.oldPerms.deny
-                                let newAllow = overwrite.newPerms.allow
-                                let newDeny = overwrite.newPerms.deny
-                                for await(perm of perms){
-                                    let before, after
-                                    if(!oldDeny.includes(perm) && !oldAllow.includes(perm) && !newDeny.includes(perm) && !newAllow.includes(perm)) continue
-                                    if(oldDeny.includes(perm) && newDeny.includes(perm)) continue
-                                    if(oldAllow.includes(perm) && newAllow.includes(perm)) continue
-                                    if(oldDeny.includes(perm) && !oldAllow.includes(perm)) before = '❌'
-                                    if(!oldDeny.includes(perm) && oldAllow.includes(perm)) before = '✅'
-                                    if(!oldDeny.includes(perm) && !oldAllow.includes(perm)) before = '⬜'
-                                    if(newDeny.includes(perm) && !newAllow.includes(perm)) after = '❌'
-                                    if(!newDeny.includes(perm) && newAllow.includes(perm)) after = '✅'
-                                    if(!newDeny.includes(perm) && !newAllow.includes(perm)) after = '🗑️'
-                                    if(!before) console.log('no before')
-                                    if(!after) console.log('no after')
-                                    let change = `${u.properCase(perm.replace(/_/g, ' '))}: ${before} ➔ ${after}`
-                                    let find = changes.find(c => c?.id == overwrite.id)
-                                    //console.log(change)
-                                    //console.log(find)
-                                    if(find) find.text.push(change)
-                                    else changes.push({id: overwrite.id, type: overwrite.type, text: [change]})
-                                }
-                            }
-                            console.log(changes.map(c => `${c.type == 'member' ? `<@${c.id}>`: `<@&${c.id}>`}:\n${c.text.join('\n')}`).join('\n'))
-                        embed.addField(`Permission Overwrites`,`${changes.map(c => `${c.type == 'member' ? `<@${c.id}>`: `<@&${c.id}>`}:\n${c.text.join('\n')}`).join('\n')}`)
-                        } else if(diff.length == 1){
-                            let change
-                            if(JSON.stringify(old).includes(JSON.stringify(diff[0]))) change = 'removed'
-                            if(JSON.stringify(neww).includes(JSON.stringify(diff[0]))) change = 'added'
-                            embed.addField(`Permission Overwrites`, `<@${diff[0].type == 'role' ? '&' : ''}${diff[0].id}> ${change}`)
-                        }
+                let time = new Date()
+                let embed = u.embed().setTitle(`The ${oldChannel.category ? 'category \`' : 'channel \`#'}\`${oldChannel.name}\` was updated`).setColor(med)
+                if(oldChannel.name != newChannel.name) embed.addField(`Name`,`**Old:** ${oldChannel.name}\n**New:** ${newChannel.name}`)
+                if(oldChannel.parent != newChannel.parent) embed.addField(`Category`,`**Old:** ${oldChannel.category}\n**New:** ${newChannel.category}`)
+                if(oldChannel.permissionOverwrites.cache != newChannel.permissionOverwrites.cache && !(oldChannel.permissionsLocked || newChannel.permissionsLocked)) {
+                        let difference = await permDifferences(oldChannel.permissionOverwrites.cache, newChannel.permissionOverwrites.cache)
+                        if(difference.length > 0) embed.addField(`Permission Overwrites`, difference.join('\n'))
                 }
-                if(oldChannel.permissionsLocked != newChannel.permissionsLocked) embed.addField(`Permissions Synced`,`Old: ${oldChannel.permissionsLocked}\nNew: ${newChannel.permissionsLocked}`)
-                if(oldChannel.position != newChannel.position) embed.addField(`Position`,`Old: ${oldChannel.position}\nNew: ${newChannel.position}`)
+                if(oldChannel.permissionsLocked != newChannel.permissionsLocked) embed.addField(`Permissions Synced`, emojify(`${oldChannel.permissionsLocked} ➔ ${newChannel.permissionsLocked}`))
+                if(oldChannel.position != newChannel.position) embed.addField(`Position`,`**Old:** ${oldChannel.position}\n**New:** ${newChannel.position}`)
                 if(oldChannel.isText()) {
-                    if(oldChannel.nsfw != newChannel.nsfw) embed.addField(`NSFW`,`Old: ${oldChannel.nsfw}\nNew: ${newChannel.nsfw}`)
-                    if(oldChannel.rateLimitPerPerson != newChannel.rateLimitPerPerson) embed.addField(`Slowmode`,`Old: ${oldChannel.rateLimitPerPerson}\nNew: ${newChannel.rateLimitPerPerson}`)
-                    if(oldChannel.topic != newChannel.topic) embed.addField(`Topic`,`Old: ${oldChannel.topic}\nNew: ${newChannel.topic}`)
+                    if(oldChannel.nsfw != newChannel.nsfw) embed.addField(`NSFW`, emojify(`${oldChannel.nsfw} ➔ ${newChannel.nsfw}`))
+                    if(oldChannel.rateLimitPerPerson != newChannel.rateLimitPerPerson) embed.addField(`Slowmode`, emojify(`${oldChannel.rateLimitPerPerson} ➔ ${newChannel.rateLimitPerPerson}`))
+                    if(oldChannel.topic != newChannel.topic) embed.addField(`Topic`,`**Old:** ${oldChannel.topic}\n**New:** ${newChannel.topic}`)
                 }
-                if(oldChannel.isVoice() && oldChannel.bitrate != newChannel.bitrate) embed.addField(`Bitrate`,`Old: ${oldChannel.bitrate}\nNew: ${newChannel.bitrate}`);
-                if(embed.fields.length > 0) (await logChannel(oldChannel.guild)).send({embeds: [embed]})
+                if(oldChannel.isVoice() && oldChannel.bitrate != newChannel.bitrate) embed.addField(`Bitrate`,`**Old:** ${oldChannel.bitrate}\n**New:** ${newChannel.bitrate}`);
+                if(embed.fields.length > 0) {
+                    let logAction = await getLogAction(newChannel.guild, newChannel.id, 'CHANNEL_UPDATE', time)
+                    if(logAction) embed = footer(embed, logAction);
+                    await send(newChannel.guild, embed)
+                }
             }
         }
     })
@@ -125,8 +136,20 @@ const Augur = require('augurbot'),
         if(channel.guild){
             let enabled = await flags(channel.guild)
             if(enabled?.includes('Message Pinned')){
-                let embed = u.embed().setTitle(`A message was pinned (or unpinned) in \`#${channel.name}\``).setColor(low);
-                (await logChannel(channel.guild)).send({embeds: [embed]})
+                let time = new Date()
+                let embed = u.embed().setColor(low);
+                let logAction = await getLogAction(channel.guild, channel.id, 'MESSAGE_PIN', time)
+                if(logAction) embed = footer(embed, logAction).setTitle(`A message was pinned in \`${channel.name}`).setURL(logAction.target.url).setDescription(logAction.target.content).setAuthor(logAction.target.member.displayName, logAction.target.author.displayAvatarURL({dynamic: true})).setTimestamp(logAction.target.createdTimestamp)
+                else{
+                    logAction = await getLogAction(channel.guild, channel.id, 'MESSAGE_UNPIN', time)
+                    if(logAction) {
+                        if(logAction.target.deleted)
+                        embed = footer(embed,logAction)
+                    }
+                    else embed.setTitle(`A message was pinned (or unpinned) in \`${channel.name}\``)
+                };
+                console.log(embed);
+                await send(channel.guild, embed)
             }
         }
     })
@@ -135,7 +158,7 @@ const Augur = require('augurbot'),
             let enabled = await flags(emoji.guild)
             if(enabled?.includes('Emoji Created')){
                 let embed = u.embed().setTitle(`The emoji \`:${emoji.name}:\` was created`).setImage(emoji.url).setColor(low);
-                (await logChannel(emoji.guild)).send({embeds: [embed]})
+                await send(emoji.guild, embed)
             }
         }
     })
@@ -144,7 +167,7 @@ const Augur = require('augurbot'),
             let enabled = await flags(emoji.guild)
             if(enabled?.includes(('Emoji Deleted'))){
                 let embed = u.embed().setTitle(`The emoji \`:${emoji.name}:\` was deleted`).setImage(emoji.url).setColor(high);
-                (await logChannel(emoji.guild)).send({embeds: [embed]})
+                await send(emoji.guild, embed)
             }
         }
     })
@@ -154,7 +177,7 @@ const Augur = require('augurbot'),
             if(enabled?.includes('Emoji Updated')){
                 let embed = u.embed().setTitle(`The emoji \`:${oldEmoji.name}:\` was updated`).setColor(med)
                 if(oldEmoji.name != newEmoji.name) embed.addField(`Name`,`Was: ${oldEmoji.name}\nIs: ${newEmoji.name}`);
-                (await logChannel(oldEmoji.guild)).send({embeds: [embed]})
+                await send(newEmoji.guild, embed)
             }
         }
     })
@@ -162,35 +185,35 @@ const Augur = require('augurbot'),
         let enabled = await flags(guild)
         if(enabled?.includes('Member Banned')){
             let embed = u.embed().setTitle(`\`${user.name}\` was banned`).setColor(high);
-            (await logChannel(guild)).send({embeds: [embed]})
+            await send(guild, embed)
         }
     })
     .addEvent('guidBanRemove', async (guild, user)=>{
         let enabled = await flags(guild)
         if(enabled?.includes('Member Unbanned')){
             let embed = u.embed().setTitle(`\`${user.name}\` was unbanned`).setColor(high);
-            (await logChannel(guild)).send({embeds: [embed]})
+            await send(guild, embed)
         }
     })
     .addEvent('guildIntegrationUpdate', async guild =>{
         let enabled = await flags(guild)
         if(enabled?.includes('Integrations Updated')){
             let embed = u.embed().setTitle('An integration was updated').setDescription("Unfortunately, I don't have a way to check what was modified").setColor(med);
-            (await logChannel(guild)).send({embeds: [embed]})
+            await send(guild, embed)
         }
     })
     .addEvent('guildMemberAdd', async member =>{
         let enabled = await flags(member.guild)
         if(enabled?.includes('Member Joined')){
             let embed = u.embed().setTitle(`\`${member.displayName}\` joined the server`).setColor(low);
-            (await logChannel(member.guild)).send({embeds: [embed]})
+            await send(member.guild, embed)
         }
     })
     .addEvent('guildMemberRemove', async member =>{
         let enabled = await flags(member.guild)
         if(enabled?.includes('Member Left')){
             let embed = u.embed().setTitle(`\`${member.displayName}\` left the server`).setColor(med);
-            (await logChannel(member.guild)).send({embeds: [embed]})
+            await send(member.guild, embed)
         }
     })
     .addEvent('guildMemberUpdate', async(oldMember, newMember)=>{
@@ -204,7 +227,7 @@ const Augur = require('augurbot'),
                 if(added.length > 0) embed.addField(`Roles Added`,`${added.join('\n')}`)
                 if(removed.length > 0) embed.addField(`Roles Removed`, `${removed.join('\n')}`)
             }
-            if(embed.fields.length > 0)( await logChannel(oldMember.guild)).send({embed, allowedMentions: {parse: []}})
+            if(embed.fields.length > 0)await send(newMember.guild, embed)
         }
     })
     .addEvent('guildUpdate', async (oldGuild, newGuild)=>{
@@ -235,7 +258,7 @@ const Augur = require('augurbot'),
             if(oldGuild.verified != newGuild.verified) embed.addField(`Verified`,`Was: ${oldGuild.verified}\nIs: ${newGuild.verified}`)
             if(oldGuild.widgetChannelId != newGuild.widgetChannelId) embed.addField(`Widget Channel`,`Was: ${oldGuild.widgetChannel}\nIs: ${newGuild.widgetChannel}`)
             if(oldGuild.widgetEnabled != newGuild.widgetEnabled) embed.addField(`Widget Enabled`,`Was: ${oldGuild.widgetEnabled}\nIs: ${newGuild.widgetEnabled}`)
-            if(embed.fields.length > 0) (await logChannel(oldGuild)).send({embeds: [embed]})
+            if(embed.fields.length > 0) await send(newGuild, embed)
         }
     })
     .addEvent('inviteCreate', async invite =>{
@@ -248,8 +271,7 @@ const Augur = require('augurbot'),
                     if(invite.maxAge > 0) embed.addField('Expires',invite.expiresAt)
                 }
                 if(invite.targetUser) embed.addField('Target User', invite.targetUser.tag)
-
-                (await logChannel(invite.guild)).send({embeds: [embed]})
+                await send(invite.guild, embed)
             }
         }
     })
@@ -259,7 +281,7 @@ const Augur = require('augurbot'),
             {let enabled = await flags(invite.guild)
             if(enabled?.includes('Invite Deleted')){
                 let embed = u.embed().setTitle(`An invite was deleted: \`${invite}\``).setColor(med);
-                (await logChannel(invite.guild)).send({embeds: [embed]})
+                await send(invite.guild, embed)
             }}
         }
     })
@@ -268,7 +290,7 @@ const Augur = require('augurbot'),
             let enabled = await flags(messages.first().guild)
             if(enabled?.includes('Messages Bulk Deleted')){
                 let embed = u.embed().setTitle(`Messages were bulk deleted in \`#${messages.first().channel.name}\``).setColor(med);
-                (await logChannel(messages.first().guild)).send({embeds: [embed]})
+                await send(messages.first().guild, embed)
             }
         }
     })
@@ -276,14 +298,14 @@ const Augur = require('augurbot'),
         let enabled = await flags(role.guild)
         if(enabled?.includes('Role Created') && role.name != 'Heckerman'){
             let embed = u.embed().setTitle(`The \`${role.name}\` role was created`).setDescription(`${role}`).setColor(low);
-            (await logChannel(role.guild)).send({embeds: [embed]})
+            await send(role.guild, embed)
         }
     })
     .addEvent('roleDelete', async role =>{
         let enabled = await flags(role.guild)
         if(enabled?.includes('Role Deleted')){
             let embed = u.embed().setTitle(`The \`${role.name}\` role was deleted`).setColor(high);
-            (await logChannel(role.guild)).send({embeds: [embed]})
+            await send(role.guild, embed)
         }
     })
     .addEvent('roleUpdate', async (oldRole, newRole)=>{
@@ -294,7 +316,7 @@ const Augur = require('augurbot'),
             if(oldRole.hoist != newRole.hoist) embed.addField(`Hoist`, `Was: ${oldRole.hoist}\nIs: ${newRole.hoist}`)
             if(oldRole.permissions != newRole.permissions)embed.addField(`Permissions`, `No information`)
             if(oldRole.position != newRole.position) embed.addField(`Position`, `Was: ${oldRole.position}\nIs: ${newRole.position}`);
-            if(embed.fields.length > 0) (await logChannel(oldRole.guild)).send({embeds: [embed]})
+            if(embed.fields.length > 0) await send(role.guild, embed)
         }
     })
     .addEvent('rateLimit', async (rateLimitInfo)=>{console.log(rateLimitInfo)})
