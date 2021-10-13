@@ -92,7 +92,7 @@ Module.addEvent('messageCreate', async (msg) =>{
                     confirmEmbed = u.embed().setTitle("You've gone global!").setDescription("You now have access to all the other global server's tags!"),
                     cancelEmbed = u.embed().setTitle("Canceled").setDescription("You didn't go global, and the tags weren't erased"),
                     decision = await u.confirmEmbed(msg,promptEmbed,confirmEmbed,cancelEmbed)
-                if(decision == true) return await Module.db.tags.setGlobal(msg.guild.id, msg.guild.owner.id)
+                if(decision == true) return await Module.db.tags.setGlobal(msg.guild.id, msg.guild.ownerId)
                 else return
             }
             else{
