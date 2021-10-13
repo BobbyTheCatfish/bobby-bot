@@ -11,7 +11,7 @@ const Module = new Augur.Module()
     u.clean(msg);
 
     let prefix = await u.prefix(msg);
-    let commands = Module.client.commands.filter(c => c.otherPerms(msg) && (msg.guild ? c.permissions ? msg.member.permissions.has(c.permissions) : true : true) && c.enabled && !c.hidden && (c.onlyThales ? msg.guild?.id == '765669316217143315' : true) && (c.onlyOwner ? msg.author.id == Module.config.ownerId : true) && (c.onlyGuild ? msg.guild : true) && (c.onlyDM ? !msg.guild : true));
+    let commands = Module.client.commands.filter(c => c.otherPerms(msg) && (msg.guild ? c.permissions ? msg.member.permissions.has(c.permissions) : true : true) && c.enabled && !c.hidden && (c.onlyOwner ? msg.author.id == Module.config.ownerId : true) && (c.onlyGuild ? msg.guild : true) && (c.onlyDM ? !msg.guild : true));
 
     let embed = u.embed()
 
