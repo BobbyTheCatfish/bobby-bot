@@ -201,45 +201,50 @@ Module.addCommand({name: "get",
         }
         else if(words == 'guild' || words == 'server')
         {
-            let object = msg.guild
-            if(keywords && msg.author.id == '337713155801350146') object = msg.client.guilds.cache.find(g => g.name.toLowerCase().startsWith(keywords) || g.id == keywords) || msg.guild
-            let embed = u.embed().setTitle(object.name)
-                .addFields([
-                    {name: 'Owner', value: object.owner.displayName || 'Unknown' , inline: true},
-                    {name: 'Description', value: object.description || 'None' , inline: true},
-                    {name: 'Name Acronym', value: object.nameAcronym , inline: true},
-                    
-                    {name: 'Created at', value: toEpoch(object.createdTimestamp) || 'Unknown' , inline: true}, 
-                    {name: 'ID', value: object.id || 'Unknown' , inline: true},
-                    {name: 'Region', value: object.region.toUpperCase() , inline: true},
-                    
-                    {name: 'Members', value: object.memberCount , inline: true},
-                    {name: 'Online', value: object.presences.cache.filter(o => o.status == 'online').values().length , inline: true},
-                    {name: 'Large', value: object.large , inline: true},
+            try{
 
-                    {name: 'Content Filter', value: object.explicitContentFilter , inline: true},
-                    {name: '2FA Level', value: object.mfaLevel , inline: true},
-                    {name: 'Verification Level', value: object.verificationLevel , inline: true},
-
-                    {name: 'Partnered', value: object.partnered , inline: true},
-                    {name: 'Boost Count', value: object.premiumSubscriptionCount , inline: true},
-                    {name: 'Boost Tier', value: object.premiumTier , inline: true},
-                    
-                    {name: 'Verified', value: object.verified , inline: true},
-                    {name: 'Default Pings', value: object.defaultMessageNotifications == 0 ? 'All messages' : 'Mentions' , inline: true},
-                    {name: 'Vanity URL Code', value: object.vanityURLCode || 'None' , inline: true},
-                    
-                    
-                    {name: 'AFK timeout', value: `${(object.afkTimeout)/60} minute${(object.afkTimeout)/60 == 1 ? '' : 's'}` , inline: true},
-                    {name: 'AFK channel', value: object.afkChannel? object.afkChannel.name : 'None' , inline: true},
-                    {name: 'Rules Channel', value: object.rulesChannel ? object.rulesChannel : 'None' , inline: true},
-                    
-                    {name: 'System Channel', value: object.systemChannel?object.systemChannel:'None' , inline: true},
-                    {name: 'Public Updates Channel', value: object.publicUpdatesChannel?object.publicUpdatesChannel:'None' , inline: true},
-                    {name: 'Widget Channel', value: object.widgetChannel?object.widgetChannel:'None' , inline: true},
-                ]).setThumbnail(object.iconURL({size: 128}))
-                if(object.discoverySplashURL) embed.setImage(object.discoverySplashURL())
-                return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
+                let object = msg.guild
+                if(keywords && msg.author.id == '337713155801350146') object = msg.client.guilds.cache.find(g => g.name.toLowerCase().startsWith(keywords) || g.id == keywords) || msg.guild
+                let embed = u.embed().setTitle(object.name)
+                    .addFields([
+                        {name: 'Owner', value: object.members.cache.get(object.ownerId).displayName || 'Unknown' , inline: true},
+                        {name: 'Description', value: object.description || 'None' , inline: true},
+                        {name: 'Name Acronym', value: object.nameAcronym || 'Unknown', inline: true},
+                        
+                        {name: 'Created at', value: new Date(object.createdAt).toLocaleString() ?? 'Unknown' , inline: true}, 
+                        {name: 'ID', value: object.id || 'Unknown' , inline: true},
+                        
+                        {name: 'Members', value: object.memberCount.toString() ?? 'Unknown' , inline: true},
+                        {name: 'Online', value: object.presences.cache.filter(o => o.status == 'online').values().length?.toString() || 'Unknown' , inline: true},
+                        {name: 'Large', value: object.large.toString() ?? 'Unknown', inline: true},
+    
+                        {name: 'Content Filter', value: object.explicitContentFilter.toString() || 'Unknown', inline: true},
+                        {name: '2FA Level', value: object.mfaLevel.toString() ?? 'Unknown', inline: true},
+                        {name: 'Verification Level', value: object.verificationLevel.toString() || 'Unknown', inline: true},
+    
+                        {name: 'Partnered', value: object.partnered.toString() || 'Unknown', inline: true},
+                        {name: 'Boost Count', value: object.premiumSubscriptionCount.toString() || 'Unknown', inline: true},
+                        {name: 'Boost Tier', value: object.premiumTier.toString() || 'Unknown', inline: true},
+                        
+                        {name: 'Verified', value: object.verified.toString() || 'Unknown', inline: true},
+                        {name: 'Default Pings', value: object.defaultMessageNotifications == 0 ? 'All messages' : 'Mentions' || 'Unknown', inline: true},
+                        {name: 'Vanity URL Code', value: object.vanityURLCode?.toString() || 'None' , inline: true},
+                        
+                        
+                        {name: 'AFK timeout', value: `${(object.afkTimeout)/60} minute${(object.afkTimeout)/60 == 1 ? '' : 's'}` || 'Unknown', inline: true},
+                        {name: 'AFK channel', value: object.afkChannel? object.afkChannel.name : 'None' || 'Unknown', inline: true},
+                        {name: 'Rules Channel', value: object.rulesChannel ? object.rulesChannel.toString() : 'None' || 'Unknown', inline: true},
+                        
+                        {name: 'System Channel', value: object.systemChannel?object.systemChannel.toString():'None' || 'Unknown', inline: true},
+                        {name: 'Public Updates Channel', value: object.publicUpdatesChannel?object.publicUpdatesChannel.toString():'None' || 'Unknown', inline: true},
+                        {name: 'Widget Channel', value: object.widgetChannel?object.widgetChannel.toString():'None' || 'Unknown', inline: true},
+                    ]).setThumbnail(object.iconURL({size: 128}))
+                    if(object.discoverySplashURL) embed.setImage(object.discoverySplashURL())
+                    return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
+            }
+            catch(e){
+                console.log(e)
+            }
         }
         else return msg.channel.send("That's not a valid get command. Try specifying member, role, emoji, channel, category, ban, or guild.").then(u.clean)
     }
