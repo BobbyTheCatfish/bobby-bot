@@ -404,4 +404,5 @@ const Augur = require('augurbot'),
     })
     
     .addEvent('rateLimit', async (rateLimitInfo)=>{console.log(rateLimitInfo)})
+
 module.exports = Module
