@@ -250,7 +250,7 @@ Module.addCommand({name: "pingeveryone",
         process: async (msg, suffix) =>{
             let getGuilds = msg.client.guilds.cache?.map(g => `${g.name}`).join("\n");
             let embed = u.embed()
-                .setTitle(`I am in the following \`${msg.client.guilds.cache?.array().length}\` servers:`)
+                .setTitle(`I am in the following \`${msg.client.guilds.cache.map(r => r).length}\` servers:`)
                 .setDescription(`**${getGuilds}**`);
             if(!getGuilds) return msg.channel.send("I'm not in any servers... somehow").then(u.clean)
             else return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
@@ -381,6 +381,5 @@ Module.addCommand({name: "pingeveryone",
         } catch (error){
             u.errorHandler('Guild Join', error)
         }
-    })
-
+    })          
 module.exports = Module
