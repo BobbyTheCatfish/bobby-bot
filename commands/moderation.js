@@ -226,7 +226,7 @@ Module.addCommand({name: "ban",
             let emoji = msg.guild.emojis.cache.find(e => `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` == words[1])
             if(!emoji) return msg.reply("I need a valid emoji from this server.")
             emoji.delete().catch(()=>{
-                return msg.reply("I wasn't able to delete that image. (Do I have the needed perms?)")
+                return msg.reply("I wasn't able to delete that emoji. (Do I have the needed perms?)")
             })
             msg.reply(`\`${emoji.name}\` was successfully removed!`)
             if(logChannel && msg.channel != logChannel) u.modEvent('emojiDelete', msg.member, emoji)
@@ -235,9 +235,13 @@ Module.addCommand({name: "ban",
             let emoji = msg.guild.emojis.cache.find(e => `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` == words[1] || e.name == words[1])
             if(!emoji) return msg.channel.send('You need to specify which emoji to rename')
             if(!words[2]) return msg.channel.send('You need to specify what you want to rename it to')
-            return msg.guild.emojis.cache.get(id[2]).setName(words[2]).then(msg.channel.send(words[1]+' was successfuly renamed to `'+ words[2]+'`')).catch(error => msg.channel.reply(`Couldn't rename emoji because of: ${error}`));
+            emoji.setName(words[2]).catch(()=> {
+                return msg.reply("I wasn't able to rename that emoji. (Do I have the needed perms?)")
+            })
+            msg.reply(`\`:${emoji}:\` was successfully renamed to \`${msg.guild.emojis.cache.get(emoji.id)}\``)
+            if(logChannel && msg.channel != logChannel) u.modEvent('emojiUpdate', msg.member, emoji, msg.guild.emojis.cache.get(emoji.id))
         }
-        return msg.channel.send("That's an invalid action. Valid actions are `create`, `id`, `remove`, and `rename`.")
+        return msg.channel.send("That's an invalid action. Valid actions are `create`, `remove`, and `rename`.")
     }
 })
 //.addCommand({name:'lockall',
@@ -274,10 +278,10 @@ Module.addCommand({name: "ban",
         let err = []
         let mutedUsers = msg.mentions.members
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
-        if(dbFetch == 'disabled') return msg.channel.send("The mute command was disabled when using `!config` to remove the muted role.")
+        if(dbFetch == 'disabled' || !dbFetch) return msg.channel.send(`The mute command is disabled. Use \`/config\` to set it up.`)
         if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
-        const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
-        if(!muteRole) return msg.channel.send(`I couldn't find the muted role.`)
+        const muteRole = msg.guild.roles.cache.find(r => r.id == dbFetch);
+        if(!muteRole) return u.reply(msg, `I couldn't find the muted role.`, true)
         mutedUsers.forEach(m => {
             if(m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
             else try{
