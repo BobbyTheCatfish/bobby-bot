@@ -3,6 +3,8 @@ const Augur = require('augurbot'),
     Jimp = require('jimp'),
     axios = require('axios'),
     schedule = require('node-schedule'),
+    low = require('lowdb'),
+    FileSync = require('lowdb/adapters/FileSync'),
     fs = require('fs'),
     ffmpegPath = require('@ffmpeg-installer/ffmpeg').path,
     ffmpeg = require('fluent-ffmpeg'),
@@ -34,6 +36,20 @@ async function getTarget(msg, suffix, keywords=false, interaction = null){
             return target
         }
         
+}
+function petPic(pet, url, remove = true){
+    let db = low(new FileSync('jsons/petpics.json'))
+    db.defaults({luna: [], goose: []}).write()
+    if(!url){
+        if(db.get(pet).length < 1){
+            if(pet == 'luna') db.assign({luna: fs.readFileSync('media/luna.txt', 'utf-8').split('\n')}).write()
+            else if(pet == 'goose') db.assign({goose: fs.readFileSync('media/goose.txt', 'utf-8').split('\n')}).write()
+        }
+        let pic = u.rand(db.get(pet).value())
+        if(remove) db.get(pet).pull(pic).write()
+        return pic
+    }
+    else return db.get(pet).push(url).write()
 }
 ffmpeg.setFfmpegPath(ffmpegPath)
 const Module = new Augur.Module();
@@ -242,12 +258,11 @@ Module.addCommand({name: "amongus",
 })
 .addCommand({name: "flex",
     category: "Images",
-    process: async (msg, args, interaction = {target: null, input: null}) =>{
-        const arm = "https://cdn.discordapp.com/attachments/488887953939103775/545672817354735636/509442648080121857.png";
-        const staticURL = interaction.target ? await getTarget(msg, args, false, interaction) : (await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 128})
-        const right = await Jimp.read(arm);
+    process: async (msg, args, interaction = null) =>{
+        let avatarURL = (interaction ? interaction.target?.user ?? msg.user : await u.getMention(msg, false, false)).displayAvatarURL({format: 'png', size: 128})
+        const right = await Jimp.read("https://cdn.discordapp.com/attachments/488887953939103775/545672817354735636/509442648080121857.png");
         const mask = await Jimp.read("./media/flexmask.png");
-        const avatar = await Jimp.read(staticURL);
+        const avatar = await Jimp.read(avatarURL);
         const canvas = new Jimp(368, 128, 0x00000000);
   
         if (Math.random() > 0.5) right.flip(false, true);
@@ -475,6 +490,17 @@ Module.addCommand({name: "amongus",
         msg.channel.send(u.rand(file.split('\n')))
     }
 })
+.addCommand({name: 'dailypic',
+    category: 'Images',
+    onlyOwner: true,
+    process: async(msg,args) =>{
+        console.log(args)
+        if(!args) return msg.reply("Which picture do you need?")
+        if(!['goose', 'luna'].includes(args.toLowerCase())) return msg.reply("either goose or luna")
+        const huddyChannel = msg.client.channels.cache.get('786033226850238525')
+        huddyChannel.send(`${args.toLowerCase() == 'goose' ? 'Daily Goose Pic':'Nightly Luna Pic'}\n${petPic(args)}`)
+    }
+})
 .addCommand({name: 'addgoose',
     category: 'Images',
     otherPerms: (msg) => ['337713155801350146', '602887436300714013'],
@@ -492,7 +518,52 @@ Module.addCommand({name: "amongus",
         }
     }
 })
+.addInteractionCommand({
+  commandId: "828084734134321162",
+  name: 'filter',
+  syntax: "filter source value",
+  category: "Images",
+  process: async (int) => {
+      console.log(int.replied)
+      await int.reply('test')
+      console.log(int.replied)
+      return console.log('started')
+      let data = int.options
+    let cmd = data.getSubcommand().replace(/flip/g, 'mirror').replace(/color/g, 'colorme')
+    let input = data.getString('option') || data.getInteger('option')?.toString()
+    let newArgs = {target: data.getMember('target'), input}
+    let process = await int.client.commands.get(cmd).process(int, '', newArgs)
+    if(process.errMsg) return int.client.interactionFailed(int, process.errMsg)
+    int.reply('test')
+    //else if(process.image) int.client.channels.cache.get('839684190157144064').send({files: [process.image]}).then(img =>{
+    //    console.log('ye')
+    //    int.reply({embeds: [u.embed().setImage(img.attachments.first().url).setTitle(process.title || '')]})
+    //})
 
+  }
+})
+//daily pics
+.addEvent('ready', () =>{
+    let rule = new schedule.RecurrenceRule()
+    rule.hour = 10
+    rule.minute = 00
+    const huddyChannel = Module.client.channels.cache.get('786033226850238525')
+    const atomicChannel = Module.client.channels.cache.get('897568610531295232')
+    const goosePic = schedule.scheduleJob(rule, function(){
+        let pic = petPic('goose')
+        huddyChannel.send(`Daily Goose Pic\n${pic}`)
+        atomicChannel.send(`Daily Goose Pic\n${pic}`)
+    })
+    let rule2 = new schedule.RecurrenceRule()
+    rule2.hour = 22
+    rule2.minute = 00
+    const lunaPic = schedule.scheduleJob(rule2, function(){
+        let pic = petPic('luna')
+        huddyChannel.send(`Nightly Luna Pic\n${pic}`)
+        atomicChannel.send(`Nightly Luna Pic\n${pic}`)
+    });
+
+})
 .addCommand({name: 'removetiktok',
     process: async (msg, args) =>{
         try{
@@ -525,6 +596,41 @@ Module.addCommand({name: "amongus",
             return u.errorHandler(e, msg)
         }
     }
+})
+.addCommand({name: 'e', onlyOwner: true, process: async(msg, args)=>{
+    msg.channel.send(petPic('luna'))
+    msg.channel.send(petPic('goose'))
+    
+    //return console.log(await u.decodeLogEvents(msg.guild))
+}})
+.addCommand({name: 'initpics', onlyOwner: true, enabled: false, process: async(msg, args)=>{
+    let db = low(new FileSync('jsons/petpics.json'))
+    db.defaults({luna: [], goose: []}).write()
+    db.assign({luna: fs.readFileSync('media/luna.txt', 'utf-8').split('\n')}).write()
+    db.assign({goose: fs.readFileSync('media/goose.txt', 'utf-8').split('\n')}).write()
+}})
+.addEvent('messageCreate', msg =>{
+    if(msg.guild?.id == '862892739124396052' && msg.author.id != '862892739124396052' && msg.content.toLowerCase().includes('hug')) msg.channel.send('<@!583012388706451462>')
+})
+.addCommand({name: 'eera', onlyOwner: true,
+process: async(msg, args)=>{
+
+        const fb = msg.guild.channels.cache.get("789694239197626371");
+        let people = []
+        let messages = await fb.messages.fetch({limit: 100})
+        messages = messages.filter(m => m.content.toLowerCase().includes('youtube')).map(a => a)
+        for(x of messages){
+        let emoji = x.reactions.cache.map(a => a)
+        if(emoji) emoji = emoji.filter(r => r.name.t == '🎵')
+        console.log(emoji)
+        if(emoji){
+          emoji = emoji.map(r => r.users.cache.map(u => u.id).filter(u => !people.includes(u)))
+          people = people.concat(emoji)
+          }
+        }
+        return console.log(people.length)
+
+}
 })
 
 module.exports = Module
