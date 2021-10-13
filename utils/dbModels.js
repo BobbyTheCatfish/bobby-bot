@@ -1,12 +1,9 @@
-const GuildConfig = require('../schemas/guildconfig'),
-    Tags = require('../schemas/tags'),
-    GTags = require('../schemas/globalTags'),
-    rRoles = require('../schemas/reactionRoles'),
-    config = require("../config/config.json"),
-    mongoose = require("mongoose")
-const u = require('./utils')
-
-const {Collection} = require("discord.js");
+const GuildConfig = require( '../schemas/guildconfig')
+const Tags = require( '../schemas/tags')
+const GTags = require( '../schemas/globalTags')
+const rRoles = require( '../schemas/reactionRoles')
+const mongoose = require( 'mongoose')
+const config = require( '../config/config.json')
 
 mongoose.connect(config.db.db, config.db.settings);
 
@@ -117,6 +114,18 @@ const models = {
         saveMutedRole: async(guildId, muted) =>{
             if(await GuildConfig.exists({guildId})) return GuildConfig.findOneAndUpdate({guildId}, {"roles.muted": muted}, {new: true})
             return null
+        },
+        langFilter: async(guildId)=>{
+            if(guildId == '406821751905976320') return 'mi'
+            //if(await GuildConfig.exists({guildId})){
+            //    let guildDoc = GuildConfig.findOne({guildId}).exec()
+            //    return guildDoc?.langFilter
+            //}
+            return null
+        },
+        langLogChannel: async(guildId)=>{
+            if(guildId == '406821751905976320') return '789694239197626371'
+            else return null
         }
     },
     tags:{
@@ -181,7 +190,7 @@ const models = {
                 })
                 return true
             }
-        }
+        },
     },
     globalTags: {
         getTag: async(name) =>{
@@ -239,19 +248,6 @@ const models = {
             return globalDoc.find(r => r.messageId == messageId)
         }
     },
-    init: (bot) => {
-      bot.guilds.cache.forEach(guild => {
-        Server.findOne({serverId: guild.id}, (e, server) => {
-          if (!e && server) {
-            serverSettings.set(server.serverId, server);
-          } else {
-            models.server.addServer(guild).then(server => {
-              serverSettings.set(server.serverId, server);
-            });
-          }
-        });
-      });
-    }
   };
   
   module.exports = models;
