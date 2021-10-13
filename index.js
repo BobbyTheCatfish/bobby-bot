@@ -1,7 +1,8 @@
 const {AugurClient} = require('augurbot'),
   config = require('./config/config.json'),
-  u = require('./utils/utils'),
-  client = new AugurClient(config,{
+  u = require('./utils/utils')
+  
+  let client = new AugurClient(config,{
     clientOptions:{
       allowedMentions: {parse: ['users',  'roles'], repliedUser: true},
       partials: ["REACTION", "CHANNEL"],
@@ -16,7 +17,11 @@ const {AugurClient} = require('augurbot'),
   client.login();
   // LAST DITCH ERROR HANDLING
   process.on("unhandledRejection", (error, p) => p.catch(e => u.errorHandler(e, "Unhandled Rejection")));
-  process.on("uncaughtException", (error) => u.errorHandler(error, "Uncaught Exception"));
+  process.on("uncaughtException", (error) => {
+    if(error.message != 'read ECONNRESET') u.errorHandler(error, "Uncaught Exception")
+  });
+  
+  
 
 
 module.exports = client
