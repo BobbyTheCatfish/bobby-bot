@@ -766,6 +766,7 @@
     "@babel/runtime" "^7.7.2"
     "core-js" "^3.4.1"
 
+<<<<<<< HEAD
 "@mapbox/node-pre-gyp@^1.0.0":
   "integrity" "sha512-qK1ECws8UxuPqOA8F5LFD90vyVU33W7N3hGfgsOVfrJaRVc8McC3JClTDHpeSbL9CBrOHly/4GsNPAvIgNZE+g=="
   "resolved" "https://registry.npmjs.org/@mapbox/node-pre-gyp/-/node-pre-gyp-1.0.6.tgz"
@@ -781,6 +782,8 @@
     "semver" "^7.3.5"
     "tar" "^6.1.11"
 
+=======
+>>>>>>> f818e9ea30ff53147d6ab637a5aa7c902b55e232
 "@npmcli/arborist@*", "@npmcli/arborist@^2.3.0", "@npmcli/arborist@^2.5.0":
   "version" "2.8.3"
   dependencies:
@@ -3773,7 +3776,11 @@
   "resolved" "https://registry.yarnpkg.com/lodash.toarray/-/lodash.toarray-4.4.0.tgz"
   "version" "4.4.0"
 
+<<<<<<< HEAD
 "lodash@^4.17.19", "lodash@^4.17.20", "lodash@^4.17.21", "lodash@^4.17.3", "lodash@4":
+=======
+"lodash@^4.17.19", "lodash@^4.17.20", "lodash@^4.17.3", "lodash@4":
+>>>>>>> f818e9ea30ff53147d6ab637a5aa7c902b55e232
   "integrity" "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="
   "resolved" "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz"
   "version" "4.17.21"
@@ -3863,7 +3870,7 @@
     "libmime" "4.2.1"
     "libqp" "1.1.0"
 
-"make-dir@^3.0.0", "make-dir@^3.1.0":
+"make-dir@^3.0.0":
   "integrity" "sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw=="
   "resolved" "https://registry.yarnpkg.com/make-dir/-/make-dir-3.1.0.tgz"
   "version" "3.1.0"
