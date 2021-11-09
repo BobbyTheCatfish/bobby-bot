@@ -509,6 +509,7 @@ Module.addCommand({name: 'play',
       try{
         await entersState(subscription.voiceConnection, VoiceConnectionStatus.Ready, 20e3)
       } catch{return console.log('err while joining')}
+      
       let url = 'https://cdn.discordapp.com/attachments/789694239197626371/897536459941228584/heheheheh.mp4'
       let track = await Track.prototype.from(url, {
         onStart(){},

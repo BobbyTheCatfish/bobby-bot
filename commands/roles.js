@@ -73,7 +73,7 @@ Module.addCommand({name: "inventory",
 })
 
 .addCommand({name: 'reactionrole',
-    permissions: ['ADMINISTRATOR'],
+    memberPermissions: ['ADMINISTRATOR'],
     //onlyOwner: true,
     process: async(msg, args) =>{
         u.clean(msg, 0)

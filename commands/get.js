@@ -10,7 +10,7 @@ Module.addCommand({name: "get",
     description: "Gets info about the server/server members",
     info: "Lots of sub commands (will describe later)",
     category: "Mod",
-    permissions: ['MANAGE_GUILD'],
+    memberPermissions: ['MANAGE_GUILD'],
     process: async (msg, suffix) =>{
         let words = suffix.split(' ')[0]
         let keywords = suffix.split(' ').slice(1).join(' ')

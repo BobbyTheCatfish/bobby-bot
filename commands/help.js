@@ -1,5 +1,5 @@
 const Augur = require("augurbot"),
-  u = require("../utils/utils");
+  u = require("../utils/utils")
 
 const Module = new Augur.Module()
 .addCommand({name: "help",

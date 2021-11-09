@@ -5,7 +5,8 @@ const Augur = require('augurbot'),
     validUrl = require('valid-url'),
     jimp = require('jimp'),
     profanityFilter = require('profanity-matcher'),
-    config = {oem: 0, psm: 3}
+    config = {oem: 0, psm: 3},
+    {Message, GuildMember} = require('discord.js')
 
 const Module = new Augur.Module();
 const logChannel = null
@@ -19,72 +20,54 @@ function filter(text){
     }
 }
 Module.addCommand({name: "ban",
-    syntax: "@User#1234 <reason>",
+    syntax: "@User#1234 @User#5678 <reason>",
     description: "Bans people",
     info: "Want to ban someone from your server? Look no further. You can also ban multiple people in one swing of the ban hammer.",
     category: "Mod",
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         if(!msg.member.permissions.has("BAN_MEMBERS")) return msg.channel.send("You are not worthy to wield the ban hammer.").then(m => u.clean([m,msg]))
-        let target, promptEmbed, confirmEmbed, cancelEmbed,
-        mentions = /<@!?(\d+)>/ig,
-        reason = suffix.replace(mentions, "")
-        if(msg.mentions.members.size == 1)
-        {
-            target = msg.guild.members.cache.get(msg.mentions.members.first());
-            if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
-            if(!target) return msg.channel.send("Sorry, I couldn't find that user.").then(m => u.clean([m,msg]))
-            if(!target.bannable) return msg.reply("That person is immune to the ban hammer!").then(m => u.clean([m,msg]))
-            if(target.roles.highest.position > msg.member.roles.highest.position && msg.member != msg.guild.owner) return msg.channel.send("You don't have permission to ban that user.")
-            promptEmbed = u.embed().setTitle('Confirm ban for:').setDescription(target).addField('Reason', reason)
-            confirmEmbed = u.embed().setTitle(`Ban successful`).setDescription(`${target} was banned by ${msg.member} for \`${reason}\``)
-            cancelEmbed = u.embed().setTitle(`Ban canceled`).setDescription(`${msg.member} canceled the ban for ${target}`)
-            let decision = await u.confirmEmbed(msg,promptEmbed,confirmEmbed,cancelEmbed)
-            if(decision == true)
-            {
-                try{
-                    msg.guild.members.cache.get(target).ban({reason: `${msg.author.username} banned them for: ${reason}`});
-                    if (logChannel && msg.channel != logChannel) u.modEvent('ban', msg.member, [target], reason)// logChannel.send({embeds: [confirmEmbed]})
-                }catch(e){
-                    msg.channel.send("I ran into an error while banning them.").then(u.clean)
-                    return logChannel ? logChannel.send(`An error occured while trying to ban ${target}: ${e}`) : console.log(e)
-                }
-            }
-            return
-        }
-        else if(msg.mentions.members.size > 1)
-        {
-            if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
-            target = msg.mentions.members.map(m=>m);
-            promptEmbed = u.embed().setTitle(`Confirm bans for:`).setDescription(target.join('\n')).addField('Reason',reason)
-            confirmEmbed = u.embed().setTitle(`Ban results:`)
-            let s = [], f = []
-            target.forEach(m => {
-                if(m.bannable && (target.roles.highest.position < msg.member.roles.highest.position || msg.member == msg.guild.owner)) s.push(m)
-                else f.push(m)
-            });
-            if(s.length > 0) confirmEmbed.addField('Successes', s.join('\n'))
-            if(f.length > 0) confirmEmbed.addField('Failures', f.join('\n'))
-            cancelEmbed = u.embed().setTitle(`Bans canceled`).setDescription(`${msg.author} canceled the bans`)
-            let decision = await u.confirmEmbed(msg,promptEmbed,confirmEmbed,cancelEmbed)
-            if(decision == true)
-            {
-                s.forEach(m => {
+        let {targets, reason} = u.parseTargets(suffix)
+        let s = [], f = []
+        if(targets.length < 1) return msg.reply("I need at least one target (make sure to mention them)")
+        for(let m of targets) m.bannable && (m.roles.highest.position < msg.member.roles.highest.position || msg.member.id == msg.guild.ownerId) ? s.push(m) : f.push(m)        
+        if(s.length < 1) return msg.reply("Unfortunately, I can't ban anyone on your hit-list.")
+        if(reason.trim().length < 1) reason = 'no reason given'
+        let plural = s.length > 1 ? "s":''
+        let promptEmbed = u.embed().setTitle(`Confirm ban${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't ban the following member${f.length > 1 ? 's': ''}:\n${f.join('\n')}` : ''}`).addField('Reason', reason)
+        let confirmEmbed = u.embed().setTitle(`Ban${plural} confirmed`)
+        let cancelEmbed = u.embed().setTitle(`Ban${plural} canceled`).setDescription(`${msg.author} canceled the ban${plural}`)
+        let decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed)
+        if(decision == true){
+            let errors = []
+            let good = []
+            let p = new Promise(async(res, rej) =>{
+                for(let i = 0; i < s.length; i++){
+                    let x = s[i]
                     try{
-                        msg.guild.members.cache.get(m).ban(`${msg.author.username} batch banned them and others for ${reason.substr(0,400)}`);
-                    }catch(e){
-                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], allowedMentions: {parse: []}}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't ban ${m}`)], allowedMentions: {parse: []}})
-                        else console.log(e)
-                        return
+                        await x.ban(`${x.displayName} ${s.length > 1 ? 'was caught in a batch ban':'was banned'} by ${msg.member.displayName}`)
+                        good.push(x)
+                        if(i == s.length+1) res(true)
+                    } catch(e){
+                        errors.push(x)
+                        console.log(e)
+                        continue
                     }
-                });
-                if(logChannel && msg.channel != logChannel) u.modEvent('ban', msg.member, target, reason)//logChannel.send({embeds: [confirmEmbed]});
-                return 
+                }
+            })
+            await p
+            let embed = u.embed().setTitle('Ban Results')
+                .addField('Banned Members', good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned')
+                .setFooter(`Action performed by ${msg.member.displayName}`, msg.author.displayAvatarURL())
+                .setTimestamp(new Date())
+            if(errors.length > 0) embed.addField('Failed To Ban', errors.join('\n'))
+            if(logChannel){
+                if(msg.channel != logChannel) msg.reply(`Ban results in ${logChannel} (${`\`${good.length}\` banned`})`).then(m => u.clean(m, 3000))
+                u.emit('ban', msg, targets, reason, embed)
             }
-            return
+            else msg.reply({failIfNotExists: false, allowedMentions: {parse: []}, embeds: [embed]}).then(u.clean)
         }
-        else return msg.channel.send("Who do you want to ban? Make sure you're pinging them.")
     }
 })
 .addCommand({name: "kick",
@@ -92,72 +75,50 @@ Module.addCommand({name: "ban",
     description: "Kicks people",
     info: "Want to kick someone from your server? Look no further. You can also kick multiple people in one swing of the boot.",
     category: "Mod",
-    permissions: ['KICK_MEMBERS'],
+    memberPermissions: ['KICK_MEMBERS'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
-        const logChannel = null
-        let target
-        let mentions = /<@!?(\d+)>/ig;
-        let reason = suffix.replace(mentions, "")
-        let promptEmbed, confirmEmbed, cancelEmbed
-        if(msg.mentions.members.size == 1)
-        {
-            target = msg.guild.members.cache.get(msg.mentions.members.first());
-            if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
-            if(!target) return msg.channel.send("Sorry, I couldn't find that user.").then(m => u.clean([m,msg]))
-            if(!target.kickable) return msg.reply("That person is immune to the boot!").then(m => u.clean([m,msg]))
-            if(target.roles.highest.position > msg.member.roles.highest.position && msg.member != msg.guild.owner) return msg.channel.send("You don't have permission to kick that user.")
-            promptEmbed = u.embed().setTitle('Confirm kick for:').setDescription(target).addField('Reason', reason)
-            confirmEmbed = u.embed().setTitle(`Kick successful`).setDescription(`${target} was kicked by ${msg.member} for \`${reason}\``)
-            cancelEmbed = u.embed().setTitle(`Kick canceled`).setDescription(`${msg.member} canceled the kick for ${target}`)
-            let decision = await u.confirmEmbed(msg,promptEmbed,confirmEmbed,cancelEmbed)
-            if(decision == true)
-            {
-                try{
-                    msg.guild.members.cache.get(target).kick(`${msg.author.username} kicked them for: ${reason.substr(0,400)}`);
-                    if (logChannel && msg.channel != logChannel) u.modEvent('kick', msg.member, [target], reason)//logChannel.send({embeds: [confirmEmbed]})
-                }catch(e){
-                    msg.channel.send("I ran into an error while kicking them.")
-                    logChannel ? logChannel.send(`An error occured while trying to kick ${target}: ${e}`) : console.log(e)
-                }
-            }
-            return
-        }
-        else if(msg.mentions.members.size > 1)
-        {
-            if(!reason || reason.replace(/ /g, '').length < 1) reason = '<no reason given>'
-            target = msg.mentions.members.map(m=>m);
-            promptEmbed = u.embed().setTitle(`Confirm kicks for:`).setDescription(target.join('\n')).addField('Reason',reason)
-            confirmEmbed = u.embed().setTitle(`Kick results:`)
-            let s = [], f = []
-            target.forEach(m => {
-                if(m.kickable && (target.roles.highest.position < msg.member.roles.highest.position || msg.member == msg.guild.owner)) s.push(m)
-                else f.push(m)
-            });
-            if(s.length > 0) confirmEmbed.addField('Successes', s.join('\n'))
-            if(f.length > 0) confirmEmbed.addField('Failures', f.join('\n'))
-            cancelEmbed = u.embed().setTitle(`Kicks canceled`).setDescription(`${msg.author} canceled the kicks`)
-            let decision = await u.confirmEmbed(msg,promptEmbed,confirmEmbed,cancelEmbed)
-            if(decision == true)
-            {
-                s.forEach(m => {
+        let {targets, reason} = u.parseTargets(suffix)
+        let s = [], f = []
+        if(targets.length < 1) return msg.reply("I need at least one target (make sure to mention them)")
+        for(let m of targets) m.kickable && (m.roles.highest.position < msg.member.roles.highest.position || msg.member.id == msg.guild.ownerId) ? s.push(m) : f.push(m)
+        if(s.length < 1) return msg.reply(`Unfortunately, I can't kick ${targets.length > 1 ? "them": "anyone on your kick-list"}`)
+        if(reason.trim().length < 1) reason = 'no reason given'
+        let plural = s.length > 1 ? "s":''
+        let promptEmbed = u.embed().setTitle(`Confirm kick${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't kick the following member${f.length > 1 ? 's': ''}:\n${f.join('\n')}` : ''}`).addField('Reason', reason)
+        let confirmEmbed = u.embed().setTitle(`Kick${plural} confirmed`)
+        let cancelEmbed = u.embed().setTitle(`Kick${plural} canceled`).setDescription(`${msg.author} canceled the kick${plural}`)
+        let decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed)
+        if(decision == true){
+            let errors = []
+            let good = []
+            let p = new Promise(async(res, rej) =>{
+                for(let i = 0; i < s.length; i++){
+                    let x = s[i]
                     try{
-                        msg.guild.members.cache.get(m).kick(`${msg.author.username} batch kicked them and others for ${reason.substr(0,400)}`);
-                        if(logChannel && msg.channel != logChannel) u.modEvent('kick', msg.member, target, reason)
-                    }catch(e){
-                        msg.channel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], allowedMentions: {parse: []}}).then(m => u.clean(m))
-                        if(logChannel && msg.channel != logChannel) logChannel.send({embeds: [u.embed().setTitle('Error').setDescription(`I couldn't kick ${m}`)], allowedMentions: {parse: []}})
-                        else console.log(e)
-                        return
+                        await x.kick(`${x.displayName} ${s.length > 1 ? 'was caught in a batch kick':'was kicked'} by ${msg.member.displayName}`)
+                        good.push(x)
+                        if(i == s.length+1) res(true)
+                    } catch(e){
+                        errors.push(x)
+                        console.log(e)
+                        continue
                     }
-                });
-                //if(logChannel && msg.channel != logChannel) logChannel.send(({embeds: [confirmEmbed]}));
-                return 
-                
+                }
+            })
+            let e = await p
+            let embed = u.embed().setTitle('Kick Results')
+                .addField(`Kicked Member${good.length > 1 ? 's' : ''}`, good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned')
+                .setFooter(`Action performed by ${msg.member.displayName}`, msg.author.displayAvatarURL())
+                .setTimestamp(new Date())
+            if(errors.length > 0) embed.addField('Failed To Kick', errors.join('\n'))
+            if(logChannel){
+                if(msg.channel != logChannel) msg.reply(`Kick results in ${logChannel} (${`\`${good.length}\` kicked`})`).then(m => u.clean(m, 3000))
+                u.emit('kick', msg, targets, reason, embed)
             }
-            return
+            else msg.reply({failIfNotExists: false, allowedMentions: {parse: []}, embeds: [embed]}).then(u.clean)
         }
-        else return msg.channel.send("Who do you want to kick? Make sure you're pinging them.")
     }
 })
 .addCommand({name: "clear",
@@ -165,41 +126,59 @@ Module.addCommand({name: "ban",
     description: "Clears messages",
     info: "Deletes up to 200 messages in a channel, including the one you send",
     category: "Mod",
-    permissions:['MANAGE_MESSAGES'],
+    memberPermissions:['MANAGE_MESSAGES'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         var deleteCount = suffix;
+        let error = false
         if(isNaN(deleteCount) || !deleteCount || deleteCount < 2 || deleteCount > 200) return msg.channel.send("Please provide a number between 2 and 200 for the number of messages to delete")
-        else msg.channel.bulkDelete(deleteCount).catch(error => errorChannel ? errorChannel.send(`I couldn't delete messages in ${msg.channel} because of: ${error}`) : msg.reply(`Couldn't delete messages because of: ${error}`));
-        let embed = u.embed().setTitle(`${deleteCount} messages deleted by ${msg.member.displayName}`)
-        if(logChannel && logChannel != msg.channel) return u.modEvent('clear', msg.member, msg.channel, deleteCount)//logChannel.send({embeds: [embed]})
+        else await msg.channel.bulkDelete(deleteCount).catch(/**@param {Error} e*/e => {
+            if(e.message.startsWith('You can only bulk delete messages')) msg.reply(`I can't bulk delete messages older than 14 days`).then(u.clean)
+            else u.errorHandler(e, msg)
+            error = true
+        })
+        if(error) return null
+        let embed = u.embed().setTitle(`${deleteCount} messages deleted by ${msg.member.displayName}`).setFooter()
+        if(logChannel){
+            if(logChannel != msg.channel) msg.reply({failIfNotExists: false, allowedMentions: {parse: []}, embeds: [embed]}).then(u.clean)
+            u.emit('clear', msg, msg.channel, embed)
+        }
+        if(logChannel && logChannel != msg.channel) return u.emit('clear', )//logChannel.send({embeds: [embed]})
         else return msg.channel.send({embeds: [embed]}).then(u.clean)
     }
 })
 .addCommand({name: "dcall",
-    description: "Disconnects all members from VCs",
+    description: "Disconnects all members from all VCs or the one you're in",
     category: "Mod",
-    permissions: ['MOVE_MEMBERS'],
+    memberPermissions: ['MOVE_MEMBERS'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
-        let total = []
-        for(let m of msg.guild.members.cache){
-            if(m.voice.channel && m != msg.member){
-                m.voice.setChannel(null)
-                total.push(m.id)
+        let total = [], failed = []
+        let channel = msg.member.voice.channel
+        let members = msg.guild.members.cache.filter(m => channel ? m.voice.channelId == channel.id : m.voice.channelId).map(a=>a)
+        let p = new Promise(async(res, rej) =>{
+            for(let m of members){
+                try{
+                    await m.voice.setChannel(null)
+                    total.push(m.id)
+                } catch{
+                    failed.push(m)
+                }
             }
-            if(logChannel && logChannel != msg.channel) u.modEvent('dcall', msg.member, msg.channel, total.length)
-            else msg.channel.send(`${msg.member.displayName} called a DC All in ${msg.channel.name}, causing ${total.length} people to DC`)
-            //(logChannel ? logChannel : msg.channel).send
-        };
-
+        })
+        await p
+        if(logChannel && logChannel != msg.channel) u.modEvent('dcall', msg.member, channel ?? msg.channel, total.length)
+        else msg.channel.send(`${msg.member.displayName} ${channel ? 'disconnected all members from their voice channels' : `disconnected all members from ${channel.name}`} in ${msg.channel.name}, causing ${total.length} people to DC${failed.length > 0 ? `\n\nNote: I was unable to remove the following member${failed.length > 1 ? 's':''}:\n${failed.join('\n')}`: ""}`)
     }
 })
 .addCommand({name: 'emoji',
     description: 'Tool for managing server emojis',
     category: 'Mod',
-    permissions: ['MANAGE_EMOJIS_AND_STICKERS'],
+    memberPermissions: ['MANAGE_EMOJIS_AND_STICKERS'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         const validName = 'You need to specify a valid name for the emoji'
         const validLink = 'You need to upload a picture or paste a valid link.'
@@ -244,111 +223,148 @@ Module.addCommand({name: "ban",
         return msg.channel.send("That's an invalid action. Valid actions are `create`, `remove`, and `rename`.")
     }
 })
-//.addCommand({name:'lockall',
-//    description: 'Locks all the VCs',
-//    category: 'Mod',
-//    permissions: ['MOVE_MEMBERS'],
-//    onlyGuild: true,
-//    process: async(msg, suffix) =>{
-//        if(!msg.guild.id == '765669316217143315') return
-//        if(!msg.member.permissions.has('MANAGE_MESSAGES')) return msg.channel.send("You don't have permission to use that command.")
-//        let channel = msg.client.channels.cache.get("765669316741038141");
-//        let perms = channel.permissionsFor(msg.guild.members.cache.get('458086784065208320')).toArray()
-//        if(perms.includes('CONNECT'))
-//        {
-//            channel.permissionOverwrites.edit(channel.guild.roles.everyone, {CONNECT: false})
-//            await msg.react('🔒')
-//            if(msg.guild.id == '765669316217143315') console.log(`${'C '.cyan}${u.time()} ${(msg.member.displayName).yellow} ${'locked all the VCs!'.green}`)
-//        }
-//        else
-//        {
-//            channel.permissionOverwrites.edit(channel.guild.roles.everyone, {CONNECT: null})
-//            await msg.react('🔓')
-//            if(msg.guild.id == '765669316217143315') console.log(`${'C '.cyan}${u.time()} ${(msg.member.displayName).yellow} ${`unlocked all the VCs!`.red}`)
-//        }
-//}
-//})
 .addCommand({name:'mute',
     description: 'Mutes people',
     category: 'Mod',
-    permissions: ['MANAGE_ROLES'],
+    memberPermissions: ['MANAGE_ROLES'],
     onlyGuild: true,
+    /**@param {Message} msg
+     * @property {Message} msg
+    */
     process: async(msg, suffix) =>{
         let s = []
         let err = []
         let mutedUsers = msg.mentions.members
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
-        if(dbFetch == 'disabled' || !dbFetch) return msg.channel.send(`The mute command is disabled. Use \`/config\` to set it up.`)
-        if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
-        const muteRole = msg.guild.roles.cache.find(r => r.id == dbFetch);
+        if(dbFetch == 'disabled' || !dbFetch) return u.reply(msg, `The mute command is disabled. Use \`/config\` to set it up.`, true)
+        if(mutedUsers.size == 0) return u.reply(msg, `You need to specify who to mute`, true)
+        const muteRole = msg.guild.roles.cache.get(dbFetch);
         if(!muteRole) return u.reply(msg, `I couldn't find the muted role.`, true)
-        mutedUsers.forEach(m => {
-            if(m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
-            else try{
-                m.roles.add(muteRole)
-                s.push(`<@${m.user.id}>`)
-            }catch(e){err.push(`<@${m.user.id}>`)}
-        });
-        let embed = u.embed().setTitle(`Mute Resulst:`)
+        let p = new Promise(async(res, rej) =>{
+            for(let i = 0; i<mutedUsers.length; i++){
+                let m = mutedUsers[i]
+                if(!m.id || m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
+                else try{
+                    await m.roles.add(muteRole)
+                    s.push(`<@${m.user.id}>`)
+                }catch(e){err.push(`<@${m.user.id}>`)}
+                if(i+1 == mutedUsers.length) res()
+            }
+        })
+        await p
+        if(logChannel) u.modEvent('muteAll', msg.member, channel, null, )
+        let embed = u.embed().setTitle(`Mute Results:`)
         if(s.length > 0) embed.addField("Successfully muted", `${s.join('\n')}`)
         if(err.length > 0) embed.addField("Failed to add role", `${err.join('\n')}`)
-        return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
+        let message = msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
+        if(logChannel && logChannel != msg.channel){
+            logChannel.send({embeds: [embed], allowedMentions: {parse: []}})
+            u.clean(message)
+        }
     }
 })
 .addCommand({name:'unmute',
     description: 'Unmutes people',
     category: 'Mod',
-    permissions: ['MANAGE_ROLES'],
+    memberPermissions: ['MANAGE_ROLES'],
     onlyGuild: true,
+    /**@param {Message} msg */
     process: async(msg, suffix) =>{
         let s = []
         let err = []
-        let mutedUsers = msg.mentions.members
+        let [id, mutedUsers] = msg.mentions.members
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
         if(dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.")
         if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
         const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
         if(!muteRole) return msg.channel.send(`I couldn't find the muted role to remove.`)
-        msg.mentions.members.forEach(m => {
-            if(!m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
-            else try{
-                m.roles.remove(muteRole)
-                s.push(`<@${m.user.id}>`)
-            }catch(e){err.push(`<@${m.user.id}>`)}
-        });
+        let p = new Promise(async(res, rej) =>{
+            for(let i = 0; i < mutedUsers.length; i++){
+                let m = mutedUsers[i]
+                if(!mid || !m.roles.cache.has(mutedRole.id)) err.push(m.member)
+                else try{
+                    await m.roles.remove(muteRole)
+                    s.push(m.member)
+                } catch{err.push(m.member)}
+                if(i+1 == mutedUsers.length) res()
+            }
+        })
+        await p
         let embed = u.embed().setTitle(`Unmute Resulst:`)
         if(s.length > 0) embed.addField("Successfully unmuted", s.join('\n'))
         if(err.length > 0) embed.addField("Failed to remove role", err.join('\n'))
-        return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});    
+        return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});
     }
 })
 .addCommand({name:'muteall',
     description: 'Mutes all members in a VC',
     category: 'Mod',
-    permissions: ['MUTE_MEMBERS'],
+    memberPermissions: ['MUTE_MEMBERS'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to mute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(true)
+        let s = [], f = []
+        let p = new Promise(async(res, rej) =>{
+            let members = channel.members.map(r =>r)
+            members.forEach(async(m, i) =>{
+                try{
+                    if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m.id != msg.member.id){
+                        m.voice.setMute(true)
+                        s.push(m.id)
+                    }
+                } catch{
+                    f.push(m.toString())
+                }
+                if(i+1 >= members.length) res()
+            })
+        })
+        await p
+        let embed = u.embed().setTitle(`Muted All in ${channel.name}`).setDescription(`Muted \`${s.length}\` members`)
+        if(f.length > 0) embed.addField('Failed to Mute', f.join('\n'))
+        if(logChannel) logChannel.send({embeds: [embed]})
     }
 })
 .addCommand({name:'unmuteall',
     description: 'Unutes all members in a VC',
     category: 'Mod',
-    permissions: ['MUTE_MEMBERS'],
+    memberPermissions: ['MUTE_MEMBERS'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
-        for (let m of channel.members.map(r => r)) if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(false)
-    }
+        let s = [], f = []
+        let p = new Promise(async(res, rej) =>{
+            let members = channel.members.map(r =>r)
+            members.forEach(async(m, i) =>{
+                try{
+                    if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m.id != msg.member.id){
+                        m.voice.setMute(true)
+                        s.push(m.id)
+                    }
+                } catch{
+                    f.push(m.toString())
+                }
+                if(i+1 >= members.length) res()
+            })
+        })
+        await p
+        let embed = u.embed().setTitle(`Muted All in ${channel.name}`).setDescription(`Muted \`${s.length}\` members`)
+        if(f.length > 0) embed.addField('Failed to Mute', f.join('\n'))
+        if(logChannel) logChannel.send({embeds: [embed]})
+        //let channel = msg.member.voice.channel;
+        //if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
+        //for (let m of channel.members.map(r => r)) if(!m.permissions.has('ADMINISTRATOR' || 'MANAGE_GUILD') && m != msg.member) m.voice.setMute(false)
+    }//
 })
 .addCommand({name:'nick',
     description: `Changes someone's nickname`,
     category: 'Mod',
-    permissions: ['MANAGE_NICKNAMES'],
+    memberPermissions: ['MANAGE_NICKNAMES'],
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let nickUser = msg.guild.members.cache.get(msg.mentions.users.first());
         if(!nickUser) return msg.channel.send("Who's nickname would you like me to change?")
@@ -361,6 +377,7 @@ Module.addCommand({name: "ban",
     description: `Repeats after you`,
     category: 'Mod',
     onlyGuild: true,
+    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         if(msg.author.id == '337713155801350146' || (msg.member.permissions.has("ADMINISTRATOR")))
         {
@@ -381,6 +398,7 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     onlyGuild: true,
     otherPerms: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
+    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let read = await Module.db.guildconfig.getPrefix(msg.guild.id)
         if(suffix == read) return msg.channel.send(`The prefix is already \`${suffix}\``)
@@ -404,7 +422,7 @@ Module.addCommand({name: "ban",
         u.errorHandler(error, reaction.message.content)
     } 
 })
-.addEvent('messageCreate', async msg =>{
+.addEvent('messageCreate', /**@param {Message} msg*/ async msg =>{
     try{
         if(!msg.guild || msg.author.bot) return
         hasLanguage = false

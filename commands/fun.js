@@ -4,6 +4,7 @@ const Augur = require('augurbot'),
     axios = require('axios'),
     request = require('request')
 const Module = new Augur.Module();
+let run = false
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
     category: "Fun",
@@ -270,5 +271,55 @@ Module.addCommand({name: "8ball",
     process: async(msg, suffix)=>{
         msg.channel.send('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot')
     }
+})
+.addCommand({name: 'selfdestruct',
+    enabled: false,
+    process: async(msg, args) =>{
+        if(run) return msg.channel.send("Self desctruct already in progress")
+        run = true
+        let messages = [
+            ["Discovering files... ⏳", 0],
+            ["99,127 files discovered in directory", 10000],
+            ["................", 15000],
+            ["372,918 files discovered on /dev/disk0", 30000],
+            ["Formatting /dev/disk0", 35000],
+            ["It's been real, folks <:clonesalute:882052188262785086>", 40000],
+            ["Format Progress: 10%... ⏳", 50000],
+            ["Format Progress: 23%... ⏳", 60000],
+            ["Format Progress: 47%... ⏳", 70000],
+            ["Format Progress: 48%... ⏳", 80000],
+            ["Format Progress: 66%... ⏳", 90000],
+            ["Format Progress: 71%... ⏳", 100000],
+            ["Format Progress: 89%... ⏳", 110000]
+        ]
+        messages.forEach((m, i) => {
+            setTimeout(() => {
+                msg.channel.send(m[0])
+                if(i == 4) msg.client.user.setActivity("around with sudo mkfs", {type: "PLAYING"})
+                if(i == messages.length-1) {
+                    client.user.setStatus('invisible')
+                    setTimeout(() => {
+                        msg.client.destroy()
+                    }, 1000);
+                }
+            }, m[1]);
+        });
+    }
+})
+.addCommand({name: "getLinks", onlyOwner: true, process: async(msg, args) =>{
+    let fs = require('fs')
+    let https = require('https')
+    let a = args.split(' ')
+    for(let x of a){
+        setTimeout(() => {
+            let emoji = msg.guild.emojis.cache.find(a => `<:${a.name}:${a.id}>` == x)
+            console.log(emoji.url)
+            let w = fs.createWriteStream(`./huddy/${emoji.id}.png`)
+            let request = https.get(emoji.url, function(res){
+                res.pipe(w)
+            })
+        }, (a.indexOf(x)*2000));
+    }
+}
 })
 module.exports = Module

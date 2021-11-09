@@ -8,13 +8,18 @@ const events = require('events'),
     em = new events.EventEmitter()
 const Utils = {
     /**
-     * @param {string} type The type of mod action
-     * @param {GuildMember} executor Who executed the command
-     * @param {GuildMember[]|GuildChannel[]|GuildEmoji[]} target Array of targets
-     * @param {string|number} [reason] Reason
+     * @param {string} name The type of mod action
+     * Options should ideally be in this order (you can also add more)
+     * @param {GuildMember} executor
+     * @param {GuildMember[]|GuildChannel|GuildEmoji|Guild} targets
+     * @param {string} reason
+     * @param {string|number} statistic
+     * @param {any[]} succeeded
+     * @param {any[]} failed
+     * @param {MessageEmbed} embed
      * @returns {em} Emits a modEvent
      */
-    modEvent: (type, executor, target, reason) => em.emit('modEvent', [type, executor, target, reason]),
+    emit: (name, ...options) => em.emit(name, options),
     
     /**
      * @param data Action Row Data
@@ -66,7 +71,7 @@ const Utils = {
      * @param {number} time Time in ms
      * @returns boolean/null
      */
-    confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)=>{
+    confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)=>{
             let msg = await message.channel.send({embeds: [promptEmbed], allowedMentions: {parse: []}})
             await msg.react('✅');
             await msg.react('🛑');
@@ -161,14 +166,20 @@ const Utils = {
     },
     
     /**
-     * Kinda borked, I wouldn't use tbh
+     * @param {string} str String to find mentions in
+     * @returns {{targets: GuildMember[], reason: string}} Guild members
      */
-    getMentions: async (msg, member = false)=>{
-        let users = Utils.parse(msg).suffix.match(/<@!?[0-9]*>/g).join('\n').replace(/[^0-9\n]/g, '').split('\n')
-        let userArray = []
-        if(member) for(let u of users) userArray.push(msg.guild.members.cache.get(u))
-        else for (let u of users) userArray.push(msg.client.users.cache.get(u))
-        return userArray
+    parseTargets: (msg, str)=>{
+        let regex = /(<@!?\d+>)/g
+        let list = str.split(regex).filter(a => !['', ' '].includes(a))
+        let targets = []
+        for(x of list){
+            if(!x.match(regex)) break
+            else targets.push(x)
+        }
+        let reason = list.slice(targets.length).join('')
+        target.map(a => msg.guild.members.cache.get(a))
+        return {targets, reason}
     },
     
     /**
@@ -265,8 +276,7 @@ const Utils = {
      * @returns {boolean} is link or not
      */
     validUrl: (txt)=>{
-        if(validUrl.isWebUri(txt)) return true
-        else return false
+        return validUrl.isWebUri(txt)
     },
     
     /**

@@ -6,7 +6,7 @@ const Module = new Augur.Module();
 
 Module.addCommand({name: 'embed',
     onlyGuild: true,
-    permissions: ['MANAGE_WEBHOOKS'],
+    memberPermissions: ['MANAGE_WEBHOOKS'],
     category: "Moderation",
     process: async(msg, suffix) =>{
         let contentFilter = m => m.content

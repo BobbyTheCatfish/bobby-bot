@@ -37,7 +37,7 @@ Module.addEvent('messageCreate', async (msg) =>{
         }
     }
 })
-
+.addCommand({name: 'ping', process: async(msg,args)=>msg.channel.send('pong')})
 .addCommand({name: 'tag',
     onlyGuild: true,
     process: async(msg, args) =>{
@@ -79,7 +79,7 @@ Module.addEvent('messageCreate', async (msg) =>{
 })
 .addCommand({name: 'tags',
     onlyGuild: true,
-    process: async(msg,args)=>{
+    process: async(msg, args)=>{
         if(args.toLowerCase() == 'global' && ((msg.member && msg.member.permissions.has('ADMINISTRATOR')|| msg.author.id == Module.config.ownerId))){
             if(!await Module.db.tags.globalStatus(msg.guild.id)){
                 let tags = await Module.db.tags.getAllTags(msg.guild.id),
