@@ -4,16 +4,15 @@ const Augur = require('augurbot'),
     tesseract = require('node-tesseract-ocr'),
     validUrl = require('valid-url'),
     jimp = require('jimp'),
-    profanityFilter = require('profanity-matcher'),
     config = {oem: 0, psm: 3},
-    {Message, GuildMember} = require('discord.js')
+    {Message, GuildMember, MessageReaction, User} = require('discord.js'),
+    Discord = require('discord.js')
 
 const Module = new Augur.Module();
 const logChannel = null
 const errorChannel = async msg => msg.guild.channels.cache.get(await Module.db.guildconfig.getErrorChannel(msg.guild.id))
 function filter(text){
     let noWhiteSpace = text.toLowerCase().replace(/[\.,\/#!$%\^&\*;:\{\}=\-_`~"'\(\)\?\|]/g,"").replace(/\s\s+/g, " ")
-    let pf = new profanityFilter()
     let filtered = pf.scan(noWhiteSpace).filter(a => a.length > 0)
     if(filtered.length > 0 && (noWhiteSpace.length > 0)){
         return filtered
@@ -25,7 +24,6 @@ Module.addCommand({name: "ban",
     info: "Want to ban someone from your server? Look no further. You can also ban multiple people in one swing of the ban hammer.",
     category: "Mod",
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         if(!msg.member.permissions.has("BAN_MEMBERS")) return msg.channel.send("You are not worthy to wield the ban hammer.").then(m => u.clean([m,msg]))
         let {targets, reason} = u.parseTargets(suffix)
@@ -77,7 +75,6 @@ Module.addCommand({name: "ban",
     category: "Mod",
     memberPermissions: ['KICK_MEMBERS'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         let {targets, reason} = u.parseTargets(suffix)
         let s = [], f = []
@@ -128,7 +125,6 @@ Module.addCommand({name: "ban",
     category: "Mod",
     memberPermissions:['MANAGE_MESSAGES'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         var deleteCount = suffix;
         let error = false
@@ -153,7 +149,6 @@ Module.addCommand({name: "ban",
     category: "Mod",
     memberPermissions: ['MOVE_MEMBERS'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         let total = [], failed = []
         let channel = msg.member.voice.channel
@@ -178,7 +173,6 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MANAGE_EMOJIS_AND_STICKERS'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async (msg, suffix) =>{
         const validName = 'You need to specify a valid name for the emoji'
         const validLink = 'You need to upload a picture or paste a valid link.'
@@ -186,20 +180,19 @@ Module.addCommand({name: "ban",
         let keywords = words.slice(0).join(' ')
         let cmd = words[0]
 
-        if(['add, create'].includes(cmd)){
+        if(['add', 'create'].includes(cmd)){
             let image = msg.attachments.first()?.url ?? words[1]
             if(!image || !await u.validImage(image)) return msg.reply(validLink)
             let name = words[1]
             if(!msg.attachments.first()) name = words[2]
             if(!name) return msg.reply(validName)
-            let emoji
             try{
-                emoji = await msg.guild.emojis.create(image, name)
+                let emoji = await msg.guild.emojis.create(image, name)
+                if(logChannel && msg.channel != logChannel) u.modEvent('emojiCreate', msg.member, emoji)
+                return msg.reply(`\`:${emoji.name}:\` was successfully added!`)
             } catch{
                 return msg.reply("I couldn't use that image (it was probably too big)").then(u.clean)
             }
-            msg.reply(`\`:${emoji.name}:\` was successfully added!`)
-            if(logChannel && msg.channel != logChannel) u.modEvent('emojiCreate', msg.member, emoji)
         }
         else if(['remove', 'delete'].includes(cmd)){
             let emoji = msg.guild.emojis.cache.find(e => `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` == words[1])
@@ -207,8 +200,8 @@ Module.addCommand({name: "ban",
             emoji.delete().catch(()=>{
                 return msg.reply("I wasn't able to delete that emoji. (Do I have the needed perms?)")
             })
-            msg.reply(`\`${emoji.name}\` was successfully removed!`)
             if(logChannel && msg.channel != logChannel) u.modEvent('emojiDelete', msg.member, emoji)
+            return msg.reply(`\`${emoji.name}\` was successfully removed!`)
         }
         else if(['rename', 'edit'].includes(cmd)){
             let emoji = msg.guild.emojis.cache.find(e => `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` == words[1] || e.name == words[1])
@@ -217,10 +210,27 @@ Module.addCommand({name: "ban",
             emoji.setName(words[2]).catch(()=> {
                 return msg.reply("I wasn't able to rename that emoji. (Do I have the needed perms?)")
             })
-            msg.reply(`\`:${emoji}:\` was successfully renamed to \`${msg.guild.emojis.cache.get(emoji.id)}\``)
             if(logChannel && msg.channel != logChannel) u.modEvent('emojiUpdate', msg.member, emoji, msg.guild.emojis.cache.get(emoji.id))
+            return msg.reply(`\`:${emoji}:\` was successfully renamed to \`${msg.guild.emojis.cache.get(emoji.id)}\``)
         }
-        return msg.channel.send("That's an invalid action. Valid actions are `create`, `remove`, and `rename`.")
+        else if(['steal', 'copy'].includes(cmd)){
+            let image = u.getEmoji(words[1])
+            let link = `https://cdn.discordapp.com/emojis/${words[1]}`
+            if(!image){
+                let extension = await u.validImage(`${link}.gif`) ? `${link}.gif` : await u.validImage(`${link}.png`) ? `${link}.png` : null
+                if(extension && !words[2]) return msg.reply("I need a name for the emoji")
+                if(extension)  image = {link: extension, name: words[2]}
+            }
+            if(!image || !await u.validImage(image.link)) return msg.reply("That's not a valid emoji!")
+            try{
+                let emoji = await msg.guild.emojis.create(image.link, image.name)
+                if(logChannel && msg.channel != logChannel) u.modEvent('emojiCreate', msg.member, emoji)
+                return msg.reply(`\`:${emoji.name}:\` was successfully added!`)
+            } catch {
+                return msg.reply("I had a problem creating the emoji").then(u.clean)
+            }
+        }
+        return msg.reply("That's an invalid action. Valid actions are `create`, `remove`, `steal`, and `rename`.")
     }
 })
 .addCommand({name:'mute',
@@ -234,10 +244,10 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let s = []
         let err = []
-        let mutedUsers = msg.mentions.members
+        let [id, mutedUsers] = msg.mentions.members
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
         if(dbFetch == 'disabled' || !dbFetch) return u.reply(msg, `The mute command is disabled. Use \`/config\` to set it up.`, true)
-        if(mutedUsers.size == 0) return u.reply(msg, `You need to specify who to mute`, true)
+        if(mutedUsers.length == 0) return u.reply(msg, `You need to specify who to mute`, true)
         const muteRole = msg.guild.roles.cache.get(dbFetch);
         if(!muteRole) return u.reply(msg, `I couldn't find the muted role.`, true)
         let p = new Promise(async(res, rej) =>{
@@ -268,14 +278,13 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MANAGE_ROLES'],
     onlyGuild: true,
-    /**@param {Message} msg */
     process: async(msg, suffix) =>{
         let s = []
         let err = []
         let [id, mutedUsers] = msg.mentions.members
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
         if(dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.")
-        if(mutedUsers.size == 0) return msg.channel.send(`You need to specify who to mute`)
+        if(mutedUsers.length == 0) return msg.channel.send(`You need to specify who to mute`)
         const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
         if(!muteRole) return msg.channel.send(`I couldn't find the muted role to remove.`)
         let p = new Promise(async(res, rej) =>{
@@ -301,7 +310,6 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MUTE_MEMBERS'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to mute the members in it!");
@@ -331,7 +339,6 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MUTE_MEMBERS'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let channel = msg.member.voice.channel;
         if(!channel) return msg.channel.send("You need to be in a voice channel to unmute the members in it!");
@@ -364,7 +371,6 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MANAGE_NICKNAMES'],
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         let nickUser = msg.guild.members.cache.get(msg.mentions.users.first());
         if(!nickUser) return msg.channel.send("Who's nickname would you like me to change?")
@@ -377,7 +383,6 @@ Module.addCommand({name: "ban",
     description: `Repeats after you`,
     category: 'Mod',
     onlyGuild: true,
-    /**@param {Message} msg*/
     process: async(msg, suffix) =>{
         if(msg.author.id == '337713155801350146' || (msg.member.permissions.has("ADMINISTRATOR")))
         {
@@ -397,8 +402,7 @@ Module.addCommand({name: "ban",
     description: `Changes the server prefix`,
     category: 'Mod',
     onlyGuild: true,
-    otherPerms: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
-    /**@param {Message} msg*/
+    permissions: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
     process: async(msg, suffix) =>{
         let read = await Module.db.guildconfig.getPrefix(msg.guild.id)
         if(suffix == read) return msg.channel.send(`The prefix is already \`${suffix}\``)
@@ -408,7 +412,7 @@ Module.addCommand({name: "ban",
         return msg.channel.send(`Changed the prefix to \`${await Module.db.guildconfig.getPrefix(msg.guild.id)}\``).then(u.clean)
     }
 })
-.addEvent('messageReactionAdd', async (reaction, user) =>{
+.addEvent('messageReactionAdd',/**@param {MessageReaction} reaction @param {User} user*/ async (reaction, user) =>{
     try {
         if(!reaction.message.guild) return
         let member = reaction.message.guild.members.cache.get(user.id)
@@ -416,46 +420,47 @@ Module.addCommand({name: "ban",
         let messages = await reaction.message.channel.messages.fetchPinned().catch(u.noop);
         if(messages.size == 50) return reaction.message.channel.send("You've reached the max number of pins for this channel. Please unpin something else if you want to pin this.")
         else await reaction.message.pin()
+        u.emit('messagePin', reaction.message, member)
       }
     } catch (error) {
         reaction.message.channel.send(`Coudln't pin that post because: ${error}`)
         u.errorHandler(error, reaction.message.content)
     } 
 })
-.addEvent('messageCreate', /**@param {Message} msg*/ async msg =>{
-    try{
-        if(!msg.guild || msg.author.bot) return
-        hasLanguage = false
-        let guildFilter = await Module.db.guildconfig.langFilter(msg.guild?.id)
-        if(guildFilter){
-            let imgFiltered, msgFiltered
-            if(guildFilter.includes('i')){
-                let image = msg.attachments.first()?.url || validUrl.isWebUri(msg.content)
-                if(image) try{await jimp.read(image)} catch{image = null}
-                if(image){
-                    image = await jimp.read(image)
-                    image.resize(image.getWidth() *1.2, image.getHeight() * 1.2).grayscale
-                    image = await image.getBufferAsync(jimp.MIME_JPEG)
-                    let text = await tesseract.recognize(image, config)
-                    if(text){
-                        imgFiltered = filter(text)
-                        if(imgFiltered) hasLanguage = "Looks like that image might have language in it. If this is the case, please delete it."
-                    }
-                }
-            }
-            if(guildFilter.includes('m') && msg.content){
-                msgFiltered = filter(msg.content)
-                if(msgFiltered) hasLanguage = `Looks like ${hasLanguage ? "both your message and image have" : "your message has"} some language in it. I'd delete it myself, but this feature is still in beta`
-            }
-            if(hasLanguage) {
-                let embed = u.embed().setTitle("Language Warning").setURL(msg.url).setDescription(msg.content).setColor('#a86632')
-                if(msgFiltered) embed.addField('Detected in message', msgFiltered.join('\n'))
-                if(imgFiltered) embed.addField('Detected in image', imgFiltered.join('\n'))
-                msg.guild.channels.cache.get(await Module.db.guildconfig.langLogChannel(msg.guild.id)).send({attachments: [msg.attachments.map(a => a.url)], embeds: [embed]})
-                return msg.reply(hasLanguage).then(u.clean)
-            }
-    }
-
-    } catch(e) {console.log(e, 'caught')}
-})
+//.addEvent('messageCreate', /**@param {Message} msg*/ async msg =>{
+//    try{
+//        if(!msg.guild || msg.author.bot) return
+//        hasLanguage = false
+//        let guildFilter = await Module.db.guildconfig.langFilter(msg.guild?.id)
+//        if(guildFilter){
+//            let imgFiltered, msgFiltered
+//            if(guildFilter.includes('i')){
+//                let image = msg.attachments.first()?.url || validUrl.isWebUri(msg.content)
+//                if(image) try{await jimp.read(image)} catch{image = null}
+//                if(image){
+//                    image = await jimp.read(image)
+//                    image.resize(image.getWidth() *1.2, image.getHeight() * 1.2).grayscale
+//                    image = await image.getBufferAsync(jimp.MIME_JPEG)
+//                    let text = await tesseract.recognize(image, config)
+//                    if(text){
+//                        imgFiltered = filter(text)
+//                        if(imgFiltered) hasLanguage = "Looks like that image might have language in it. If this is the case, please delete it."
+//                    }
+//                }
+//            }
+//            if(guildFilter.includes('m') && msg.content){
+//                msgFiltered = filter(msg.content)
+//                if(msgFiltered) hasLanguage = `Looks like ${hasLanguage ? "both your message and image have" : "your message has"} some language in it. I'd delete it myself, but this feature is still in beta`
+//            }
+//            if(hasLanguage) {
+//                let embed = u.embed().setTitle("Language Warning").setURL(msg.url).setDescription(msg.content).setColor('#a86632')
+//                if(msgFiltered) embed.addField('Detected in message', msgFiltered.join('\n'))
+//                if(imgFiltered) embed.addField('Detected in image', imgFiltered.join('\n'))
+//                msg.guild.channels.cache.get(await Module.db.guildconfig.langLogChannel(msg.guild.id)).send({attachments: [msg.attachments.map(a => a.url)], embeds: [embed]})
+//                return msg.reply(hasLanguage).then(u.clean)
+//            }
+//    }
+//
+//    } catch(e) {console.log(e, 'caught')}
+//})
 module.exports = Module
