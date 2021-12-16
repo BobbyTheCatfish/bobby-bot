@@ -16,7 +16,10 @@ const TagSchema = new mongoose.Schema({
         },
         file:{
             type: String
-        }
+        },
+        time:{
+            type: Number
+        },
     },
     global:{
         type: Boolean,

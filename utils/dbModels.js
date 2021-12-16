@@ -151,19 +151,31 @@ const models = {
     tags:{
         getTag: async (guildId, name) =>{
             let document = await Tags.findOne({guildId})?.exec();
-            return document?.tags.find(t => t.name == name);
+            return document?.tags?.find(t => t.name == name);
+        },
+        getGlobalTag: async(name) =>{
+            /**@type {{tags: [{name: string, time: Date}]}[]} */
+            let document = await Tags.find({global: true})?.exec()
+            return document?.map(a => a.tags)?.flat()?.filter(t => t.name == name)?.sort((a, b) => a.time-b.time)[0]
         },
         getAllTags: async (guildId) =>{
-            return await Tags.findOne({guildId})?.exec()
+            let document = await Tags.findOne({guildId})?.exec()
+            return document?.tags
+        },
+        getAllGlobalTags: async() =>{
+            let document = await Tags.find({global: true})?.exec()
+            let filtered = document?.map(a => a.tags)?.flat()?.sort((a, b) => a.time-b.time).filter((v, i, a) => a.map(a => a.name).indexOf(v.name) == i)
+            return filtered.sort((a, b) => a.name.localeCompare(b.name))
         },
         saveTag: async (guildId, name, text, file) =>{
             let document = await Tags.findOne({guildId})?.exec()
+            let time = Date.now()
             if(document){
                 let tag = document.tags.find(t => t.name == name)
                 if(tag) return Tags.updateOne({guildId, "tags.name":name}, {$set: {"tags.$.text":text, "tags.$.file": file}})
-                else return Tags.updateOne({guildId}, {$push: {tags: {name, text, file}}})
+                else return Tags.updateOne({guildId}, {$push: {tags: {name, text, file, time}}})
             }
-            else return Tags.create({guildId, tags: [{name, text, file}]})
+            else return Tags.create({guildId, tags: [{name, text, file, time}]})
         },
         removeTag: async (guildId, name) =>{
             let document = await Tags.findOne({guildId})?.exec()
@@ -173,6 +185,9 @@ const models = {
             }
             return null
         },
+        //addTimestamps: async(guildId, name) =>{
+        //    return await Tags.updateMany({tags: {$gte: {$size: 1}}}, {$set: {"tags.$[].time": Date.now()}})
+        //},
         globalStatus: async(guildId)=>{
             let document = await Tags.findOne({guildId})?.exec()
             return document?.global
