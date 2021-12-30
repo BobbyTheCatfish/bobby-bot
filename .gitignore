@@ -4,7 +4,7 @@ database/
 media/
 config/config.json
 backup_commands/
-jsons/*.json
+jsons/
 commands/dms.js
 commands/eval.js
 commands/thalesGameNights.js

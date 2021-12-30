@@ -1,10 +1,7 @@
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
-    colors = require('colors'),
-    axios = require('axios'),
     request = require('request')
 const Module = new Augur.Module();
-let run = false
 Module.addCommand({name: "8ball",
     aliases:["🎱"],
     category: "Fun",
@@ -23,13 +20,11 @@ Module.addCommand({name: "8ball",
           "Yes.",
           "Signs point to yes.",
 
-          "Reply hazy, try again.",
           "Ask again later.",
           "Better not tell you now.",
           "Cannot predict now.",
           "Concentrate and ask again.",
           "Perhaps.",
-          "Why ask me?",
 
           "Don't count on it.",
           "My reply is no.",
@@ -43,17 +38,16 @@ Module.addCommand({name: "8ball",
 .addCommand({name: "acronym",
     category: "Fun",
     process: async(msg, args)=>{
-        let length = 4
-        if(args && !isNaN(args)) length = args
+        let length = (args && !isNaN(args)) ? args : 4
         let alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y", "Z"];
         let profanityFilter = require("profanity-matcher");
         let pf = new profanityFilter();
         let word = [];
 
         while (word.length == 0){
-            for (var i = 0; i < length; i++) word.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+            for (var i = 0; i < length; i++) word.push(u.rand(alphabet));
             word = word.join("");
-            if (pf.scan(word.toLowerCase()).length == 0) return msg.channel.send("I've always wondered what __**" + word + "**__ stood for...");
+            if (pf.scan(word.toLowerCase()).length == 0) return msg.channel.send(`I've always wondered what __**${word}**__ stood for...`);
             else word = [];
         }
     }
@@ -62,17 +56,11 @@ Module.addCommand({name: "8ball",
 .addCommand({name: "flip",
     category: "Fun",
     process: async (msg, args) =>{
-        let flip = Math.floor(Math.random()*2)
-        if(msg.guild?.id == '408747484710436877' && msg.member.permissions.has('ADMINISTRATOR')) flip = Math.floor(Math.random()*10)
-        if(args.toLowerCase() == 'heads'){
-            if(flip >=1) return msg.react('💀').then(msg.react('🎉'))
-            else return msg.react('🪱').then(msg.react('❌'))
-        }
-        else if(args.toLowerCase() == 'tails'){
-            if(flip >=1) return msg.react('🪱').then(msg.react('🎉'));
-            else return msg.react('💀').then(msg.react('❌'))
-        }
-        else return msg.reply('You need to specify heads or tails!').then(u.clean)
+        if(!['heads', 'tails'].includes(args.toLowerCase())) return msg.reply("You need to specify heads or tails!").then(u.clean)
+        let choice = Math.floor(Math.random()*2) == 1 ? 'heads' : 'tails'
+        let won = (args.toLowercase() == choice) ? '🎉' : '❌'
+        choice = (choice == 'heads') ? '💀' : '🪱'
+        return msg.react(choice).then(msg.react(won))
     }
 })
 .addCommand({name: "impostor",
@@ -98,19 +86,6 @@ Module.addCommand({name: "8ball",
         msg.channel.send({embeds: [embed]})
     }
 })
-.addCommand({name: "personal",
-    category: "Fun",
-    process: async (msg) =>{
-        const Jimp = require('jimp')
-        let image = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/808446253737181244/personal.png')
-        let target = await Jimp.read((msg.mentions.members.first() ? msg.mentions.members.first().user : msg.author).displayAvatarURL({format: 'png', size: 512}))
-        let mask = await Jimp.read('media/flexmask.png')
-        mask.resize(350,350)
-        target.resize(350, 350).mask(mask)
-        image.blit(target, 1050, 75)
-        return await msg.channel.send({files: [await image.getBufferAsync(Jimp.MIME_PNG)]})
-    }
-})
 .addCommand({name: "mewhen",
     category: "Fun",
     process: async (msg, args) =>{
@@ -118,25 +93,24 @@ Module.addCommand({name: "8ball",
         let final = []
         if(!args) return msg.channel.send("You need to provide some context!")
         words.forEach(k => {
-            if(k == 'i' || k == 'we') k = 'they'
-            else if(k == 'am') k = 'are'
-            else if(k == "i'm" || k == "we're") k = "they're"
-            else if(k == "i've" || k == "we've") k = "they've"
-            else if(k=='my' || k=='our') k = 'their'
-            else if(k=='mine' || k=='ours') k = 'theirs'
+            if(k == 'am') k = 'are'
+            else if(["i'm", "we're"].includes(k)) k = "they're"
+            else if(["i've","we've"].includes(k)) k = "they've"
+            else if(['mine', 'ours'].includes(k)) k = 'theirs'
+            else if(['i', 'we'].includes(k)) k = 'they'
+            else if(['my', 'our'].includes(k)) k = 'their'
             else if(k=='me') k = 'them'
             final.push(k)
         });
         msg.delete()
-        return msg.channel.send(`${msg.member ? msg.member.displayName : msg.author.username} when ${final.join(' ')}`, {files: ['media/mewhen.png']})
+        return msg.channel.send(`${msg.member?.displayName ?? msg.author.username} when ${final.join(' ')}`, {files: ['media/mewhen.png']})
     }
 })
 .addCommand({name: "poll",
     category: "Fun",
     process: async (msg, args) =>{
-        let words = args.split(' ')
-        let keywads = words.slice(0).join(' ')
-        let options = keywads.split('|').map(o => o.trim());
+        let words = args.split(' ').slice(0).join(' ')
+        let options = words.split('|').map(o => o.trim());
         let title = options.shift();
         if(!title || options.length < 2 || options.length > 30) return msg.channel.send("You need a title and at least two options! (<Title>|<Option 1>|<Option 2>)")
         else{
@@ -156,7 +130,7 @@ Module.addCommand({name: "8ball",
             else{
                 body = JSON.parse(body);
                 let embed = u.embed()
-                    .setAuthor(`New poll from ${msg.guild?.displayName || msg.author.username}`)
+                    .setAuthor(`New poll from ${msg.member?.displayName ?? msg.author.username}`)
                     .setTimestamp()
                     .setTitle(decodeURI(body.title))
                     .setURL(`https://www.strawpoll.me/${body.id}`)
@@ -212,52 +186,50 @@ Module.addCommand({name: "8ball",
     aliases:['e','embiggen'],
     category: "Fun",
     process: async (msg, args) =>{
-        const unicode = require('emoji-unicode')
+        console.log('run')
+        const twemoji = require('@discordapp/twemoji')
         const Jimp = require('jimp')
-        const svgToImg = require('svg-to-img')
+        function getUnicode(emoji) {
+            console.log('unicode')
+            let parse = JSON.stringify(twemoji.parse(emoji))
+            return parse?.match(/https:\/\/twemoji\.maxcdn\.com\/v\/.*.png/)?.[0]
+        }
         let test = /<(a?):\w+:(\d+)>/i;
-        let rows = []
         let cols = 1
-        for(x of args.split('\n')){
-            let j = []
-            for(y of x.split(' ')) if(y != '' && y != ' ') j.push(y)
-            rows.push(j.join(' '))
-        }
-        for(x of rows) if(x.split(' ').length > cols) cols = x.split(' ').length
+        let rows = args.split('\n').map(j => j.split(' ').filter(a => a != '' && a != ' '))
+        console.log('rows', rows)
+        for(x of rows) if(x.length > cols) cols = x.length
+        console.log('cols length set', cols)
         if(rows.length == 1 && cols == 1){
+            console.log('one')
             let id = test.exec(args)
-            if(id) return msg.channel.send({files: [`https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`]})
+            let link = getUnicode(args)
+            if(id) link ??= `https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`
+            if(link) return msg.reply({files: [link]})
+            else return msg.reply("I need a valid emoji!")
         }
-        if(rows.join(' ').split(' ').length > 25) return msg.channel.send("That's too many emojis! The limit is 25.")
+        if(rows.length > 5 || cols >= 5) return msg.channel.send("That's too many emojis! You're limited to a 5x5 grid.")
         if(!args.replace(/[\[\] ]/g, '')) return msg.channel.send(`You need to supply emojis!`)
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
-        let o = 1, a = 0 //o=y, a=x
-        for (y of rows) {
-            for(x of y.split(' ')){
+        rows.forEach(async (y, o) =>{
+            y.forEach(async (x, a) =>{
                 let id = test.exec(x)
-                if(x == '[]'){
-                    let image = new Jimp(150, 150, 0x00000000)
-                    canvas.blit(image, 150 * a, 150 * (o-1))
-                }
+                if(x == '[]'){}
                 else if(id){
-                    let image
-                    try{image = await Jimp.read(`https://cdn.discordapp.com/emojis/${id[2]}.${(id[1] ? "gif" : "png")}`)}catch{msg.channel.send(`I couldn't enlarge the emoji ${x}.`);break}
-                    image.resize(150, 150)
-                    canvas.blit(image, 150 * a, 150 * (o-1))
+                    let image = await u.validImage(`https://cdn.discordapp.com/emojis/${id[2]}.png`)
+                    if(!image) return msg.reply(`I couldn't enlarge ${x}`)
+                    await image.resize(150, 150)
+                    await canvas.blit(image, 150 * a, 150 * o)
                 }
-                else if(unicode(x)){
-                    let requested
-                    try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{try{requested = await axios.get(`https://twemoji.maxcdn.com/v/latest/svg/${unicode(x).replace(/ /g, '-')}.svg`)}catch{msg.channel.send(`I couldn't enlarge the emoij ${x}.`);break}}
-                    let toPng = await svgToImg.from(requested.data).toPng()
-                    let image = await Jimp.read(toPng)
-                    canvas.blit(image, 150 * a, 150 * (o-1))
+                else if(id = getUnicode(args)){
+                    let image = await u.validImage(id)
+                    if(!image) return msg.reply(`I couldn't enlarge ${x}`)
+                    await image.resize(150, 150)
+                    await canvas.blit(image, 150 * a, 150 * o)
                 }
-                else{msg.channel.send(`${x} isn't a valid emjoji.`); break}
-                a++
-                if(a == y.split(' ').length && o == rows.length) return await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
-                if(a == y.split(' ').length){a=0;o++}   
-            }
-        }
+                if(o == (rows.length - 1) && a == (cols - 1)) return await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
+            })
+        })
     }
 })
 .addCommand({name: "shop",
@@ -272,54 +244,17 @@ Module.addCommand({name: "8ball",
         msg.channel.send('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot')
     }
 })
-.addCommand({name: 'selfdestruct',
-    enabled: false,
-    process: async(msg, args) =>{
-        if(run) return msg.channel.send("Self desctruct already in progress")
-        run = true
-        let messages = [
-            ["Discovering files... ⏳", 0],
-            ["99,127 files discovered in directory", 10000],
-            ["................", 15000],
-            ["372,918 files discovered on /dev/disk0", 30000],
-            ["Formatting /dev/disk0", 35000],
-            ["It's been real, folks <:clonesalute:882052188262785086>", 40000],
-            ["Format Progress: 10%... ⏳", 50000],
-            ["Format Progress: 23%... ⏳", 60000],
-            ["Format Progress: 47%... ⏳", 70000],
-            ["Format Progress: 48%... ⏳", 80000],
-            ["Format Progress: 66%... ⏳", 90000],
-            ["Format Progress: 71%... ⏳", 100000],
-            ["Format Progress: 89%... ⏳", 110000]
-        ]
-        messages.forEach((m, i) => {
-            setTimeout(() => {
-                msg.channel.send(m[0])
-                if(i == 4) msg.client.user.setActivity("around with sudo mkfs", {type: "PLAYING"})
-                if(i == messages.length-1) {
-                    client.user.setStatus('invisible')
-                    setTimeout(() => {
-                        msg.client.destroy()
-                    }, 1000);
-                }
-            }, m[1]);
-        });
-    }
-})
-.addCommand({name: "getLinks", onlyOwner: true, process: async(msg, args) =>{
-    let fs = require('fs')
-    let https = require('https')
-    let a = args.split(' ')
-    for(let x of a){
-        setTimeout(() => {
-            let emoji = msg.guild.emojis.cache.find(a => `<:${a.name}:${a.id}>` == x)
-            console.log(emoji.url)
-            let w = fs.createWriteStream(`./huddy/${emoji.id}.png`)
-            let request = https.get(emoji.url, function(res){
-                res.pipe(w)
-            })
-        }, (a.indexOf(x)*2000));
-    }
-}
+.addCommand({name: 'talk', process: async(msg, args)=>{
+    const duck = require('uberduck.js')
+    duck.setDetails('pub_quqovcwdgcnkonfmkv', 'pk_b738ccda-f06b-4b7d-aba6-73ddf84039db')
+    let link = await duck.downloadSpeak(await duck.requestSpeak('wheatley', args))
+    msg.reply({files: [{attachment: link, name: 'botspeak.mp3'}], failIfNotExists: false})
+}})
+.addEvent('messageCreate', msg =>{
+    let link = u.validUrl(msg.content)
+    let badLink = 'media.discordapp.net'
+    let vids = ['mp4','mov','avi','m4v']
+    if(link && link.includes(badLink) && vids.includes(link.toLowerCase().slice(link.length - 3))) msg.reply(`\`${badLink}\` moment\n${link.replace(badLink, 'cdn.discordapp.com')}`)
+    if(msg.content.includes('<:dkHotFace:845140861846290452>') || msg.content.includes('<:theantiohgo:915407691923464233>')) msg.reply('https://tenor.com/view/modern-family-spray-squirt-annoyed-irritated-gif-4445288')
 })
 module.exports = Module

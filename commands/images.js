@@ -1,3 +1,5 @@
+const request = require('request').defaults({encoding: null})
+
 const Augur = require('augurbot'),
     u = require('../utils/utils'),
     Jimp = require('jimp'),
@@ -12,15 +14,53 @@ const Augur = require('augurbot'),
     {getVideoDurationInSeconds} = require('get-video-duration'),
     https = require('https'),
     {Readable} = require('stream'),
-    readError = 'I ran into an error while getting the image.'
+    {GifUtil, GifFrame, GifCodec} = require('gifwrap'),
+    readError = 'I ran into an error while getting the image. It might be too large.'
+    
 
+async function gifFilter(link, effectFunc){
+    try{
+        let y = await new Promise(async(reso, rej) =>{
+            request.get(link, function(err, res, gif){
+                GifUtil.read(gif).then(async inputGif =>{
+                    console.log(inputGif.frames.length)
+                    //if(inputGif.frames.length > 20) return reso(null)
+                    let frames = new Array(inputGif.frames.length)
+                    await new Promise(async(res, rej) =>{
+                        inputGif.frames.forEach(async (frame, i) =>{
+                            let jimped = GifUtil.copyAsJimp(Jimp, frame)
+                            let p = new Promise(async(re)=>{
+                                let j = effectFunc(jimped)
+                                re(j)
+                            })
+                            jimped = await p
+                            let gframe = new GifFrame(jimped.bitmap, {
+                                disposalMethod: 2,
+                                delayCentisecs: frame.delayCentisecs
+                            })
+                            frames[i] = gframe
+                            if(frames.filter(a => a.bitmap).length == inputGif.frames.length) res()
+                        })
+                    })
+                    GifUtil.quantizeSorokin(frames)
+                    let codec = new GifCodec()
+                    let encoded = await codec.encodeGif(frames)
+                    reso(encoded.buffer)
+                })
+            })
+        })
+        console.log(y)
+        return y
+    } catch(e){return console.log(e)}
+}
 function getTarget(msg, suffix){
     let target = msg.options?.getUser('target')
     if(msg.attachments?.size > 0) target = msg.attachments.first()?.url
-    target ??= msg.mentions?.users?.first()?.displayAvatarURL({format: 'png', size: 256})
+    target ??= msg.mentions?.users?.first()?.displayAvatarURL({format: 'png', dynamic: true, size: 256})
     target ??= u.validUrl(suffix)
     target ??= u.getEmoji(suffix)
-    target ??= (msg.author ?? msg.user)?.displayAvatarURL({format: 'png', size: 256})
+    target ??= (msg.author ?? msg.user)?.displayAvatarURL({format: 'png', dynamic: true, size: 256})
+    console.log(target)
     return target
 }
 function petPic(pet, url, remove = true){
@@ -48,18 +88,27 @@ Module.addCommand({name: "amongus",
         let color = (msg.options?.getString('option') ?? args?.toLowerCase().split(' ')[0])?.toLowerCase()
         if(!colors.includes(color)) color = u.rand(colors)
         try{
-            let image = await Jimp.read(`media/amongians/${color}.png`)
-            let avatar = await u.validImage(getTarget(msg, args))
+            let target = getTarget(msg, args)
+            let avatar = await u.validImage(target)
             if(!avatar) return msg.reply(readError)
+            let image = await Jimp.read(`media/amongians/${color}.png`)
             let mask = await Jimp.read('media/amongians/mask.png')
             let helmet = await Jimp.read('media/amongians/helmet.png')
-            avatar.autocrop(5).resize(370, Jimp.AUTO)
-            avatar = new Jimp(799, 1080, 0x00000000).blit(avatar, 375, 130).mask(mask, 0, 0)
-            image.blit(avatar, 0, 0).blit(helmet, 0, 0)
-            let output = await image.getBufferAsync(Jimp.MIME_PNG)
-            return msg.reply({files: [output]})
+            /**@param {Jimp} avatar */
+            let filter = function(avatar, img = image) {
+                avatar.resize(370, Jimp.AUTO)
+                avatar.background(Jimp.cssColorToHex('white'))
+                avatar = new Jimp(799, 1080, 0x00000000).blit(avatar, 375, 130).mask(mask, 0, 0)
+                img.blit(avatar, 0, 0).blit(helmet, 0, 0)
+                //msg.channel.send({files: [await img.getBufferAsync(Jimp.MIME_PNG)]})
+                //img.getBuffer(Jimp.MIME_PNG, (err, buffer) =>{return buffer})
+                //return await img.getBufferAsync(Jimp.MIME_PNG)
+            }
+            //if(target.includes('.gif')) output = await gifFilter(target, filter)
+            output ??= await filter(avatar).getBufferAsync(Jimp.MIME_PNG)
+            await msg.reply({files: [output]})
         }catch (error) {
-            u.errorHandler(error, msg)
+            console.log(error)
         }
     }
 })
@@ -110,15 +159,21 @@ Module.addCommand({name: "amongus",
 .addCommand({name: "blurple",
     category: "Images",
     process: async (msg, args) =>{
-        let image = await u.validImage(getTarget(msg, args))
+        let target = getTarget(msg, args)
+        let image = await u.validImage(target)
         if(!image) return msg.reply(readError)
-        image.color([
-          { apply: "desaturate", params: [100] },
-          { apply: "saturate", params: [47.7] },
-          { apply: "hue", params: [227] }
-        ])
-        let output = await image.getBufferAsync(Jimp.MIME_PNG)
-        await msg.reply({files: [output]});
+        let output
+        let filter = async function(image){
+            image.color([
+              { apply: "desaturate", params: [100] },
+              { apply: "saturate", params: [47.7] },
+              { apply: "hue", params: [227] }
+            ])
+            return await image.getBufferAsync(Jimp.MIME_PNG)
+        }
+        if(target.includes('.gif')) output = await gifFilter(target, filter)
+        else output = await filter(image)
+        await msg.reply({files: [{attachment: output, name: `${(msg.author ?? msg.user).username}.gif`}]});
     }
 })
 .addCommand({name: "color",
@@ -188,6 +243,18 @@ Module.addCommand({name: "amongus",
         image.invert()
         let output = await image.getBufferAsync(Jimp.MIME_PNG)
         return await msg.reply({files: [output]});
+    }
+})
+.addCommand({name: "deepfry",
+    category: "Images",
+    process: async(msg, args) =>{
+        let image = await u.validImage(getTarget(msg, args))
+        if(!image) return msg.reply(readError)
+        image.posterize(20)
+        image.color([{apply: "saturate", params: [100]}])
+        image.contrast(1)
+        let output = await image.getBufferAsync(Jimp.MIME_PNG)
+        return await msg.reply({files: [output]})
     }
 })
 .addCommand({name: "personal",
@@ -407,6 +474,42 @@ Module.addCommand({name: "amongus",
         atomicChannel.send(`Nightly Luna Pic\n${pic}`)
     });
 
+})
+.addCommand({name: 'duplicatepics',
+    onlyOwner: true,
+    process: async(msg, args) =>{
+        const check = require('pixelmatch')
+        const PNG = require('pngjs').PNG
+        let pet = args.split(' ')[0]?.toLowerCase()
+        let newURL = args.split(' ')[1]
+        if(!newURL) return msg.reply('need url')
+        if(!['luna','goose'].includes(pet)) return msg.reply('luna or goose')
+        let file = fs.readFileSync(`media/${pet}.txt`, 'utf8').split('\n')
+        if(file.includes(newURL)) return msg.reply(`That's a match!\n${newURL}`)
+        msg.reply('This might take a few minutes...')
+        let newPNG = await (await u.validImage(newURL)).getBufferAsync(Jimp.MIME_PNG)
+        let img1 = PNG.sync.read(newPNG)
+        const {height, width} = img1
+        let p = new Promise(async(res, rej)=>{
+            for(let i = 0; i<file.length; i++){
+                let x = file [i]
+                let png = await (await u.validImage(x))?.getBufferAsync(Jimp.MIME_PNG)
+                if(!png) u.reply(msg, `${x} not valid`)
+                let img2 = PNG.sync.read(png)
+                if(width == img2.width && height == img2.height){
+                    let diff = new PNG({width, height})
+                    let difference = check(img1.data, img2.data, diff.data, width, height, {threshold: 0.1})
+                    if(difference <= 300){
+                        msg.reply(`Is this it? (Difference of ${difference} pixels)\n${x}`)
+                        return res(true)
+                    } 
+                }
+                if(i == (file.length -1)) res(false)
+            }
+        })
+        if(await p == false) return msg.reply("I didn't find any duplicates.")
+
+    }
 })
 
 module.exports = Module

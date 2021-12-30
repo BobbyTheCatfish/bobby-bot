@@ -6,13 +6,13 @@ const {AugurClient} = require('augurbot'),
     clientOptions:{
       allowedMentions: {parse: ['users',  'roles'], repliedUser: true},
       partials: ["REACTION", "CHANNEL"],
-      parse: u.parse,
     },
+    parse: u.parse,
     commands: "./commands",
     errorHandler: u.errorHandler,
     utils: u
   })
-
+  client.setMaxListeners(20)
   client.login();
   // LAST DITCH ERROR HANDLING
   process.on("unhandledRejection", (error, p) => p.catch(e => u.errorHandler(e, "Unhandled Rejection")));

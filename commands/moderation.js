@@ -135,7 +135,7 @@ Module.addCommand({name: "ban",
             error = true
         })
         if(error) return null
-        let embed = u.embed().setTitle(`${deleteCount} messages deleted by ${msg.member.displayName}`).setFooter()
+        let embed = u.embed().setTitle(`${deleteCount} messages deleted by ${msg.member.displayName}`)
         if(logChannel){
             if(logChannel != msg.channel) msg.reply({failIfNotExists: false, allowedMentions: {parse: []}, embeds: [embed]}).then(u.clean)
             u.emit('clear', msg, msg.channel, embed)
@@ -238,13 +238,10 @@ Module.addCommand({name: "ban",
     category: 'Mod',
     memberPermissions: ['MANAGE_ROLES'],
     onlyGuild: true,
-    /**@param {Message} msg
-     * @property {Message} msg
-    */
     process: async(msg, suffix) =>{
         let s = []
         let err = []
-        let [id, mutedUsers] = msg.mentions.members
+        let mutedUsers = msg.mentions.members.map(a => a)
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
         if(dbFetch == 'disabled' || !dbFetch) return u.reply(msg, `The mute command is disabled. Use \`/config\` to set it up.`, true)
         if(mutedUsers.length == 0) return u.reply(msg, `You need to specify who to mute`, true)
@@ -253,11 +250,11 @@ Module.addCommand({name: "ban",
         let p = new Promise(async(res, rej) =>{
             for(let i = 0; i<mutedUsers.length; i++){
                 let m = mutedUsers[i]
-                if(!m.id || m.roles.cache.has(muteRole.id)) err.push(`<@${m.user.id}>`)
+                if(!m.id || m.roles.cache.has(muteRole.id)) err.push(m.toString())
                 else try{
                     await m.roles.add(muteRole)
-                    s.push(`<@${m.user.id}>`)
-                }catch(e){err.push(`<@${m.user.id}>`)}
+                    s.push(m.toString())
+                }catch(e){err.push(m.toString())}
                 if(i+1 == mutedUsers.length) res()
             }
         })
@@ -281,7 +278,7 @@ Module.addCommand({name: "ban",
     process: async(msg, suffix) =>{
         let s = []
         let err = []
-        let [id, mutedUsers] = msg.mentions.members
+        let mutedUsers = msg.mentions.members.map(a => a)
         let dbFetch = await Module.db.guildconfig.getMutedRole(msg.guild.id)
         if(dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.")
         if(mutedUsers.length == 0) return msg.channel.send(`You need to specify who to mute`)
@@ -290,16 +287,16 @@ Module.addCommand({name: "ban",
         let p = new Promise(async(res, rej) =>{
             for(let i = 0; i < mutedUsers.length; i++){
                 let m = mutedUsers[i]
-                if(!mid || !m.roles.cache.has(mutedRole.id)) err.push(m.member)
+                if(!m.id || !m.roles.cache.has(muteRole.id)) err.push(m.toString())
                 else try{
                     await m.roles.remove(muteRole)
-                    s.push(m.member)
-                } catch{err.push(m.member)}
+                    s.push(m.toString())
+                } catch{err.push(m.toString())}
                 if(i+1 == mutedUsers.length) res()
             }
         })
         await p
-        let embed = u.embed().setTitle(`Unmute Resulst:`)
+        let embed = u.embed().setTitle(`Unmute Results:`)
         if(s.length > 0) embed.addField("Successfully unmuted", s.join('\n'))
         if(err.length > 0) embed.addField("Failed to remove role", err.join('\n'))
         return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}});

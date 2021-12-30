@@ -57,10 +57,10 @@ const GuildConfigSchema = new mongoose.Schema({
             reactions: {
                 type: Array,
             },
-            singleChannel: {
+            whitelist: {
                 type: String,
             },
-            toStar: {
+            toPost: {
                 type: Number,
             },
         },

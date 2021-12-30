@@ -6,9 +6,9 @@ function toEpoch (time) {
 }
 const Module = new Augur.Module();
 Module.addCommand({name: "get",
-    syntax: "<type>",
+    syntax: "type item",
     description: "Gets info about the server/server members",
-    info: "Lots of sub commands (will describe later)",
+    info: "Subcommands: Members, Roles, Emojis, Channels, Categories, Bans, Server",
     category: "Mod",
     memberPermissions: ['MANAGE_GUILD'],
     process: async (msg, suffix) =>{
@@ -68,10 +68,10 @@ Module.addCommand({name: "get",
                         {name: 'Members', value: msg.guild.roles.everyone == object ? 'Everyone' : hasRole || 'Nobody', inline: true},
                         {name: 'Position', value: (msg.guild.roles.cache.size - object.position).toString() || 'Unknown', inline: true},
                     ])
-                if(object.unicodeEmoji(embed.addField('Unicode Emoji', object.unicodeEmoji, true)))
-                if(object.tags.botId) embed.addField('Bot Role For', `<@${object.tags.botId}>`, true)
-                if(object.tags.integrationId) embed.addField('Integration Role For', object.tags.integrationId, true)
-                if(object.tags.premiumSubscriberRole) embed.addField('Booster Role', 'true')
+                if(object.unicodeEmoji) embed.addField('Unicode Emoji', object.unicodeEmoji, true)
+                if(object.tags?.botId) embed.addField('Bot Role For', `<@${object.tags.botId}>`, true)
+                if(object.tags?.integrationId) embed.addField('Integration Role For', object.tags.integrationId, true)
+                if(object.tags?.premiumSubscriberRole) embed.addField('Booster Role', 'true')
                 if(object.icon) embed.setThumbnail(object.iconURL())
                 return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
@@ -100,13 +100,13 @@ Module.addCommand({name: "get",
                     ])
                 if(object.guild.id != msg.guildId) embed.addField('Server', object.guild.name, true)
                 if(object.url) embed.setImage(object.url)
-                return msg.channel.send({embed, allowedMentions: {parse: []}})
+                return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             } 
             else {
                 let object = msg.guild.emojis.cache
                 let embed = u.embed().setTitle(`There are \`${object.size}\` emojis in your server.`).setDescription(object.map(e => e).join("  "))
                 if(object.size == 0) return msg.channel.send("Looks like your server doesn't have any emojis.")
-                else return msg.channel.send({embed, allowedMentions: {parse: []}})
+                else return msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
             }
         }
         else if(['channel','channels'].includes(words.toLowerCase())){

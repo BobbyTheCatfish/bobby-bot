@@ -1,11 +1,14 @@
 const {Util, WebhookClient, MessageButton, MessageActionRow, Message, MessageSelectMenu, MessageEmbed} = require("discord.js");
-const {GuildMember, GuildChannel, GuildEmoji, Guild} = require('discord.js')
+const {GuildMember, GuildChannel, GuildEmoji, Guild, Interaction, CommandInteraction} = require('discord.js')
+const discord = require('discord.js')
 const config = require("../config/config.json")
 const validUrl = require('valid-url');
 const jimp = require('jimp')
 const errorLog = new WebhookClient({id: config.error.id, token: config.error.token})
-const events = require('events'),
-    em = new events.EventEmitter()
+const events = require('events')
+const fs = require('fs')
+const langFilter = fs.readFileSync('./jsons/naughty.txt', 'utf-8').split('\n')
+const em = new events.EventEmitter()
 const Utils = {
     /**
      * @param {string} name The type of mod action
@@ -23,9 +26,15 @@ const Utils = {
     
     /**
      * @param data Action Row Data
-     * @returns new MessageActionRow
+     * @returns {MessageActionRow}
      */
     actionRow: (data) => new MessageActionRow(data),
+    
+    /**
+     * @param data Message Embed Data
+     * @returns {MessageEmbed}new MessageEmbed
+     */
+    embed: (data) => new MessageEmbed(data).setColor(config.color),
     
     /**
      * @param data Message Button Data
@@ -61,7 +70,88 @@ const Utils = {
             return Promise.resolve(message);
         }        
     },
-    
+
+    /**
+     * @param {error} error error
+     * @param {Message|Interaction|CommandInteraction} msg Message Object
+     * @returns Handles the error (don't worry about it)
+     */
+    errorHandler: async (error, msg)=>{
+        try{
+            if (!error) return;
+            console.error(Date());
+            let embed = Utils.embed().setTitle(error.name);
+            console.log(msg)
+            if (msg instanceof Message) {
+                console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM")}: ${msg.cleanContent}`);
+                msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
+                embed.addField("User", msg.author.username, true).addField("Location", (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
+            } if(msg instanceof CommandInteraction){
+                msg.client.interactionFailed(msg, "ERROR")
+                let subcmd = `/${msg.commandName} ${msg.options.getSubcommand(false) ?? ''}`
+                let options = msg.options.data.map(a => {return {name: a.name, value: a.value}})
+                let location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`
+                console.error(`${msg.user.username} in ${location}: ${subcmd} ${options.map(a => a.value).join(' ')}`)
+                embed.addField("User", msg.user.username, true)
+                .addField("Location", location, true)
+                .addField("Command", subcmd, true)
+                .addFields(options)
+            }
+            else if(msg instanceof Interaction ){
+                let location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`
+                console.error(`${msg.user.username} in ${location}: ${msg.type}: ${msg.valueOf()}`)
+                msg.client.interactionFailed(msg, "ERROR")
+                let {type} = msg
+                if(msg.isMessageComponent()) type = msg.componentType
+                embed.addField("User", msg.user.username, true)
+                .addField("Location", location, true)
+                .addField("Type", type, true)
+                .addField("Full interaction", msg.valueOf(), true)
+                console.error(`${msg.user.username} in ${location}: ${type}: ${msg.valueOf()}`)
+            }
+            
+            else if (typeof msg === "string") {
+                console.error(msg);
+                embed.addField("Message", msg.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
+            }
+            console.trace(error);
+            
+            let stack = (error.stack ? error.stack : error.toString());
+            if (stack.length > 1024) stack = stack.slice(0, 1000);
+        
+            embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
+            return errorLog.send({embeds: [embed]});
+        } catch(e){console.log(e)}
+    },
+
+    /**
+     * 
+     * @param {Message} msg 
+     * @param {string} content 
+     */
+    hasLang: async(msg, content)=>{
+        let status = 0//await msg.client.db.guildconfig.getLanguageFilter(msg.guild.id)
+        if(status == 0) return false
+        let filter
+        if(status == 1) filter = langFilter[0].split(',')
+        else if(status == 2) filter = langFilter[1].split(',')
+        else filter = langFilter.join(',').split(',')
+        let filtered = filter.filter(a => content.includes(a)).filter(a => a.length > 0)
+        console.log(filtered)
+        if(filtered.length > 0) return filtered
+        else return false
+    },
+
+    /**
+     * @param {string} string 
+     */
+    getEmoji: (string) =>{
+        let parsed = discord.Util.parseEmoji(string)
+        if(!parsed?.id) return null
+        parsed.link = `https://cdn.discordapp.com/emojis/${parsed.id}.${parsed.animated ? 'gif' : 'png'}`
+        return parsed
+    },
+
     /**
      * @param {Message} message Message Object
      * @param {MessageEmbed}promptEmbed Initial embed to send
@@ -71,35 +161,40 @@ const Utils = {
      * @param {number} time Time in ms
      * @returns boolean/null
      */
-    confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!'), time = 6000)=>{
-            let msg = await message.channel.send({embeds: [promptEmbed], allowedMentions: {parse: []}})
-            await msg.react('✅');
-            await msg.react('🛑');
-            
-            const filter = (reaction, user) => ['✅', '🛑'].includes(reaction.emoji.name) && user.id === (message.author ? message.author : message).id;
-            
-            try {
-                const collected = await msg.awaitReactions({filter, max: 1, time, errors: ['time'] });
-                const reaction = collected.first();
-                if (reaction.emoji.name === '✅') {
-                msg.edit({embeds: [confirmEmbed]});
-                return true;
-                } else {
-                msg.edit({embeds: [cancelEmbed]});
-                return false;
-                }
-            } catch(error) {
-                msg.edit({embeds: [timeoutEmbed]});
-                return null
-            }
+    confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed, time = 300000)=>{
+        if(!timeoutEmbed) timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!')
+        let confirmButton = Utils.button().setStyle('SUCCESS').setLabel('Confirm').setCustomId('confirm')
+        let cancelButton = Utils.button().setStyle('DANGER').setLabel('Cancel').setCustomId('cancel')
+        let buttons = Utils.actionRow().addComponents([confirmButton, cancelButton])
+        let msg
+        if(message instanceof discord.User || message instanceof discord.GuildMember) msg = await message.send({embeds: [promptEmbed], components: [buttons], allowedMentions: {parse: []}})
+        else msg = await message.reply({embeds: [promptEmbed], components: [buttons], allowedMentions: {parse: []}})
+        
+        let filter = m => m.user.id == (message.author?.id ?? m.user.id) && m.componentType == 'BUTTON'
+        const int = await msg.awaitMessageComponent({filter, componentType: 'BUTTON', time}).catch(e =>{console.log(e);return msg.edit({embeds: [timeoutEmbed]})})
+        let status = (int.customId == 'confirm')
+        int.update({embeds: [status ? confirmEmbed : cancelEmbed]})
+        return status
     },
-    
+
     /**
-     * @param data Message Embed Data
-     * @returns {MessageEmbed}new MessageEmbed
+     * 
+     * @param {Message} msg 
+     * @param {discord.MessageActionRow[]} actionRows 
+     * @returns {Promise<discord.MessageComponentInteraction>}
      */
-    embed: (data) => new MessageEmbed(data).setColor(config.color),
-    
+    awaitButton: async(msg, time = 5000 * 60) =>{
+        let filter = m => m.user.id == (msg.user ?? msg.author)?.id
+        try{
+            let int = await msg.awaitMessageComponent({filter: filter, componentType: 'BUTTON', time: time})
+            return int
+        } catch(e){
+            let er = new Error()
+            if(er.stack.includes('ending with reason: time')) return {customId: 'time'}
+            else return u.errorHandler(e, msg)
+        }
+    },
+
     /**
      * @param {string} text Text to escape
      * @param {{}} options EscapeMarkdownOptions
@@ -184,6 +279,21 @@ const Utils = {
     
     /**
      * @param {Message} msg Message Object
+     * @returns {Promise<string>} Prefix
+     */
+    prefix: async (msg)=>{
+        try {
+            if(msg.channel?.parentId == '813847559252344862') return '>'
+            else if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
+            else return config.prefix;
+        } catch(e) {
+            Utils.errorHandler(e, msg.content);
+            return config.prefix;
+        }
+    },
+    
+    /**
+     * @param {Message} msg Message Object
      * @returns {Promise<{command: string, suffix:string, params: []}>} Parsed message content
      */
     parse: async (msg)=>{
@@ -206,21 +316,6 @@ const Utils = {
         } catch(e) {
             Utils.errorHandler(e, msg);
             return null;
-        }
-    },
-    
-    /**
-     * @param {Message} msg Message Object
-     * @returns {Promise<string>} Prefix
-     */
-    prefix: async (msg)=>{
-        try {
-            if(msg.channel?.parentId == '813847559252344862') return '>'
-            else if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
-            else return config.prefix;
-        } catch(e) {
-            Utils.errorHandler(e, msg.content);
-            return config.prefix;
         }
     },
     
@@ -281,12 +376,13 @@ const Utils = {
     
     /**
      * @param {string} image Image URL
-     * @returns {Promise<boolean>} is image or not
+     * @returns {Promise<jimp>} is image or not
      */
     validImage: async(image)=>{
         try{
-            await jimp.read(image)
-            return true
+            let img = await jimp.read(image)
+            if(img.bitmap.data.byteLength >= 7500000) return null
+            return img
         } catch{
             return false
         }
@@ -312,37 +408,7 @@ const Utils = {
         return msg.client.channels.cache.get(channel) ?? msg.channel
     },
     
-    /**
-     * @param {error} error error
-     * @param {Message} msg Message Object
-     * @returns Handles the error (don't worry about it)
-     */
-    errorHandler: async (error, msg = null)=>{
-        try{
-
-            if (!error) return;
-            console.error(Date());
-            let embed = Utils.embed().setTitle(error.name);
-        
-            if (msg instanceof Message) {
-                console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "DM")}: ${msg.cleanContent}`);
-                const client = msg.client;
-                msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
-                embed.addField("User", msg.author.username, true).addField("Location", (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
-            } else if (typeof msg === "string") {
-                console.error(msg);
-                embed.addField("Message", msg.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
-            }
-        
-            console.trace(error);
-        
-            let stack = (error.stack ? error.stack : error.toString());
-            if (stack.length > 1024) stack = stack.slice(0, 1000);
-        
-            embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
-            return errorLog.send({embeds: [embed]});
-        } catch(e){console.log(e)}
-    },
+    
     
     /**
      * @param {{category: string, int: number}[]} flags Array of flag categories and ints

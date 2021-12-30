@@ -79,18 +79,25 @@ const models = {
             await models.guildconfig.createConfig(guildId)
             if(await GuildConfig.exists({guildId})){
                 let document = await GuildConfig.findOne({guildId}).exec();
-                let channels = document?.channels?.starboards
-                if(channels) return channels 
+                return document?.channels?.starboards 
             }
             else throw new Error(`No guildconfig for guild ${guildId}`)
         },
-        saveStarBoard: async (guildId, channel, reactions, singleChannel, toStar)=>{
+        /**
+         * @typedef StarBoard
+         * @property {string} channel
+         * @property {string[]} reactions
+         * @property {string[]} whitelist
+         * @property {number} toPost
+         * @param {StarBoard} board
+         */
+        saveStarBoard: async (guildId, theBoard)=>{
             await models.guildconfig.createConfig(guildId)
             if(await GuildConfig.exists({guildId})){
                 let document = await GuildConfig.findOne({guildId})
                 let board = document?.channels?.starboards?.find(c => c.channel == channel)
-                if(board) return GuildConfig.findOneAndUpdate({guildId, 'channels.starboards.channel': channel}, {$set: {'channels.starboards.$.channel':channel, 'channels.starboards.$.reactions':reactions,'channels.starboards.$.singleChannel': singleChannel, 'channels.starboards.$.toStar': toStar}})
-                else return GuildConfig.updateOne({guildId}, {channels: {starboards:{$push: {channel, reactions, singleChannel, toStar}}}})
+                if(board) return GuildConfig.findOneAndUpdate({guildId, 'channels.starboards.channel': channel}, {$set: {'channels.starboards.$.channel':theBoard.channel, 'channels.starboards.$.reactions':theBoard.reactions,'channels.starboards.$.whitelist': theBoard.whitelist, 'channels.starboards.$.toPost': theBoard.toPost}})
+                else return GuildConfig.updateOne({guildId}, {channels: {starboards:{$push: theBoard}}})
             }
             else throw new Error(`No guildconfig for guild ${guildId}`)
         },
