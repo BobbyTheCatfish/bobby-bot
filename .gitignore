@@ -1,7 +1,7 @@
 .vs/
 node_modules/
 database/
-media/
+media/*.txt
 config/config.json
 backup_commands/
 jsons/
