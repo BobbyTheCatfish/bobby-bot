@@ -67,6 +67,7 @@
     "passport-google-oauth": "^2.0.0",
     "path": "^0.12.7",
     "pet-pet-gif": "^1.0.9",
+    "profanity-matcher": "^1.0.1",
     "puppeteer": "^5.2.1",
     "qrcode": "^1.4.4",
     "replace-color": "^2.3.0",

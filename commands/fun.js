@@ -90,9 +90,9 @@ Module.addCommand({name: "8ball",
     category: "Fun",
     process: async (msg, args) =>{
         let words = args.toLowerCase().split(' ')
-        let final = []
         if(!args) return msg.channel.send("You need to provide some context!")
-        words.forEach(k => {
+        if(await u.hasLang(msg, args)) return
+        words.forEach((k, i) => {
             if(k == 'am') k = 'are'
             else if(["i'm", "we're"].includes(k)) k = "they're"
             else if(["i've","we've"].includes(k)) k = "they've"
@@ -100,10 +100,10 @@ Module.addCommand({name: "8ball",
             else if(['i', 'we'].includes(k)) k = 'they'
             else if(['my', 'our'].includes(k)) k = 'their'
             else if(k=='me') k = 'them'
-            final.push(k)
+            words[i] = k
         });
         msg.delete()
-        return msg.channel.send(`${msg.member?.displayName ?? msg.author.username} when ${final.join(' ')}`, {files: ['media/mewhen.png']})
+        return msg.channel.send(`${msg.member?.displayName ?? msg.author.username} when ${words.join(' ')}`, {files: ['media/mewhen.png']})
     }
 })
 .addCommand({name: "poll",
@@ -150,8 +150,8 @@ Module.addCommand({name: "8ball",
             choice = (await u.parse(msg)).command,
             choices = ['rock','paper','scissors']
         if(choice.toLowerCase() != 'rps') choice = choices.indexOf(choice.toLowerCase())
-        else if(!choices.includes(args?.toLowerCase())) return msg.reply("You need to specify rock, paper, or scissors.")
-        else choice = choices.indexOf(args.toLowerCase())
+        else choice = choices.indexOf(args?.toLowerCase())
+        if(!choice || choice < 0) return msg.reply("You need to specify rock, paper, or scissors.")
         if(choice == decision) return await msg.react('👔').then(emoji2)
         else if(choice > decision || (choice == 0 && decision ==2)) return await msg.react('🎉').then(emoji2)
         else return await msg.react('❌').then(emoji2)
@@ -160,26 +160,23 @@ Module.addCommand({name: "8ball",
 .addCommand({name: "roll",
     category: "Fun",
     process: async (msg, args) =>{
-        try{
-            let numDies=1,
-            numSides = args || 6
-            if(!(2 < args < 99) && !args.toLowerCase().includes('d')) return msg.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
-            else if(args.toLowerCase().includes('d')){
-                let many = args.toLowerCase().split('d')
-                if(many[2] || isNaN(many[0]) || many[1] ? isNaN(many[1]) : isNaN(many[0])) return msg.channel.send("To use multiple dice, do `2d20`, replacing 2 with the number you want.")
-                numDies=args.split('d')[0] || 1
-                numSides=args.split('d')[1] || 6
-            }
-            else if(!(2 < args < 99)) return msg.channel.send("That's not a valid die! You need to specify a number between 2 and 99")
-            let diceRoll = (Math.floor(Math.random() * (Math.floor(numSides)*Math.floor(numDies)))+1)/numDies,
-                diceEmote = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'],
-                diceEmote2 =['0️⃣','784591469196345345','784591457054621717','784591457109147709','784591457302478878','784591457293303808','784591457259356171','784591457239040000','784591457768046592','784591456782254101'],
-                e1 = diceEmote[diceRoll.toString().charAt(0)],
-                e2 = diceEmote2[diceRoll.toString().charAt(1)]
-            if(diceRoll == 10){e1=diceEmote[10];e2=null}
-            await msg.react(e1)
-            if(e2) await msg.react(e2)
-        }catch(err){u.errorHandler('Die Roll', err)}
+        let numDies=1,
+        numSides = (isNaN(args) || args < 2) ? 6 : args
+        if(args.toLowerCase().includes('d')){
+            let parsed = args.toLowerCase().split('d')
+            if(parsed[2] || isNaN(parsed[0]) || isNaN(parsed[1])) return msg.channel.send("To use multiple dice, do `2d10`, replacing 2 with the number of dice and 10 with the number of sides.")
+            numDies=parsed[0] || 1
+            numSides=parsed[1] || 6
+        }
+        if(!(2 < numSides < 99)) return msg.channel.send("That's not a valid die! There has to be between 2 and 99 sides")
+        let diceRoll = (Math.floor(Math.random() * numSides * numDies)+1)/numDies
+        let diceEmote = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+        let diceEmote2 =['0️⃣','784591469196345345','784591457054621717','784591457109147709','784591457302478878','784591457293303808','784591457259356171','784591457239040000','784591457768046592','784591456782254101']
+        let e1 = diceEmote[diceRoll.toString().charAt(0)]
+        let e2 = diceEmote2[diceRoll.toString().charAt(1)]
+        if(diceRoll == 10){e1=diceEmote[10];e2=null}
+        await msg.react(e1)
+        if(e2) await msg.react(e2)
     }
 })
 .addCommand({name: "enlarge",
@@ -190,63 +187,56 @@ Module.addCommand({name: "8ball",
         const twemoji = require('@discordapp/twemoji')
         const Jimp = require('jimp')
         function getUnicode(emoji) {
-            console.log('unicode')
             let parse = JSON.stringify(twemoji.parse(emoji))
             return parse?.match(/https:\/\/twemoji\.maxcdn\.com\/v\/.*.png/)?.[0]
         }
-        let test = /<(a?):\w+:(\d+)>/i;
+        if(!args) return msg.reply("You need to supply emojis!")
         let cols = 1
         let rows = args.split('\n').map(j => j.split(' ').filter(a => a != '' && a != ' '))
-        console.log('rows', rows)
         for(x of rows) if(x.length > cols) cols = x.length
-        console.log('cols length set', cols)
         if(rows.length == 1 && cols == 1){
-            console.log('one')
-            let id = test.exec(args)
-            let link = getUnicode(args)
-            if(id) link ??= `https://cdn.discordapp.com/emojis/${id[2]}.${id[1] ?'gif':'png'}`
-            if(link) return msg.reply({files: [link]})
+            let discordLink = u.getEmoji(args).link
+            let link = getUnicode(args) ?? discordLink
+            if(link) return msg.reply(link)
             else return msg.reply("I need a valid emoji!")
         }
-        if(rows.length > 5 || cols >= 5) return msg.channel.send("That's too many emojis! You're limited to a 5x5 grid.")
-        if(!args.replace(/[\[\] ]/g, '')) return msg.channel.send(`You need to supply emojis!`)
+        if(rows.length > 5 || cols > 5) return msg.channel.send("That's too many emojis! You're limited to a 5x5 grid.")
+        if(args.replace(/[\[\] ]/g, '')?.length < 1) return msg.channel.send(`You need to supply emojis!`)
         let canvas = new Jimp(150 * cols, 150 * rows.length, 0x00000000)
         rows.forEach(async (y, o) =>{
-            y.forEach(async (x, a) =>{
-                let id = test.exec(x)
-                if(x == '[]'){}
-                else if(id){
-                    let image = await u.validImage(`https://cdn.discordapp.com/emojis/${id[2]}.png`)
+            let p = new Promise((res, rej) => {
+                y.forEach(async (x, a) =>{
+                    let id = u.getEmoji(x)?.id
+                    let image
+                    if(x == '[]'){}
+                    else if(id) image = await u.validImage(`https://cdn.discordapp.com/emojis/${id}.png`)
+                    else if(id = getUnicode(args)) image = await u.validImage(id)
                     if(!image) return msg.reply(`I couldn't enlarge ${x}`)
-                    await image.resize(150, 150)
-                    await canvas.blit(image, 150 * a, 150 * o)
-                }
-                else if(id = getUnicode(args)){
-                    let image = await u.validImage(id)
-                    if(!image) return msg.reply(`I couldn't enlarge ${x}`)
-                    await image.resize(150, 150)
-                    await canvas.blit(image, 150 * a, 150 * o)
-                }
-                if(o == (rows.length - 1) && a == (cols - 1)) return await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
+                    image.resize(image.getHeight > image.getWidth ? (Jimp.AUTO, 150) : (150, Jimp.AUTO))
+                    canvas.blit(image, 150 * a, 150 * o)
+                    if(a == (cols - 1)) res()
+                })
             })
+            await p
+            if(y == (rows.length - 1)) return await msg.channel.send({files: [await canvas.getBufferAsync(Jimp.MIME_PNG)]})
         })
     }
 })
 .addCommand({name: "shop",
     category: "General",
     process: async (msg, args) =>{
-        msg.channel.send('https://teespring.com/stores/bobbys-gift-shop')
+        msg.reply('https://teespring.com/stores/bobbys-gift-shop')
     }
 })
 .addCommand({name: "repo",
     category: "Development",
     process: async(msg, suffix)=>{
-        msg.channel.send('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot')
+        msg.reply('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot')
     }
 })
 .addCommand({name: 'talk', process: async(msg, args)=>{
     const duck = require('uberduck.js')
-    duck.setDetails('pub_quqovcwdgcnkonfmkv', 'pk_b738ccda-f06b-4b7d-aba6-73ddf84039db')
+    duck.setDetails(msg.client.config.uberduck.user, msg.client.config.uberduck.pass)
     let link = await duck.downloadSpeak(await duck.requestSpeak('wheatley', args))
     msg.reply({files: [{attachment: link, name: 'botspeak.mp3'}], failIfNotExists: false})
 }})
