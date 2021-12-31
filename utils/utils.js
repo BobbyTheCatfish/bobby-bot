@@ -48,6 +48,9 @@ const Utils = {
      */
     selectMenu: (data) => new MessageSelectMenu(data),
     
+    /**@param data */
+    collection: (data) => new discord.Collection(),
+
     /**
      * Deletes 1 or more messages
      * @param {Message|Message[]} message Message Object(s)

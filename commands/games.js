@@ -1,6 +1,5 @@
 let Augur = require('augurbot'),
     u = require('../utils/utils'),
-    colors = require('colors'),
     low = require('lowdb'),
     FileSync = require('lowdb/adapters/FileSync'),
     db = low(new FileSync('jsons/battleship.json')),
@@ -139,53 +138,45 @@ function generateBoard(){
 Module.addCommand({name: "playing",
     onlyGuild: true,
     category: "Games",
-    process: async(msg, suffix)=>{
+    process: async(msg, args)=>{
         function currentPlayers(game){
             // List people playing the game
             let players = [];
-            let games = []
-            try{
-                for(m of msg.guild.members.cache.map(m=>m)){
-                    if (m.user.bot) continue
-                    let presence = m.user?.activities?.filter(a => a.type == "PLAYING" && a.name.toLowerCase().startsWith(game.toLowerCase()))[0]
-                    if(presence){
-                        players.push(`• <@${m.id}>`)
-                        games.push(presence.name)
-                    }
-                }
-                if(games[0]) game = games[0]
-                let embed = u.embed().setTitle(`${msg.guild.name} members currently playing ${game}`).setTimestamp()
-                players.sort((a, b) => a.localeCompare(b))
-                if (players.length > 0) embed.setDescription(players.join("\n"))
-                else embed.setDescription(`I couldn't find any members playing ${game}.`)
-                return embed
-            } catch (error) {u.errorHandler(error, 'Playing currentPlayers Function')}
-        }
-        if (suffix) msg.channel.send({embeds: [currentPlayers(suffix)], allowedMentions: {parse: []}})
-        else{
-            // List *all* games played
-            let games = new u.Collection()
-            for (m of msg.guild.members.cache.map(m=>m)){
+            for(let m of msg.guild.members.cache.map(m=>m)){
                 if (m.user.bot) continue
-                let game = m.user.presence?.activities?.filter(a => a.type == "PLAYING")[0]
-                if (game && !games.has(game.name)) games.set(game.name, {game: game.name, players: 0, people: m})
-                if(game){
+                let presence = m.presence?.activities.find(a => a.type == "PLAYING" && a.name.toLowerCase().startsWith(game.toLowerCase()))
+                if(presence){
+                    players.push(`• ${m.toString()}`)
+                }
+            }
+            let embed = u.embed().setTitle(`${msg.guild.name} members currently playing ${game}`).setTimestamp()
+            players.sort((a, b) => a.localeCompare(b))
+            if (players.length > 0) embed.setDescription(players.join("\n"))
+            else embed.setDescription(`I couldn't find any members playing ${game}.`)
+            return embed
+        }
+        if(args) msg.reply({embeds: [currentPlayers(args)], allowedMentions: {parse: []}})
+        else{
+            let games = u.collection()
+            for (let m of msg.guild.members.cache.map(m=>m)){
+                if (m.user.bot) continue
+                let game = m.presence?.activities?.find(a => a.type == "PLAYING")
+                if (game && !games.has(game.name)) games.set(game.name, {game: game.name, players: 1, people: [m]})
+                else if(game){
                     games.get(game.name).players++
-                    games.get(game.name).people+(m)
+                    games.get(game.name).people.push(m)
                 }
             }
             let gameList = games.sort((a, b) => {
                 if (b.players == a.players) return a.game.localeCompare(b.game)
                 else return b.players - a.players
-            }).values()
+            }).map(a=>a)
             let min = Math.min(gameList.length, 25)
-            let embed = u.embed().setTimestamp()
-                .setTitle("Currently played games in " + msg.guild.name)
-                .setDescription(`The ${min == 1 ? 'only game' : 'top '+min+' games'} game${ min == 1 ? '':'s'} currently being played in ${msg.guild.name}:`)
-                
-            if (gameList.length > 0)  for (let i = 0; i < Math.min(gameList.length, 25); i++) embed.addField(gameList[i].game, gameList[i].people, gameList[i].people, true)
+            let embed = u.embed().setTimestamp().setTitle("Currently played games in " + msg.guild.name)
+                .setDescription(`The ${min == 1 ? 'only game' : `top ${min} games`} currently being played in ${msg.guild.name}:`)
+            if (gameList.length > 0)  for (let i = 0; i < min; i++) embed.addField(gameList[i].game, gameList[i].people, gameList[i].people, true)
             else embed.setDescription("Well, this is awkward... Nobody is playing anything.")
-            msg.channel.send({embeds: [embed], allowedMentions: {parse: []}})
+            msg.reply({embeds: [embed], allowedMentions: {parse: []}})
         }
     }
 })
