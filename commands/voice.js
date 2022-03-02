@@ -51,7 +51,8 @@ const subscriptions = new Map()
 
 //Cool things called classes that i dont use that often
 class MusicSubscription {
-	voiceConnection;
+  
+  voiceConnection;
 	audioPlayer;
 	queue;
 	queueLock = false;

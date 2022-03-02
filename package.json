@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ./commands/highlights.js"
   },
   "author": "BobbbyTheCatfish#4215",
   "license": "ISC",
@@ -25,6 +26,7 @@
     "emoji-aware": "^3.0.5",
     "emoji-unicode": "^2.0.1",
     "express": "^4.17.1",
+    "fast-b64": "^0.1.0",
     "ffmpeg": "0.0.4",
     "ffprobe": "^1.1.2",
     "ffprobe-static": "^3.0.0",
@@ -89,5 +91,13 @@
     "ytdl": "^0.10.4",
     "ytdl-core": "^4.9.1",
     "ytdl-core-discord": "^1.2.5"
+  },
+  "devDependencies": {
+    "eslint": "^8.10.0",
+    "eslint-plugin-jsdoc": "^37.9.4",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.24.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.0"
   }
 }

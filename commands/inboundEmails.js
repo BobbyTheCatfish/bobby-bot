@@ -1,9 +1,10 @@
+/* eslint-disable no-unused-vars */
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
   imaps = require('imap-simple'),
   _ = require('lodash'),
-  {simpleParser} = require('mailparser'),
-  Module = new Augur.Module()
+  { simpleParser } = require('mailparser'),
+  Module = new Augur.Module();
 
 /*
 //THE FOLLOWING IS TEST CODE. I'M NOT PLANNING ON USING THIS, BUT IT GETS EMAILS AND SENDS THEM TO A CHANNEL. pretty simple stuf
@@ -65,4 +66,4 @@ Module.setClockwork(() => {
   } catch(e){u.errorHandler(e, "Missionary Email Clockwork Error")}
 })*/
 
-module.exports = Module
+module.exports = Module;

@@ -74,5 +74,9 @@ const GuildConfigSchema = new mongoose.Schema({
             },
         },
     },
+    commands:{
+        type: String,
+        required: true,
+    }
 });
 module.exports = mongoose.model('GuildConfig',GuildConfigSchema);
