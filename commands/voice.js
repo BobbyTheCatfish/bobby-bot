@@ -7,6 +7,7 @@ const ytdl = require('youtube-dl-exec').raw
 const { getInfo } = require('ytdl-core');
 const fileType = require('file-type')
 const https = require('https')
+const axios = require('axios')
 const {Message, VoiceState} = require('discord.js')
 const {
   createAudioResource,
@@ -493,9 +494,11 @@ Module.addCommand({name: 'play',
 })
 
 //splat
-.addEvent('voiceStateUpdate', /*** @param {VoiceState} oldState* @param {VoiceState} newState*/ async(oldState, newState) =>{
+.addEvent('voiceStateUpdate', /*** @param {VoiceState} oldState * @param {VoiceState} newState*/ async(oldState, newState) =>{
+  if(oldState.member.user.bot) return;
+  if(newState.channel?.members.size < 2) return
   let subscription = subscriptions.get(oldState.guild.id)
-  if(!subscription && ['406821751905976320', '779497076564164620'].includes(oldState.guild.id)){
+  if(!subscription && ['408747484710436877', '779497076564164620', '371022006726164480'].includes(oldState.guild.id)){
     if(!oldState.channel && newState.channel){
       const channel = newState.channel
         subscription = new MusicSubscription(
@@ -512,6 +515,7 @@ Module.addCommand({name: 'play',
       } catch{return console.log('err while joining')}
       
       let url = 'https://cdn.discordapp.com/attachments/789694239197626371/897536459941228584/heheheheh.mp4'
+      if(oldState.guild.id == '371022006726164480') url = 'https://cdn.discordapp.com/attachments/511896528470802442/979232273553567745/user_joined.mp3'
       let track = await Track.prototype.from(url, {
         onStart(){},
         onFinish(){
@@ -526,5 +530,39 @@ Module.addCommand({name: 'play',
     }
   }
 })
+.addCommand({ name: 'talk2', process: async (msg, args) => {
+  const duck = require('uberduck.js');
+  duck.setDetails(msg.client.config.apiKeys.uberduck.user, msg.client.config.apiKeys.uberduck.pass);
+  const uuid = await duck.requestSpeak('jeremy-clarkson', args)
+  console.log(uuid);
+  const url = await duck.getLink(uuid)
+  if (msg.member?.voice?.channel) {
+    const channel = msg.member.voice.channel
+    subscription = new MusicSubscription(
+      joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        adapterCreator: channel.guild.voiceAdapterCreator
+      }), channel.id
+    );
+    subscription.voiceConnection.on('error', u.errorHandler)
+    subscriptions.set(msg.guild.id, subscription)
+  try{
+    await entersState(subscription.voiceConnection, VoiceConnectionStatus.Ready, 20e3)
+  } catch{return console.log('err while joining')}
+  let track = await Track.prototype.from(url, {
+    onStart(){},
+    onFinish(){
+      subscriptions.delete(msg.guild.id)
+      subscription.voiceConnection.destroy()
+    },
+    onError(error){return console.log(error)}
+  }, null, 'file')
+  setTimeout(() => {
+    subscription.enqueue(track)
+  }, 1000);
+  }
+  else msg.reply({ files: [{ attachment: url, name: 'botspeak.mp3' }], failIfNotExists: false });
+} })
 
 module.exports = Module
