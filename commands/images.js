@@ -1,6 +1,7 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
   Jimp = require('jimp'),
+  { GifFrame, GifUtil, GifCodec, BitmapImage } = require('gifwrap'),
   axios = require('axios'),
   schedule = require('node-schedule'),
   petPetGif = require('pet-pet-gif'),
@@ -13,13 +14,12 @@ const Augur = require('augurbot'),
   https = require('https'),
   { Readable } = require('stream'),
   readError = 'I ran into an error while getting the image. It might be too large.';
-
 function getTarget(msg, suffix) {
   let target = msg.options?.getUser('target');
   if (msg.attachments?.size > 0) target = msg.attachments.first()?.url;
   target ??= msg.mentions?.users?.first()?.displayAvatarURL({ format: 'png', dynamic: true, size: 256 });
   target ??= u.validUrl(suffix);
-  target ??= u.getEmoji(suffix);
+  target ??= u.getEmoji(suffix)?.link;
   target ??= (msg.author ?? msg.user)?.displayAvatarURL({ format: 'png', dynamic: true, size: 256 });
   return target;
 }
@@ -31,7 +31,7 @@ function petPic(pet, url, remove = true) {
     if (db.get(pet).value().length < 1) {
       if (pet == 'luna') db.assign({ luna: fs.readFileSync('media/luna.txt', 'utf-8').split('\n') }).write();
       else if (pet == 'goose') db.assign({ goose: fs.readFileSync('media/goose.txt', 'utf-8').split('\n') }).write();
-      else if (pet == 'juan') db.assign({ goose: fs.readFileSync('media/juan.txt', 'utf-8').split('\n') }).write();
+      else if (pet == 'juan') db.assign({ juan: fs.readFileSync('media/juan.txt', 'utf-8').split('\n') }).write();
       reset = true;
     }
     const pic = u.rand(db.get(pet).value());
@@ -337,6 +337,32 @@ Module.addCommand({ name: "amongus",
     else if (a == otherAnimals[1].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url;
     if (!image) return msg.reply("That's not one of the animals!").then(u.clean);
     msg.reply(image);
+  }
+}).addCommand({ name: "spin",
+  category: "Images",
+  process: async (msg, args) => {
+    try {
+      const image = await u.validImage(getTarget(msg, args));
+      if (!image) return msg.reply(readError);
+      let i = 0;
+      const deg = 30;
+      const gifFrames = [];
+      const mask = await Jimp.read('media/flexmask.png');
+      const scale = Math.min(image.getHeight(), image.getWidth());
+      mask.resize(scale, scale);
+      image.crop(0, 0, scale, scale).mask(mask, 0, 0);
+      do {
+        const newImage = image.clone().rotate((0 - deg) * i).autocrop();
+        const frame = new GifFrame(new BitmapImage(newImage.bitmap), { delayCentisecs: 3 });
+        GifUtil.quantizeSorokin(frame);
+        gifFrames.push(frame);
+        i++;
+      } while (i < (360 / deg));
+      const result = await GifCodec.prototype.encodeGif(gifFrames);
+      return msg.reply({ files: [{ attachment: result.buffer, name: 'output.gif' }] });
+    } catch (error) {
+      u.errorHandler(error, msg);
+    }
   }
 })
 
