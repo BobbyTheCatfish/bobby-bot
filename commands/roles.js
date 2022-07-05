@@ -76,7 +76,7 @@ Module.addCommand({ name: "inventory",
     const filter = r => yesNo.includes(r.emoji.name) && !r.me;
     const roleFilter = m => msg.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase());
     const emojiFilter = m => emoji(m.content)[0] ? { id: null, name: emoji(m.content)[0] } : null || msg.guild.emojis.cache.find(e => e.id == m.content.replace(/[^0-9]]/g, '') || e.name.toLowerCase() == m.content.toLowerCase());
-    if (Module.db.reactionRoles.getGuildReactionRole(msg.guild.id)[0]) return msg.reply("Looks like there's already a reaction role thing set up! Modification and deletion coming soon.");
+    if (u.db.reactionRoles.getGuildReactionRole(msg.guild.id)[0]) return msg.reply("Looks like there's already a reaction role thing set up! Modification and deletion coming soon.");
     const sendNSave = async () => {
       const embed = u.embed().setTitle('Should the roles be removed when the user unreacts?');
       msg.author.send({ embeds: [embed] }).then(async m => {
@@ -89,7 +89,7 @@ Module.addCommand({ name: "inventory",
           embed.setTitle(`Get your role${things.length > 1 ? 's' : ''}!`).setDescription(`React with the corresponding emoji to get the role!${removeOnUnreact ? '\nUnreact to get the role taken away.' : ''}\n${combine.join('\n')}`).setFooter('Remember that you have to use !equip <role name> to get the color!');
           msg.author.send(`Sending the message in ${msg.channel}`);
           msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).then(async message => {
-            await Module.db.reactionRoles.saveReactionRoles(message, things, removeOnUnreact);
+            await u.db.reactionRoles.saveReactionRoles(message, things, removeOnUnreact);
             await u.react(message, things.map(t => t.id || t.name));
             await message.pin();
           });
@@ -137,7 +137,7 @@ Module.addCommand({ name: "inventory",
 })
 .addEvent("messageReactionAdd", async (reaction, user) => {
   try {
-    const dbLookup = await Module.db.reactionRoles.getReactionRole(reaction.message.id);
+    const dbLookup = await u.db.reactionRoles.getReactionRole(reaction.message.id);
     if (dbLookup[0]) {
       const message = await reaction.message.fetch();
       const member = message.guild.members.cache.get(user.id);
@@ -150,7 +150,7 @@ Module.addCommand({ name: "inventory",
 })
 .addEvent("messageReactionRemove", async (reaction, user) => {
   try {
-    const dbLookup = await Module.db.reactionRoles.getRemoveableRoles(reaction.message.id);
+    const dbLookup = await u.db.reactionRoles.getRemoveableRoles(reaction.message.id);
     if (dbLookup) {
       const message = await reaction.message.fetch();
       const member = message.guild.members.cache.get(user.id),
@@ -160,44 +160,8 @@ Module.addCommand({ name: "inventory",
     }
   } catch (error) {u.errorHandler(error, 'Error on reaction role removal');}
 })
-.addCommand({ name: "fetchhighlights",
-  // permissions: (msg) => msg.guild?.id == sf.ldsg && msg.member.roles.cache.hasAny([sf.roles.team, sf.roles.management, sf.roles.manager]),
-  process: async (msg) => {
-    const date = new Date();
-    const after = new Date(date.getFullYear(), date.getMonth(), 1);
-    const sf = { channels: { highlightsubmissions: '789694239197626371' } };
-    const channel = msg.guild.channels.cache.get(sf.channels.highlightsubmissions); // #highlight-submissions
-    const messages = [];
-    let lastId;
-    await new Promise(res => {
-      const loop = async () => {
-        setTimeout(async () => {
-          console.log('loop started');
-          let fetched = await channel.messages.fetch({ limit: 100, before: lastId });
-          fetched = fetched.filter(a => a.createdTimestamp >= after.getTime()).map(a => a);
-          if (fetched.length != 100) console.log('less');
-          lastId = fetched[fetched.length - 1].id;
-          messages.push(...fetched);
-          if (fetched.length != 100) res();
-          else loop();
-        }, 3000);
-      };
-      loop();
-    });
-    if (messages.length > 0) {
-      let results = messages.filter(a => a.attachments.size > 0);
-      let otherLinks = messages.filter(a => a.content?.includes('https://'));
-      if (results.length > 0 || otherLinks.length > 0) {
-        results = results.map(a => a.attachments.map(b => (`{"url": "${b.url}", "name": "${b.name}", "author": "${a.author.username}"}`)));
-        otherLinks = otherLinks.map(a => `{"content": "${a.content}", "author": "${a.author.username}"}`);
-        const final = Buffer.from(`{"files": [${results.join(',\n')}],\n"urls": [\n${otherLinks.join(',\n')}]}`, 'utf8');
-        msg.author.send({ files: [{ attachment: final, name: `${after.toDateString()} Highlight Reel.json` }] });
-      } else {msg.reply("I couldn't find any new submissions!");}
-    } else {msg.reply("I couldn't find any new submissions!");}
-  }
-})
 .addEvent('ready', async () => {
-  const dbLookup = await Module.db.reactionRoles.getAllReactionRoles();
+  const dbLookup = await u.db.reactionRoles.getAllReactionRoles();
   for (const { messageId, channelId } of dbLookup) Module.client.channels.cache.get(channelId).messages.fetch(messageId);
 });
 module.exports = Module;

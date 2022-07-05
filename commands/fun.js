@@ -246,10 +246,12 @@ Module.addCommand({ name: "8ball",
   msg.reply({ files: [{ attachment: link, name: 'botspeak.mp3' }], failIfNotExists: false });
 } })
 .addEvent('messageCreate', msg => {
-  const link = u.validUrl(msg.content);
-  const badLink = 'media.discordapp.net';
-  const vids = ['mp4', 'mov', 'avi', 'm4v'];
-  if (link && link.includes(badLink) && vids.includes(link.toLowerCase().slice(link.length - 3))) msg.reply(`\`${badLink}\` moment\n${link.replace(badLink, 'cdn.discordapp.com')}`);
-  if (msg.content.includes('<:dkHotFace:845140861846290452>') || msg.content.includes('<:theantiohgo:915407691923464233>')) msg.reply('https://tenor.com/view/modern-family-spray-squirt-annoyed-irritated-gif-4445288');
+  if (!msg.author.bot && !msg.author.system) {
+    const link = u.validUrl(msg.content);
+    const badLink = 'media.discordapp.net';
+    const vids = ['mp4', 'mov', 'avi', 'm4v'];
+    if (link && link.includes(badLink) && vids.includes(link.toLowerCase().slice(link.length - 3))) msg.reply(`\`${badLink}\` moment\n${link.replace(badLink, 'cdn.discordapp.com')}`);
+    if (msg.content.includes('<:dkHotFace:845140861846290452>') || msg.content.includes('<:theantiohgo:915407691923464233>')) msg.reply('https://tenor.com/view/modern-family-spray-squirt-annoyed-irritated-gif-4445288');
+  }
 });
 module.exports = Module;

@@ -174,10 +174,10 @@ Module.addCommand({ name: "pingeveryone",
       port: 465,
       secure: true, // true for 465, false for other ports
       auth:
-            {
-              user: Module.config.email.user,
-              pass: Module.config.email.pass
-            },
+        {
+          user: Module.config.email.user,
+          pass: Module.config.email.pass
+        },
     });
 
     if (msg.attachments.first()) {
@@ -187,12 +187,12 @@ Module.addCommand({ name: "pingeveryone",
         subject: emailSubject, // Subject line
         html: emailContent, // html body
         attachments:
-                [
-                  { // use URL as an attachment
-                    filename: msg.attachments.first().name,
-                    path: msg.attachments.first().url
-                  },
-                ]
+          [
+            { // use URL as an attachment
+              filename: msg.attachments.first().name,
+              path: msg.attachments.first().url
+            },
+          ]
       });
       return msg.channel.send("sent");
     }
@@ -365,17 +365,17 @@ Module.addCommand({ name: "pingeveryone",
   }
   for (const x of Module.client.guilds.cache.map(g => g.id)) {
     try {
-      const foundGuild = await Module.db.guildconfig.getConfig(x);
-      if (!foundGuild) await Module.db.guildconfig.createConfig(x, Module.client.commands);
+      const foundGuild = await u.db.guildconfig.getConfig(x);
+      if (!foundGuild) await u.db.guildconfig.createConfig(x, Module.client.commands);
     } catch (error) {
       u.errorHandler(error, 'Guild Config Create onReady');
     }
   }
 })
 .addEvent('guildCreate', async guild => {
-  const foundGuild = await Module.db.guildconfig.getConfig(guild.id);
+  const foundGuild = await u.db.guildconfig.getConfig(guild.id);
   try {
-    if (!foundGuild) await Module.db.guildconfig.createConfig(guild.id, Module.client.commands);
+    if (!foundGuild) await u.db.guildconfig.createConfig(guild.id, Module.client.commands);
   } catch (error) {
     u.errorHandler(error, 'Guild Join');
   }

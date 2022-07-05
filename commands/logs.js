@@ -1,8 +1,9 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
+  discord = require('discord.js'),
   Module = new Augur.Module();
 const flags = async (guild) => await u.decodeLogEvents(guild);
-// const flags = async(guild) => await Module.db.guildconfig.getLogFlags(guild.id)
+// const flags = async(guild) => await u.db.guildconfig.getLogFlags(guild.id)
 async function permDifferences(oldCache, newCache, guild) {
   function getDiff(a1, a2) {
     return a1.filter(x => !JSON.stringify(a2).includes(JSON.stringify(x)));
@@ -59,12 +60,14 @@ async function permDifferences(oldCache, newCache, guild) {
   } else {return null;}
 }
 async function send(guild, embed, content) {
-  const channel = await Module.db.guildconfig.getLogChannel(guild.id);
+  const channel = await u.db.guildconfig.getLogChannel(guild.id);
   guild.channels.cache.get(channel)?.send({ content, embeds: [embed], allowedMentions: { parse: [] } });
 }
 async function getLogAction(guild, id, type, time = new Date().getTime() - 50000, limit = 5, timeout = 500) {
   let logs, entry;
-  function find(entries) {return entries.find(e => (e.target.id == id || e.extra?.channel?.id == id || e.extra?.id == id || e.code == id) && time - e.createdAt.getTime() < timeout);}
+  function find(entries) {
+    return entries.find(e => (e.target?.id == id || e.extra?.channel?.id == id || e.extra?.id == id || e.code == id) && time - e.createdAt.getTime() < timeout);
+  }
   if (typeof type == 'string') {
     logs = await guild.fetchAuditLogs({ type, limit });
     entry = find(logs.entries);
@@ -76,7 +79,7 @@ async function getLogAction(guild, id, type, time = new Date().getTime() - 50000
     }
   }
   if (!entry) {
-    entry = logs.entries.find(e => (e.extra?.channel?.id == id || e.extra?.id == id || e.code == id) && time - e.createdAt.getTime() < 500);
+    entry = logs.entries.find(e => (e.target?.id == id || e.extra?.channel?.id == id || e.extra?.id == id || e.code == id) && time - e.createdAt.getTime() < 500);
     if (!entry) return null;
   }
   const member = guild.members.cache.get(entry.executor.id);
@@ -95,7 +98,7 @@ function emojify(string) {
 // const gmu = ['n', 'r'];
 // const ru = ['c', 'h', 'pe', 'po'];
 const low = '#0fe300', med = '#e3d000', high = '#ff0000';
-Module.addEvent('channelCreate', async channel => {
+Module.addEvent('channelCreate', /** @param {discord.Channel} channel */ async channel => {
   function mention(p) {return p.type == 'member' ? channel.guild.members.cache.get(p.id) : channel.guild.roles.cache.get(p.id);}
   if (channel.guild) {
     const enabled = await flags(channel.guild);
@@ -112,7 +115,7 @@ Module.addEvent('channelCreate', async channel => {
     }
   }
 })
-    .addEvent('channelDelete', async channel => {
+    .addEvent('channelDelete', /** @param {discord.Channel} channel */ async channel => {
       if (channel.guild) {
         const enabled = await flags(channel.guild);
         if (enabled?.includes('Channel Deleted')) {
@@ -123,7 +126,7 @@ Module.addEvent('channelCreate', async channel => {
         }
       }
     })
-    .addEvent('channelUpdate', async (oldChannel, newChannel) => {
+    .addEvent('channelUpdate', /** @param {discord.Channel} oldChannel @param {discord.Channel} newChannel*/ async (oldChannel, newChannel) => {
       if (oldChannel.guild) {
         const time = new Date();
         const enabled = await flags(oldChannel.guild);
@@ -155,7 +158,7 @@ Module.addEvent('channelCreate', async channel => {
         }
       }
     })
-    .addEvent('channelPinsUpdate', async channel => {
+    .addEvent('channelPinsUpdate', /** @param {discord.Channel} channel */ async channel => {
       if (channel.guild) {
         const enabled = await flags(channel.guild);
         if (enabled?.includes('Message Pinned')) {
@@ -182,8 +185,7 @@ Module.addEvent('channelCreate', async channel => {
         }
       }
     })
-
-    .addEvent('emojiCreate', async emoji => {
+    .addEvent('emojiCreate', /** @param {discord.Emoji} emoji */ async emoji => {
       if (emoji.guild) {
         const enabled = await flags(emoji.guild);
         if (enabled?.includes('Emoji Created')) {
@@ -194,7 +196,7 @@ Module.addEvent('channelCreate', async channel => {
         }
       }
     })
-    .addEvent('emojiDelete', async emoji => {
+    .addEvent('emojiDelete', /** @param {discord.Emoji} emoji */ async emoji => {
       if (emoji.guild) {
         const enabled = await flags(emoji.guild);
         if (enabled?.includes(('Emoji Deleted'))) {
@@ -205,7 +207,7 @@ Module.addEvent('channelCreate', async channel => {
         }
       }
     })
-    .addEvent('emojiUpdate', async (oldEmoji, newEmoji) => {
+    .addEvent('emojiUpdate', /** @param {discord.Emoji} oldEmoji @param {discord.Emoji} newEmoji */ async (oldEmoji, newEmoji) => {
       if (oldEmoji.guild) {
         const time = new Date();
         const enabled = await flags(oldEmoji.guild);
@@ -219,7 +221,7 @@ Module.addEvent('channelCreate', async channel => {
       }
     })
 
-    .addEvent('guildBanAdd', async (ban) => {
+    .addEvent('guildBanAdd', /** @param {discord.GuildBan} ban */ async ban => {
       const { guild, user } = ban;
       const time = new Date();
       const enabled = await flags(guild);
@@ -230,7 +232,7 @@ Module.addEvent('channelCreate', async channel => {
         await send(guild, embed);
       }
     })
-    .addEvent('guildBanRemove', async (ban) => {
+    .addEvent('guildBanRemove', /** @param {discord.GuildBan} ban */ async ban => {
       const { guild, user } = ban;
       const time = new Date();
       const enabled = await flags(guild);
@@ -241,14 +243,15 @@ Module.addEvent('channelCreate', async channel => {
         await send(guild, embed);
       }
     })
-    .addEvent('guildMemberAdd', async member => {
+    .addEvent('guildMemberAdd', /** @param {discord.GuildMember} member */ async member => {
       const enabled = await flags(member.guild);
       if (enabled?.includes('Member Joined')) {
-        const embed = u.embed().setTitle(`\`${member.displayName}\` joined the server`).setColor(low);
+        const embed = u.embed().setTitle(`\`${member.displayName}\` joined the server`).setColor(low).setThumbnail(member.displayAvatarURL()).setDescription(member.toString());
+        if (member.pending) embed.addField('Pending', 'True');
         await send(member.guild, embed);
       }
     })
-    .addEvent('guildMemberRemove', async member => {
+    .addEvent('guildMemberRemove', /** @param {discord.GuildMember} member */ async member => {
       const time = new Date();
       const enabled = await flags(member.guild);
       if (enabled?.includes('Member Left')) {
@@ -263,7 +266,7 @@ Module.addEvent('channelCreate', async channel => {
         await send(member.guild, embed);
       }
     })
-    .addEvent('guildMemberUpdate', async (oldMember, newMember) => {
+    .addEvent('guildMemberUpdate', /** @param {discord.GuildMember} oldMember @param {discord.GuildMember} newMember*/ async (oldMember, newMember) => {
       const time = new Date();
       const enabled = await flags(oldMember.guild);
       if (enabled?.includes('Member Updated')) {
@@ -280,7 +283,7 @@ Module.addEvent('channelCreate', async channel => {
         if (embed.fields.length > 0) await send(newMember.guild, embed);
       }
     })
-    .addEvent('guildUpdate', async (oldGuild, newGuild) => {
+    .addEvent('guildUpdate', async /** @param {discord.Guild} oldGuild @param {discord.Guild} newGuild*/ (oldGuild, newGuild) => {
       const time = new Date();
       const enabled = await flags(oldGuild);
       if (enabled?.includes('Server Updated')) {
@@ -314,39 +317,38 @@ Module.addEvent('channelCreate', async channel => {
       }
     })
 
-    .addEvent('inviteCreate', async invite => {
+    .addEvent('inviteCreate', /** @param {discord.Invite} invite */ async invite => {
       if (invite.guild) {
-        const time = new Date();
         const enabled = await flags(invite.guild);
         if (enabled?.includes('Invite Created')) {
-          let embed = u.embed().setTitle(`An invite was created: \`${invite}\``).setColor(low);
+          let embed = u.embed().setTitle(`An invite was created: \`${invite}\``).setColor(low).addField('Channel', invite.channel.toString());
           const logAction = await getLogAction(invite.guild, invite.code, 'INVITE_CREATE', invite.createdTimestamp);
           let reason;
-          if (logAction) reason = logAction.reason;
-          embed = footer(embed, { member: invite.guild.members.cache.get(invite.inviter).displayName, reason });
+          if (logAction) {
+            reason = logAction.reason;
+            embed = footer(embed, { member: invite.guild.members.cache.get(invite.inviter.id), reason });
+          }
           if (invite.maxUses > 0) embed.addField('Max Uses', invite.maxUses);
-          if (invite.maxAge > 0) embed.addField('Expires', `<t:${Math.round(time.getTime() / 1000 + invite.maxAge)}:f>`);
+          if (invite.maxAge > 0) embed.addField('Expires', `<t:${Math.floor(invite.expiresTimestamp / 1000)}:f>` ?? 'Never');
           if (invite.targetUser) embed.addField('Target User', invite.targetUser.tag);
           await send(invite.guild, embed);
         }
       }
     })
-    .addEvent('inviteDelete', async invite => {
+    .addEvent('inviteDelete', /** @param {discord.Invite} invite */ async invite => {
       if (invite.guild) {
-        const time = new Date();
-        if (invite.expiresAt > time) {
-          const enabled = await flags(invite.guild);
-          if (enabled?.includes('Invite Deleted')) {
-            let embed = u.embed().setTitle(`Invite \`${invite}\` was deleted`).setColor(med);
-            const logAction = await getLogAction(invite.guild, invite.targetUser.id, 'INVITE_DELETE', time);
-            if (logAction) embed = footer(embed, logAction);
-            await send(invite.guild, embed);
+        const enabled = await flags(invite.guild);
+        if (enabled?.includes('Invite Deleted')) {
+          let embed = u.embed().setTitle(`Invite \`${invite}\` was deleted`).setColor(med);
+          const logAction = await getLogAction(invite.guild, invite.code, 'INVITE_DELETE', new Date());
+          if (logAction) {
+            embed = footer(embed, logAction);
           }
+          await send(invite.guild, embed);
         }
       }
     })
-
-    .addEvent('messageDeleteBulk', async messages => {
+    .addEvent('messageDeleteBulk', /** @param {discord.Collection<discord.Snowflake, discord.Message>} messages */ async messages => {
       if (messages.first().guild) {
         const time = new Date();
         const enabled = await flags(messages.first().guild);
@@ -363,7 +365,7 @@ Module.addEvent('channelCreate', async channel => {
       }
     })
 
-    .addEvent('roleCreate', async role => {
+    .addEvent('roleCreate', /** @param {discord.Role} role */ async role => {
       const enabled = await flags(role.guild);
       if (enabled?.includes('Role Created')) {
         let embed = u.embed().setTitle(`The \`${role.name}\` role was created`).setDescription(`${role}`).setColor(low);
@@ -372,7 +374,7 @@ Module.addEvent('channelCreate', async channel => {
         await send(role.guild, embed);
       }
     })
-    .addEvent('roleDelete', async role => {
+    .addEvent('roleDelete', /** @param {discord.Role} role */ async role => {
       const enabled = await flags(role.guild);
       if (enabled?.includes('Role Deleted')) {
         let embed = u.embed().setTitle(`The \`${role.name}\` role was deleted`).setColor(high);
@@ -381,7 +383,7 @@ Module.addEvent('channelCreate', async channel => {
         await send(role.guild, embed);
       }
     })
-    .addEvent('roleUpdate', async (oldRole, newRole) => {
+    .addEvent('roleUpdate', /** @param {discord.Role} oldRole @param {discord.Role} newRole */ async (oldRole, newRole) => {
       const enabled = await flags(oldRole.guild);
       if (enabled?.includes('Role Updated')) {
         const embed = u.embed().setTitle(`The role \`${oldRole.name}\` was modified`).setColor(med);
@@ -398,6 +400,6 @@ Module.addEvent('channelCreate', async channel => {
       }
     })
 
-    .addEvent('rateLimit', async (rateLimitInfo) => {console.log(rateLimitInfo);});
+    .addEvent('rateLimit', /** @param {discord.RateLimitData} rateLimitInfo */ async (rateLimitInfo) => {console.log(rateLimitInfo);});
 
 module.exports = Module;

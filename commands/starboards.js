@@ -3,7 +3,7 @@ const Augur = require('augurbot'),
 
 const Module = new Augur.Module();
 
-const starboards = async (msg) => await Module.db.guildconfig.getStarBoards(msg.guild.id);
+const starboards = async (msg) => await u.db.guildconfig.getStarBoards(msg.guild.id);
 
 const postToBoard = async (reaction, user, force = false) => {
   const msg = reaction.message;
@@ -20,7 +20,7 @@ const postToBoard = async (reaction, user, force = false) => {
           embed.addField('Channel', msg.channel).addField('Jump to post', msg.url).setTimestamp(msg.createdAt).setAuthor(msg.member.displayName, msg.author.avatarURL()).setFooter(reaction.emoji.name);
           if (channel) {
             channel.send({ embeds: [embed] });
-            // Module.db.guildconfig.saveSBMessage(msg)
+            // u.db.guildconfig.saveSBMessage(msg)
           } else {u.errorHandler(`Starboard Send Error`, `Couldn't send to channel *${x.channel}* in guild *${msg.guild.name}*`);}
         }
       }
