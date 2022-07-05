@@ -51,7 +51,7 @@
     "looks-same": "^7.3.0",
     "lowdb": "^1.0.0",
     "mailparser": "^3.0.1",
-    "marked": "^2.0.0",
+    "marked": "^4.0.10",
     "marked-terminal": "^4.1.0",
     "merge-stream": "^2.0.0",
     "mongodb": "^3.6.3",
