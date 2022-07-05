@@ -7,6 +7,7 @@ const jimp = require('jimp');
 const errorLog = new WebhookClient({ id: config.error.id, token: config.error.token });
 const events = require('events');
 const fs = require('fs');
+const db = require('./dbModels');
 const langFilter = fs.readFileSync('./jsons/naughty.txt', 'utf-8').split('\n');
 const em = new events.EventEmitter();
 const Utils = {
@@ -24,33 +25,18 @@ const Utils = {
      */
   emit: (name, ...options) => em.emit(name, options),
 
-  /**
-     * @param data Action Row Data
-     * @returns {MessageActionRow}
-     */
+  db,
+  /** @param {discord.MessageActionRowOptions} data */
   actionRow: (data) => new MessageActionRow(data),
-
-  /**
-     * @param data Message Embed Data
-     * @returns {MessageEmbed}new MessageEmbed
-     */
+  /** @param {discord.MessageEmbedOptions} data */
   embed: (data) => new MessageEmbed(data).setColor(config.color),
-
-  /**
-     * @param data Message Button Data
-     * @returns new MessageButton
-     */
+  /** @param {discord.MessageButtonOptions} data */
   button: (data) => new MessageButton(data),
-
-  /**
-     * @param data Message Select Menu Data
-     * @returns new MessageSelectMenu
-     */
+  /** @param {discord.MessageSelectMenuOptions} data */
   selectMenu: (data) => new MessageSelectMenu(data),
-
-  /** @param data */
+  /** @param {[string, any]} data */
   collection: (data) => new discord.Collection(data),
-
+  toEpoch: (date = new Date(), format = 'f') => `<t:${Math.floor(date.getTime() / 1000)}:${format}>`,
   /**
      * Deletes 1 or more messages
      * @param {Message|Message[]} message Message Object(s)
@@ -61,13 +47,13 @@ const Utils = {
     if (message.length > 1) {
       setTimeout(() => {
         message.forEach(m => {
-          if (m.deletable && !m.deleted) m.delete();
+          if (m.deletable) m.delete();
         });
       }, t, message);
       return Promise.resolve(message);
     } else {
       setTimeout(() => {
-        if (message.deletable && !message.deleted) message.delete();
+        if (message.deletable) message.delete();
       }, t, message);
       return Promise.resolve(message);
     }
@@ -80,24 +66,24 @@ const Utils = {
      */
   errorHandler: async (error, msg) => {
     try {
-      if (!error) return;
+      if (!error || msg?.webhookId || (msg?.author?.bot && msg?.content == `I've run into an error. I've let my devs know.`)) return;
+      if (typeof error != Error) error = new Error(error);
       console.error(Date());
       const embed = Utils.embed().setTitle(error.name);
-      console.log(msg);
       if (msg instanceof Message) {
         console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM")}: ${msg.cleanContent}`);
         msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
-        embed.addField("User", msg.author.username, true).addField("Location", (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
+        embed.addField("User", msg.author?.username || 'Unknown', true).addField("Location", (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
       } if (msg instanceof CommandInteraction) {
         msg.client.interactionFailed(msg, "ERROR");
         const subcmd = `/${msg.commandName} ${msg.options.getSubcommand(false) ?? ''}`;
-        const options = msg.options.data.map(a => {return { name: a.name, value: a.value };});
+        const options = msg.options.data.map(a => {return { name: a.name ?? "Unknown Name", value: a.value ?? 'Unkonwn Value' };});
         const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
         console.error(`${msg.user.username} in ${location}: ${subcmd} ${options.map(a => a.value).join(' ')}`);
-        embed.addField("User", msg.user.username, true)
-                .addField("Location", location, true)
-                .addField("Command", subcmd, true)
-                .addFields(options);
+        embed.addField("User", msg.user?.username ?? "Unknown", true)
+          .addField("Location", location, true)
+          .addField("Command", subcmd, true)
+          .addFields(options);
       } else if (msg instanceof Interaction) {
         const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
         console.error(`${msg.user.username} in ${location}: ${msg.type}: ${msg.valueOf()}`);
@@ -129,7 +115,7 @@ const Utils = {
      * @param {string} content
      */
   hasLang: async (msg, content) => {
-    const status = 0;// await msg.client.db.guildconfig.getLanguageFilter(msg.guild.id)
+    const status = 0;// await Utils.db().guildconfig.getLanguageFilter(msg.guild.id)
     if (status == 0) return false;
     let filter;
     if (status == 1) filter = langFilter[0].split(',');
@@ -169,50 +155,80 @@ const Utils = {
     if (message instanceof discord.User || message instanceof discord.GuildMember) msg = await message.send({ embeds: [promptEmbed], components: [buttons], allowedMentions: { parse: [] } });
     else msg = await message.reply({ embeds: [promptEmbed], components: [buttons], allowedMentions: { parse: [] } });
     const filter = m => m.user.id == (message.author?.id ?? m.user.id) && m.componentType == 'BUTTON';
-    const int = await msg.awaitMessageComponent({ filter, componentType: 'BUTTON', time }).catch(e => {
-      console.log(e);
-      return msg.edit({ embeds: [timeoutEmbed] });
-    });
+    const int = await msg.awaitMessageComponent({ filter, componentType: 'BUTTON', time });
     const status = (int.customId == 'confirm');
-    int.update({ embeds: [status ? confirmEmbed : cancelEmbed] });
+    int.reply({ embeds: [status ? confirmEmbed : cancelEmbed], components: [] });
     return status;
   },
+  /**
+   * @param {discord.CommandInteraction} int MAKE SURE IT'S BEEN REPLIED TO OR DEFERRED
+   * @param {string} description
+   * @param {string} title
+   * @param {number} time
+   */
+  confirmInt: async (int, description, title, time = 300000) => {
+    const reply = (int.deferred || int.replied) ? "editReply" : "reply";
+    const confirmButton = Utils.button().setStyle('SUCCESS').setLabel('Confirm').setCustomId(`confirm${int.id}`);
+    const cancelButton = Utils.button().setStyle('DANGER').setLabel('Cancel').setCustomId(`cancel${int.id}`);
+    const buttons = Utils.actionRow().addComponents([confirmButton, cancelButton]);
 
+    const embed = Utils.embed({ author: int.member ?? int.user })
+      .setColor(0xff0000)
+      .setTitle(title)
+      .setDescription(description);
+    await int[reply]({ embeds: [embed], components: [buttons], ephemeral: true, content: null, allowedMentions: { parse: [] } });
+    const filter = m => m.user.id == (int.user.id) && m.customId.includes(int.id);
+    const res = await int.channel.awaitMessageComponent({ filter, componentType: 'BUTTON', time }).catch(() => {return null;});
+    const status = (res.customId == `confirm${int.id}`);
+    await res.reply({ content: status ? "Confirmed" : "Canceled", components: [], ephemeral: true });
+    return status;
+  },
+  /** @param {discord.ModalOptions} data */
+  modal: (data) => new discord.Modal(data),
+  /** @param {discord.TextInputComponentOptions} data */
+  textInput: (data) => new discord.TextInputComponent(data),
+  blocked: (member, logs, extra) => logs.send({ embeds: [
+    Utils.embed().setAuthor({ name: member.displayName, iconURL: member.displayAvatarURL() })
+      .setDescription(extra ?? null)
+      .setColor(0x00ffff)
+      .setTitle(`${member.displayName} has me blocked. *sadface*`)
+  ] }),
   /**
      *
      * @param {Message} msg
+     * @param {Message|Interaction} initMessage
      * @param {discord.MessageActionRow[]} actionRows
      * @returns {Promise<discord.MessageComponentInteraction>}
      */
-  awaitButton: async (msg, time = 5000 * 60) => {
-    const filter = m => m.user.id == (msg.user ?? msg.author)?.id;
+  awaitButton: async (msg, initMessage, time = 5000 * 60) => {
+    const filter = m => m.user.id == (initMessage.user ?? initMessage.author)?.id;
     try {
       const int = await msg.awaitMessageComponent({ filter: filter, componentType: 'BUTTON', time: time });
       return int;
     } catch (e) {
-      const er = new Error();
-      if (er.stack.includes('ending with reason: time')) return { customId: 'time' };
+      if (e.stack.includes('ending with reason: time')) return { customId: 'time' };
       else return Utils.errorHandler(e, msg);
     }
   },
-
   /**
-     * @param {string} text Text to escape
-     * @param {{}} options EscapeMarkdownOptions
-     * @returns {string} Escaped Text
-     */
+   *
+   * @param {Interaction} msg
+   * @param {discord.AwaitMessageCollectorOptionsParams} options
+   * @returns {Promise<discord.Collection<string, Message> | null>}
+   */
+  awaitMessage: async (msg, options) => {
+    if (!options?.filter) options.filter = m => m.author.id == (msg.user ?? msg.author)?.id;
+    try {
+      const messages = await msg.channel.awaitMessages(options);
+      return messages;
+    } catch (e) {
+      if (e.stack.includes('ending with reason: time')) return null;
+      else return Utils.errorHandler(e, msg);
+    }
+  },
   escape: (text, options = {}) => Util.escapeMarkdown(text, options),
 
-  /**
-     * @param {string} txt Text to escape
-     * @returns {string} Escaped Text
-     */
   escapeText: (txt) => txt.replace(/(\*|_|`|~|\\|\|)/g, '\\$1'),
-
-  /**
-     * @param {any[]} array Array
-     * @returns {any} Random entry from the array
-     */
   rand: (array) => array[Math.floor(Math.random() * array.length)],
 
   /**
@@ -273,7 +289,7 @@ const Utils = {
   prefix: async (msg) => {
     try {
       if (msg.channel?.parentId == '813847559252344862') return '>';
-      else if (msg.guild) return await msg.client.db.guildconfig.getPrefix(msg.guild.id);
+      else if (msg.guild) return await Utils.db.guildconfig.getPrefix(msg.guild.id);
       else return config.prefix;
     } catch (e) {
       Utils.errorHandler(e, msg.content);
@@ -370,7 +386,7 @@ const Utils = {
   validImage: async (image) => {
     try {
       const img = await jimp.read(image);
-      if (img.bitmap.data.byteLength >= 7500000) return null;
+      // if (img.bitmap.data.byteLength >= 7500000) return null;
       return img;
     } catch {
       return false;
@@ -383,7 +399,7 @@ const Utils = {
      */
   botSpam: async (msg) => {
     if (!msg.guild) return msg.channel;
-    const channel = await msg.client.db.guildconfig.getBotLobby(msg.guild.id);
+    const channel = await Utils.db.guildconfig.getBotLobby(msg.guild.id);
     return msg.client.channels.cache.get(channel) ?? msg.channel;
   },
 
@@ -393,10 +409,9 @@ const Utils = {
      */
   errorChannel: async (guild) => {
     if (!guild) return null;
-    const channel = await guild.client.db.guildconfig.getErrorChannel(guild.id);
+    const channel = await Utils.db.guildconfig.getErrorChannel(guild.id);
     return guild.channels.cache.get(channel) ?? null;
   },
-
 
   /**
      * @param {{category: string, int: number}[]} flags Array of flag categories and ints
@@ -434,7 +449,7 @@ const Utils = {
       if (int == 5) return filtered.filter(f => f[1] == 1 || f[1] == 3).map(f => f[0]);
       if (int == 6) return filtered.filter(f => f[1] == 2 || f[1] == 3).map(f => f[0]);
     };
-    const bytefield = await guild.client.db.guildconfig.getLogFlags(guild.id);
+    const bytefield = await Utils.db.guildconfig.getLogFlags(guild.id);
     if (!bytefield) return [];
     const channel = decrypt(bytefield[0], 'channel');
     const message = decrypt(bytefield[1], 'message');
@@ -444,7 +459,8 @@ const Utils = {
     const server = decrypt(bytefield[5], 'server');
     const role = decrypt(bytefield[6], 'role');
     return channel.concat(message, emoji, member, other, server, role);
-  }
+  },
+  noop: () => null
 };
 
 module.exports = Utils;

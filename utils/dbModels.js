@@ -2,14 +2,16 @@ const GuildConfig = require('../schemas/guildconfig');
 const Tags = require('../schemas/tags');
 const GTags = require('../schemas/globalTags');
 const rRoles = require('../schemas/reactionRoles');
+const Ranks = require('../schemas/ranks');
+const Infractions = require("../schemas/infractions");
 const mongoose = require('mongoose');
 const config = require('../config/config.json');
 const converter = require('fast-b64');
-// const Augur = require('augurbot');
+// const { Module } = require('augurbot');
 mongoose.connect(config.db.db, config.db.settings);
 const models = {
   guildconfig: {
-    createConfig: async (guildId, commands) => {
+    createConfig: async (guildId, commands = []) => {
       if (!await GuildConfig.exists({ guildId })) GuildConfig.create({ guildId, commands: converter.bitstobase64(commands.map(() => '1').join('')) });
       else return null;
     },
@@ -19,6 +21,9 @@ const models = {
         const document = await GuildConfig.findOne({ guildId }).exec();
         if (document) return document;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    getAllConfigs: async () => {
+      return await GuildConfig.find().exec();
     },
     getInvite: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
@@ -130,8 +135,16 @@ const models = {
         const document = await GuildConfig.findOne({ guildId });
         const board = document?.channels?.starboards?.find(c => c.channel == theBoard.channel);
         if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': theBoard.channel }, { $set: { 'channels.starboards.$.channel':theBoard.channel, 'channels.starboards.$.reactions':theBoard.reactions, 'channels.starboards.$.whitelist': theBoard.whitelist, 'channels.starboards.$.toPost': theBoard.toPost } });
-        else return GuildConfig.updateOne({ guildId }, { channels: { starboards:{ $push: theBoard } } });
+        else return GuildConfig.updateOne({ guildId }, { $push: { 'channels.starboards': theBoard } });
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    removeStarBoard: async (guildId, channel) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = await GuildConfig.findOne({ guildId });
+        const board = document?.channels?.starboards?.find(c => c.channel == channel);
+        if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': channel }, { $pull: { channel } }, { new: true });
+      }
     },
     saveLogChannel: async (guildId, channel, flags) => {
       await models.guildconfig.createConfig(guildId);
@@ -167,21 +180,69 @@ const models = {
       if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "roles.muted": muted }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
-    langFilter: async (guildId) => {
-      if (guildId == '406821751905976320') return 'mi';
-      // await models.guildconfig.createConfig(guildId)
-      // if(await GuildConfig.exists({guildId})){
-      //    let document = GuildConfig.findOne({guildId}).exec()
-      //    return document?.langFilter
-      // }
-      // else throw new Error(`No guildconfig for guild ${guildId}`)
+    getLangFilter: async (guildId) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = GuildConfig.findOne({ guildId }).exec();
+        return document?.langFilter;
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    saveLangFilter: async (guildId, filter) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { filter }, { new: true });
+      else throw new Error(`No guildconfig for guild ${guildId}`);
+    },
+    getLangLog: async (guildId) => {
+      if (await GuildConfig.exists({ guildId })) {
+        const document = GuildConfig.findOne({ guildId }).exec();
+        return document?.channels?.language;
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    saveLangLog: async (guildId, channelId) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.language": channelId }, { new: true });
+      else throw new Error(`No guildconfig for guild ${guildId}`);
+    }
+  },
+  infraction: {
+    addGuild: async (guildId) => {
+      if (!await Infractions.exists({ guildId })) return Infractions.create({ guildId, infractions: [] });
       else return null;
     },
-    langLogChannel: async (guildId) => {
-      // await models.guildconfig.createConfig(guildId)
-      // else throw new Error(`No guildconfig for guild ${guildId}`)
-      if (guildId == '406821751905976320') return '789694239197626371';
-      else return null;
+    getByFlag: async (guildId, flag) => {
+      await models.infraction.addGuild(guildId);
+      const document = await Infractions.findOne({ guildId }).exec();
+      return document?.infractions.find(d => d.flag == flag);
+    },
+    getSummary: async (guildId, discordId, time = 90) => {
+      const since = new Date(Date.now() - (time * 24 * 60 * 60 * 1000));
+      await models.infraction.addGuild(guildId);
+      const document = await Infractions.findOne({ guildId });
+      if (!document) return null;
+      const records = document.infractions.filter(i => i.discordId == discordId && i.timestamp >= since);
+      if (!records) return { time };
+      return {
+        discordId,
+        count: records.length,
+        points: records.reduce((c, r) => c + r.value, 0),
+        time,
+        detail: records
+      };
+    },
+    remove: async (guildId, flag) => {
+      const newDoc = Infractions.findOneAndUpdate({ guildId, 'infractions.$.flag': flag }, { $pull: { flag } }, { new: true }).exec();
+      return newDoc?.infractions;
+    },
+    save: async (guildId, infraction) => {
+      infraction.timestamp = new Date();
+      await models.infraction.addGuild(guildId);
+      const newDoc = await Infractions.findOneAndUpdate({ guildId }, { $push: { 'infractions': infraction } }, { new: true })?.exec();
+      return newDoc?.infractions;
+    },
+    update: async (guildId, flag, infraction) => {
+      await models.infraction.addGuild(guildId);
+      const newDoc = await Infractions.findOne({ guildId, 'infractions.$.flag': flag }, { 'infractions.$': infraction }, { new: true });
+      return newDoc?.infractions[0];
     }
   },
   tags:{
@@ -272,10 +333,8 @@ const models = {
     },
     saveWelcome: async (guildId, channel, roles, emoji, ruleChannel, custom) => {
       await models.guildconfig.createConfig(guildId);
-      if (!await GuildConfig.exists({ guildId })) {
-        if (GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { welcome: { enabled: true, channel, roles, ruleChannel, custom } }, { new: true }); // 'welcome.enabled':true, 'welcome.channel':channel, 'welcome.roles': roles, 'welcome.emoji': emoji, 'welcome.ruleChannel':ruleChannel, 'welcome.custom': custom}
-        else throw new Error(`No guildconfig for guild ${guildId}`);
-      }
+      if (GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { welcome: { enabled: true, channel, emoji, roles, ruleChannel, custom } }, { new: true });
+      else throw new Error(`No guildconfig for guild ${guildId}`);
     },
     disableWelcome: async (guildId) => {return GuildConfig.findOneAndUpdate({ guildId }, { 'welcome.enabled': false });}
   },
@@ -301,6 +360,100 @@ const models = {
     getRemoveableRoles: async (messageId) => {
       const document = await rRoles.find({ removeOnUnreact: true })?.exec();
       return document.find(r => r.messageId == messageId);
+    }
+  },
+  ranks: {
+    addGuild: async (guildId) => {
+      if (!await Ranks.exists({ guildId })) {
+        await Ranks.create({ guildId, exclude: { channels: [], roles: [] }, users: [], roles: [], enabled: true, rate: 2 });
+        return await Ranks.findOne({ guildId })?.exec();
+      } else {
+        return null;
+      }
+    },
+    addUser: async (guildId, userId) => {
+      if (Array.isArray(userId)) {
+        await models.ranks.addGuild(guildId);
+        const document = await Ranks.findOne({ guildId })?.exec();
+        const users = userId.filter(u => !document.users.find(d => d.userId == u));
+        const mapped = users.map(u => {return { userId: u, xp: 0, lifeXP: 0, excludeXP: false, posts: 0 };});
+        if (mapped.length > 0) return await Ranks.findOneAndUpdate({ guildId }, { $push: { 'users': { $each: mapped } } }, { new: true })?.exec();
+        else return null;
+      }
+      if (!await Ranks.exists({ guildId, 'users.$.userId': userId })) return await Ranks.findOneAndUpdate({ guildId }, { $push: { 'users': { userId, xp: 0, lifeXP: 0, excludeXP: false, posts: 0 } } }, { new: true })?.exec();
+      else return null;
+    },
+    getRank: async (guildId, userId) => {
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      const user = document.users.find(u => u.userId == userId);
+      if (user) return user;
+      else return await models.ranks.addUser(guildId, userId);
+    },
+    getAllRanks: async (guildId) => {
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      return document;
+    },
+    getAllDocuments: async () => {
+      return await Ranks.find()?.exec();
+    },
+    gStatusToggle: async (guildId, status = true) => {
+      if (status) await models.ranks.addGuild(guildId);
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      return await Ranks.findOneAndUpdate({ guildId }, { enabled: status }, { new: true })?.exec();
+    },
+    addXP: async (active, xp, lifeXP) => {
+      const guilds = [];
+      xp ??= Math.floor(Math.random() * 11) + 15;
+      lifeXP ??= xp;
+      for (const [guild, users] of active) {
+        guilds.push({ guild, users });
+      }
+      const response = { guilds: [], xp: 0 };
+      if (active.size == 0) return response;
+      response.xp = xp;
+      let i = 0;
+      do {
+        const guild = guilds[i];
+        if (guild.users.length > 0) {
+          await models.ranks.addUser(guild.guild, guild.users);
+          await Ranks.findOneAndUpdate({ guildId:  guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.posts': 1 } }).exec();
+          await Ranks.findOneAndUpdate({ guildId: guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.xp': xp, 'users.$.lifeXP': lifeXP } }).exec();
+          const userDocs = await Ranks.findOne({ guildId: guild.guild }).exec();
+          userDocs.users = userDocs?.users.filter(u => guild.users.includes(u.userId));
+          response.guilds.push(userDocs);
+        }
+        i++;
+      } while (i < guilds.length);
+      return response;
+    },
+    updateRank: async (guildId, userId, xp, lifeXP, posts) => {
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      const user = document.users.find(u => u.userId == userId);
+      if (user) return await Ranks.findOneAndUpdate({ guildId, 'users.userId': userId }, { $set: { 'users.$.xp': xp, 'users.$.lifeXP': lifeXP, 'users.$.posts': posts } }, { new: true })?.exec();
+      else return await Ranks.findOneAndUpdate({ guildId }, { $push: { 'users': { userId, xp, lifeXP, posts } } }, { new: true })?.exec();
+    },
+    resetRanks: async (guildId) => {
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      return Ranks.findOneAndUpdate({ guildId }, { $set: { 'users.$[].xp': 0 } }, { new: true });
+    },
+    opt: async (guildId, userId, excludeXP) => {
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      const user = document.users.find(u => u.userId == userId);
+      if (user) return await Ranks.findOneAndUpdate({ guildId, 'users.userId': userId }, { $set: { 'users.$.excludeXP': excludeXP } }, { new: true })?.exec();
+      else return await Ranks.findOneAndUpdate({ guildId }, { $push: { 'users': { userId, excludeXP } } }, { new: true })?.exec();
+    },
+    configGuild: async (guildId, newDoc) => {
+      await models.ranks.addGuild(guildId);
+      const document = await Ranks.findOne({ guildId })?.exec();
+      if (!document) return null;
+      const updated = await Ranks.findOneAndUpdate({ guildId }, newDoc, { new: true })?.exec();
+      return updated;
     }
   },
 };

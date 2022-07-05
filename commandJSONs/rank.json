@@ -1,0 +1,120 @@
+{
+  "name": "rank",
+  "description": "Leaderboard information",
+  "options": [
+    {
+      "type": 1,
+      "name": "view",
+      "description": "Get your (or someone else's) leaderboard rank",
+      "options": [
+        {
+          "type": 6,
+          "name": "user",
+          "description": "The user to look up (defaults to you)"
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "leaderboard",
+      "description": "Get the server leaderboard",
+      "options": [
+        {
+          "type": 3,
+          "name": "timeframe",
+          "description": "Whether to get the season or lifetime leaderboard",
+          "choices": [
+            {
+              "name": "Season",
+              "value": "xp"
+            },
+            {
+              "name": "Lifetime",
+              "value": "lifeXP"
+            }
+          ],
+          "required": true
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "track",
+      "description": "Start or stop gaining XP for your messages",
+      "options": [
+        {
+          "type": 5,
+          "name": "choice",
+          "description": "Whether or not to track XP",
+          "required": true
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "xp",
+      "description": "[MOD] Give or take XP from a user",
+      "options": [
+        {
+          "type": 6,
+          "name": "user",
+          "description": "The user whose XP you want to modify",
+          "required": true
+        },
+        {
+          "type": 4,
+          "name": "xp",
+          "description": "The amount of XP to give/take (positive number to give, negative to take)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "type": 1,
+      "name": "season-reset",
+      "description": "[MGMT] Reset everyone's current XP to 0"
+    },
+    {
+      "type": 1,
+      "name": "config",
+      "description": "[MGMT] Configure the leaderboard",
+      "options": [
+        {
+          "type": 5,
+          "name": "enable",
+          "description": "Should the leaderboard be enabled?"
+        },
+        {
+          "type": 8,
+          "name": "exclude-role",
+          "description": "Add or remove a role from the excluded roles list"
+        },
+        {
+          "type": 7,
+          "name": "exclude-channel",
+          "description": "Add or remove a channel from the excluded channels list"
+        },
+        {
+          "type": 8,
+          "name": "reward",
+          "description": "Add or remove a role to give at a certain level"
+        },
+        {
+          "type": 4,
+          "name": "reward-level",
+          "description": "What level should the reward be given at?"
+        },
+        {
+          "type": 4,
+          "name": "level-rate",
+          "description": "A number between 1 and 10 (2 is default) to determine how fast you gain levels (lower = faster)"
+        },
+        {
+          "type": 5,
+          "name": "view",
+          "description": "View the current settings"
+        }
+      ]
+    }
+  ]
+}
