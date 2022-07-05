@@ -1,0 +1,37 @@
+{
+  "name": "welcome",
+  "description": "Sets up the welcome message",
+  "options": [
+    {
+      "type": 7,
+      "name": "channel",
+      "description": "The channel to send the message in",
+      "required": true
+    },
+    {
+      "type": 3,
+      "name": "message",
+      "description": "Custom message to send (leave blank for a randomized one. Use <@member> to ping the new member)"
+    },
+    {
+      "type": 3,
+      "name": "emoji",
+      "description": "Emoji to use in randomized message"
+    },
+    {
+      "type": 7,
+      "name": "rule-channel",
+      "description": "Rule channel to mention in randomized message"
+    },
+    {
+      "type": 8,
+      "name": "role",
+      "description": "Role to give the new member"
+    },
+    {
+      "type": 8,
+      "name": "role2",
+      "description": "Another role to give the new member"
+    }
+  ]
+}

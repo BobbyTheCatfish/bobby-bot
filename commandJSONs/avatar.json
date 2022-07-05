@@ -1,0 +1,70 @@
+{
+  "name": "avatar",
+  "description": "Get someone's avatar and apply a filter to it",
+  "options": [
+    {
+      "type": 6,
+      "name": "user",
+      "description": "The user whose avatar you want to apply the filter to (defaults to yours)"
+    },
+    {
+      "type": 3,
+      "name": "filter",
+      "description": "A filter to apply to the avatar",
+      "choices": [
+        {
+          "name": "Amogus",
+          "value": "amongus"
+        },
+        {
+          "name": "Andy Warhol",
+          "value": "andywarhol"
+        },
+        {
+          "name": "Blur",
+          "value": "blur"
+        },
+        {
+          "name": "Blurple",
+          "value": "blurple"
+        },
+        {
+          "name": "Colorize",
+          "value": "colorme"
+        },
+        {
+          "name": "Deepfry",
+          "value": "deepfry"
+        },
+        {
+          "name": "Flex",
+          "value": "flex"
+        },
+        {
+          "name": "Grayscale",
+          "value": "grayscale"
+        },
+        {
+          "name": "Invert",
+          "value": "invert"
+        },
+        {
+          "name": "Metal",
+          "value": "metal"
+        },
+        {
+          "name": "Personal",
+          "value": "personal"
+        },
+        {
+          "name": "Petpet",
+          "value": "petpet"
+        },
+        {
+          "name": "Popart",
+          "value": "popart"
+        }
+      ]
+    }
+  ]
+}
