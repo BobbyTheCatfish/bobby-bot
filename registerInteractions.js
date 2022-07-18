@@ -12,10 +12,19 @@ const globalCommandFiles = [
   "welcome.json",
   "rank.json"
 ];
-const guildId = "406821751905976320";
 const guildCommandFiles = [
-  "config.json",
-  "mod.json",
+  {
+    id: "406821751905976320",
+    cmds: [
+      "config.json",
+    ]
+  },
+  {
+    id: "408747484710436877",
+    cmds: [
+      "mod.json"
+    ]
+  }
 ];
 const permissionData = new Collection();
 // permissionData.set(commandID, [{
@@ -68,27 +77,29 @@ function displayError(error) {
 const applicationId = config.applicationId;
 const commandPath = path.resolve(require.main ? path.dirname(require.main.filename) : process.cwd(), "./commandJSONs");
 
-if (guildId) {
-  const guildCommandLoads = [];
+if (guildCommandFiles.length > 0) {
   for (const command of guildCommandFiles) {
-    const load = require(path.resolve(commandPath, command));
-    if (Array.isArray(load)) guildCommandLoads.push(...load);
-    else guildCommandLoads.push(load);
-  }
-  axios({
-    method: "put",
-    url: `https://discord.com/api/v8/applications/${applicationId}/guilds/${guildId}/commands`,
-    headers: { Authorization: `Bot ${config.token}` },
-    data: guildCommandLoads
-  }).then((response) => {
-    console.log("=====Guild commands registered=====");
-    const cmds = response.data;
-    for (const c of cmds) {
-      const commandType = getCommandType(c.type);
-      console.log(`${c.name} (${commandType}): ${c.id}`);
+    const guildCommandLoads = [];
+    for (const cmd of command.cmds) {
+      const load = require(path.resolve(commandPath, cmd));
+      if (Array.isArray(load)) guildCommandLoads.push(...load);
+      else guildCommandLoads.push(load);
     }
-    console.log();
-  }).catch(displayError);
+    axios({
+      method: "put",
+      url: `https://discord.com/api/v8/applications/${applicationId}/guilds/${command.id}/commands`,
+      headers: { Authorization: `Bot ${config.token}` },
+      data: guildCommandLoads
+    }).then((response) => {
+      console.log(`=====Guild commands for ${command.id} registered=====`);
+      const cmds = response.data;
+      for (const c of cmds) {
+        const commandType = getCommandType(c.type);
+        console.log(`${c.name} (${commandType}): ${c.id}`);
+      }
+      console.log();
+    }).catch(displayError);
+  }
 }
 
 const globalCommandLoads = [];

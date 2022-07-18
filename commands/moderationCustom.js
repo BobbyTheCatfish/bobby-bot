@@ -1,40 +1,47 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
+  lang = require('../jsons/badwords.json'),
+  sites = require('../jsons/blockedsites.json'),
   mU = require('../utils/modUtils');
 const Module = new Augur.Module();
-// const r = {
-//   guild: '408747484710436877',
-//   logChannel: '987892109145169970',
-//   muteChannel: '959875038423695491',
-//   muted: '713820156844834836',
-//   trusted: '988546556632399912',
-//   trustPlus: '988549111957585950',
-//   untrusted: '990387440017608704',
-//   mods: '425039849540812800'
-// };
-const t = {
-  guild: '406821751905976320',
-  logChannel: '789694239197626371',
-  muteChannel: '839684190157144064',
-  muted: '989330053265522740',
-  trusted: '990452331210506280',
-  trustPlus: '990452365217906784',
-  untrusted: '990452401821614120',
-  mods: '470368495771844639'
+const r = {
+  guild: '408747484710436877',
+  logChannel: '987892109145169970',
+  modCategory: '728723188682457088',
+  muteChannel: '959875038423695491',
+  muted: '713820156844834836',
+  trusted: '988546556632399912',
+  trustPlus: '988549111957585950',
+  untrusted: '990387440017608704',
+  mods: '425039849540812800'
 };
+// testing server
+// const t = {
+//   guild: '406821751905976320',
+//   logChannel: '993929866451894333',
+//   muteChannel: '993929904892686436',
+//   muted: '989330053265522740',
+//   trusted: '990452331210506280',
+//   trustPlus: '990452365217906784',
+//   untrusted: '990452401821614120',
+//   mods: '470368495771844639'
+// };
 const modal = u.modal().addComponents([
   u.actionRow().addComponents(u.textInput({ customId: 'reason', label: 'Reason', style: 'SHORT' })),
   u.actionRow().addComponents(u.textInput({ customId: 'info', label: 'Additional Info', style: 'PARAGRAPH' }))
 ]);
 function harshFilter(str) {
-  return str.includes('aaa');
+  return lang.find(l => str.includes(l));
 }
-function filter(str) {
-  return str.includes('eee');
+function siteFilter(str) {
+  for (const category in sites) {
+    const site = sites[category].find(c => str.includes(c));
+    if (site) return { category, site };
+  }
 }
-const { logChannel, muteChannel, muted, trusted, trustPlus, untrusted, mods, guild } = t;
+const { logChannel, muteChannel, muted, trusted, trustPlus, untrusted, mods, guild, modCategory } = r;
 Module.addInteractionCommand({ name: 'mod',
-  commandId: '989984380099391578',
+  commandId: '998632048057139304',
   process: async (int) => {
     const command = int.options.getSubcommand();
     const logs = int.client.channels.cache.get(logChannel);
@@ -64,7 +71,7 @@ Module.addInteractionCommand({ name: 'mod',
   }
 })
 .addInteractionCommand({ name: "userMod",
-  commandId: "993705353999028267",
+  commandId: "998632048057139303",
   process: async (int) => {
     if (!int.isApplicationCommand()) return;
     const target = int.targetMember;
@@ -108,7 +115,7 @@ Module.addInteractionCommand({ name: 'mod',
   }
 })
 .addInteractionCommand({ name: "report",
-  commandId: "992867695173308516",
+  commandId: "998632048057139301",
   process: async (int) => {
     const msg = int.targetMessage;
     const logs = msg.guild.channels.cache.get(logChannel);
@@ -138,7 +145,7 @@ Module.addInteractionCommand({ name: 'mod',
   }
 })
 .addInteractionCommand({ name: "harshReport",
-  commandId: "992880134581403659",
+  commandId: "998632048057139302",
   process: async (int) => {
     if (!int.isMessageContextMenu()) return;
     const msg = int.targetMessage;
@@ -267,6 +274,31 @@ Module.addInteractionCommand({ name: 'mod',
 
 // AUTO MOD
 .addEvent('messageCreate', async (msg) => {
+  // links
+  if (msg.content && msg.guild?.id == guild && !msg.author.bot && msg.channel.parent?.id != modCategory) {
+    const site = siteFilter(msg.content);
+    if (site) {
+      const matches = site.site;
+      const ruleName = site.category;
+      const logs = msg.guild.channels.cache.get(logChannel);
+      const mute = msg.guild.roles.cache.get(muted);
+      const flag = {
+        msg,
+        pingMods: false,
+        snitch: null,
+        flagReason: `Language Category \`${ruleName}\``,
+        muted: mute,
+        logs,
+        mods: msg.guild.roles.cache.get(mods),
+        muteChannel: msg.guild.channels.cache.get(muteChannel),
+        member: msg.member,
+        matches
+      };
+      await new mU().createFlag(flag);
+      if (msg.deletable) return await msg.delete().catch(() => u.noop());
+    }
+  }
+
   if (msg.channel.id == logChannel && msg.embeds.length > 0 && !msg.author.bot && !msg.author.system) {
     const modMsg = msg.embeds[0];
     if (modMsg.type == 'auto_moderation_message') {
@@ -291,7 +323,7 @@ Module.addInteractionCommand({ name: 'mod',
         matches
       };
       await new mU().createFlag(flag);
-      return await msg.delete();
+      if (msg.deletable) return await msg.delete().catch(() => u.noop());
     }
   }
 })
@@ -300,7 +332,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addEvent('userUpdate', async (oldUser, newUser) => {
   if (!oldUser.bot && !oldUser.system && oldUser.guild.id == guild) {
     if (oldUser.username != newUser.username) {
-      if (filter(newUser.username) || harshFilter(newUser.username)) {
+      if (harshFilter(newUser.username)) {
         const g = oldUser.client.guilds.cache.get(guild);
         const logs = oldUser.client.channels.cache.get(logChannel);
         await new mU(null, logs).sendLog("Language In Username",
@@ -316,7 +348,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addEvent('guildMemberUpdate', async (oldMember, newMember) => {
   if (!oldMember.user.bot && !oldMember.user.system && newMember.guild.id == guild) {
     if (oldMember.nickname != newMember.nickname) {
-      if (filter(newMember.nickname) || harshFilter(newMember.nickname)) {
+      if (harshFilter(newMember.nickname)) {
         const logs = oldMember.client.channels.cache.get(logChannel);
         await new mU(null, logs).sendLog("Language In Nickname",
           `${oldMember} (${newMember.nickname}) has possible language in their nickname.`,
@@ -334,7 +366,7 @@ Module.addInteractionCommand({ name: 'mod',
     if (newPresence.activities.map(a => a.name).toString() != oldPresence.activities.map(a => a.name).toString()) {
       const mapped = newPresence?.activities.map(a => a.name).join(' ') ?? '';
       const oldMapped = oldPresence?.activities.map(a => a.name).join(' ') ?? '';
-      if (filter(mapped) || harshFilter(mapped)) {
+      if (harshFilter(mapped)) {
         const logs = oldPresence.client.channels.cache.get(logChannel);
         const g = oldPresence.client.guilds.cache.get(guild);
         await new mU(null, logs).sendLog("Language In Activity",

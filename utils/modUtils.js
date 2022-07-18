@@ -23,7 +23,11 @@ function compareRoles(mod, target) {
   return (modHigh.comparePositionTo(targetHigh) > 0);
 }
 const colors = { low: '0x00ff00', med: '0x#ffff00', high: '0xff0000' };
-const logEmbed = (int, target, color) => u.embed().addField("User", `${target}\n(${target.user.tag})`, true).addField("Mod", int?.member?.toString() ?? "Auto", true).setColor(colors[color]).setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
+const logEmbed = (int, target, color) => u.embed().addField("User", `${target}\n(${target.user.tag})`, true)
+  .addField("Mod", int?.member?.toString() ?? "Auto", true)
+  .addField("Joined At", u.toEpoch(target.joinedAt, 'f'), true)
+  .setColor(colors[color])
+  .setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
 const infractionField = (embed, summary) => embed.addField(`Infraction Summary (${summary.time} Day(s))`, `Infractions: ${summary.count}\nPoints: ${summary.points}`);
 class ModCommon {
   /**
@@ -56,7 +60,7 @@ class ModCommon {
       .addFields(fields ?? []);
     this.logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
-  async ban(untrusted, target) {
+  async ban(untrusted, target, testing = false) {
     const interaction = this.interaction;
     const logs = this.logs;
     try {
@@ -74,7 +78,7 @@ class ModCommon {
           u.embed().setTitle("User Ban").setDescription(`You have been banned from **${interaction.guild.name}** for:\n${reason}`)
         ] }).catch(() => u.blocked(target, logs, "They were too busy being banned"));
         if (untrusted) await target.roles.add(untrusted);
-        await target.ban({ days, reason });
+        if (!testing) await target.ban({ days, reason });
 
         // Edit interaction
         await interaction.followUp({ embeds: [
@@ -280,7 +284,7 @@ class ModCommon {
       .setDescription(text)
       .setColor(0x00ff00);
   }
-  async kick(untrusted, target, reason) {
+  async kick(untrusted, target, reason, testing = false) {
     const interaction = this.interaction;
     const logs = this.logs;
     try {
@@ -297,7 +301,7 @@ class ModCommon {
           u.embed().setTitle("User Kick").setDescription(`You have been kicked in ${interaction.guild.name} for:\n${reason}`)
         ] }).catch(() => u.blocked(target, logs, "They were too busy getting kicked"));
         if (untrusted) await target.roles.add(untrusted);
-        // await target.kick(reason);
+        if (!testing) await target.kick(reason);
 
         // Edit interaction
         await interaction.followUp({ embeds: [
@@ -551,8 +555,7 @@ class ModCommon {
         + `${untrust ? "Talk to a mod to see why." : "Please remember to follow the rules when doing so."}`
       ).catch(() => u.blocked(target, logs, `They were too busy getting ${untrust ? 'removed from' : ''} the Trusted role`));
 
-      const embed = logEmbed(interaction, target, 'low').setTitle(`User ${untrust ? 'Removed From' : 'Given'} Trusted`)
-        .addField("Joined At", u.toEpoch(target.joinedAt, 'f'));
+      const embed = logEmbed(interaction, target, 'low').setTitle(`User ${untrust ? 'Removed From' : 'Given'} Trusted`);
       if (!untrust && target.roles.cache.has(untrusted)) {
         await target.roles.remove(untrusted);
         embed.addField("Untrusted", "User was previously untrusted");
@@ -636,7 +639,6 @@ class ModCommon {
 
 
       const embed = logEmbed(interaction, target, 'low').setTitle("Watching User")
-        .addField("Joined At", u.toEpoch(target.joinedAt, 'f'), true)
         .addField(`Trusted ${undo ? "Regained" : "Removed"}`, `${(remove || undo) ? "YES" : "NO"}`, true);
       if (undo) {
         await target.roles.remove(untrusted);

@@ -1,6 +1,5 @@
 const GuildConfig = require('../schemas/guildconfig');
 const Tags = require('../schemas/tags');
-const GTags = require('../schemas/globalTags');
 const rRoles = require('../schemas/reactionRoles');
 const Ranks = require('../schemas/ranks');
 const Infractions = require("../schemas/infractions");
@@ -306,23 +305,6 @@ const models = {
         throw new Error(`No tag document for guild ${guildId}`);
       }
     },
-  },
-  globalTags: {
-    getTag: async (name) => {
-      return await GTags.findOne({ name })?.exec();
-    },
-    getAllTags: async () => {
-      return await GTags.find()?.exec();
-    },
-    saveTag: async (guildId, user, name, text, file) => {
-      const document = await GTags.find({ e: true }).exec();
-      const tag = document?.find(t => t.name == name);
-      return tag ? GTags.findOneAndUpdate({ name }, { text, file }) : GTags.create({ user, guildId, name, text, file });
-    },
-    removeTag: async (name) => {
-      const tag = await GTags.find({ name })?.exec();
-      return tag ? GTags.findOneAndDelete({ name }) : null;
-    }
   },
   welcome:{
     getWelcome: async (guildId) => {

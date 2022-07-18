@@ -47,13 +47,13 @@ const Utils = {
     if (message.length > 1) {
       setTimeout(() => {
         message.forEach(m => {
-          if (m.deletable) m.delete();
+          if (m.deletable) m.delete().catch(() => Utils.noop());
         });
       }, t, message);
       return Promise.resolve(message);
     } else {
       setTimeout(() => {
-        if (message.deletable) message.delete();
+        if (message.deletable) message.delete().catch(() => Utils.noop());
       }, t, message);
       return Promise.resolve(message);
     }
