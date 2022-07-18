@@ -1,7 +1,5 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
-  lang = require('../jsons/badwords.json'),
-  sites = require('../jsons/blockedsites.json'),
   mU = require('../utils/modUtils');
 const Module = new Augur.Module();
 const r = {
@@ -30,15 +28,7 @@ const modal = u.modal().addComponents([
   u.actionRow().addComponents(u.textInput({ customId: 'reason', label: 'Reason', style: 'SHORT' })),
   u.actionRow().addComponents(u.textInput({ customId: 'info', label: 'Additional Info', style: 'PARAGRAPH' }))
 ]);
-function harshFilter(str) {
-  return lang.find(l => str.includes(l));
-}
-function siteFilter(str) {
-  for (const category in sites) {
-    const site = sites[category].find(c => str.includes(c));
-    if (site) return { category, site };
-  }
-}
+
 const { logChannel, muteChannel, muted, trusted, trustPlus, untrusted, mods, guild, modCategory } = r;
 Module.addInteractionCommand({ name: 'mod',
   commandId: '998632048057139304',
@@ -276,7 +266,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addEvent('messageCreate', async (msg) => {
   // links
   if (msg.content && msg.guild?.id == guild && !msg.author.bot && msg.channel.parent?.id != modCategory) {
-    const site = siteFilter(msg.content);
+    const site = u.siteFilter(msg.content);
     if (site) {
       const matches = site.site;
       const ruleName = site.category;
@@ -306,7 +296,7 @@ Module.addInteractionCommand({ name: 'mod',
       msg.url = modMsg.fields.find(f => f.name == 'flagged_message_id');
       const matches = modMsg.fields.find(f => f.name == 'keyword_matched_content')?.value;
       const ruleName = modMsg.fields.find(f => f.name == 'rule_name')?.value;
-      const harsh = harshFilter(msg.content);
+      const harsh = u.harshFilter(msg.content);
       const logs = msg.guild.channels.cache.get(logChannel);
       const mute = msg.guild.roles.cache.get(muted);
       const flag = {
@@ -332,7 +322,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addEvent('userUpdate', async (oldUser, newUser) => {
   if (!oldUser.bot && !oldUser.system && oldUser.guild.id == guild) {
     if (oldUser.username != newUser.username) {
-      if (harshFilter(newUser.username)) {
+      if (u.harshFilter(newUser.username)) {
         const g = oldUser.client.guilds.cache.get(guild);
         const logs = oldUser.client.channels.cache.get(logChannel);
         await new mU(null, logs).sendLog("Language In Username",
@@ -348,7 +338,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addEvent('guildMemberUpdate', async (oldMember, newMember) => {
   if (!oldMember.user.bot && !oldMember.user.system && newMember.guild.id == guild) {
     if (oldMember.nickname != newMember.nickname) {
-      if (harshFilter(newMember.nickname)) {
+      if (u.harshFilter(newMember.nickname)) {
         const logs = oldMember.client.channels.cache.get(logChannel);
         await new mU(null, logs).sendLog("Language In Nickname",
           `${oldMember} (${newMember.nickname}) has possible language in their nickname.`,
@@ -366,7 +356,7 @@ Module.addInteractionCommand({ name: 'mod',
     if (newPresence.activities.map(a => a.name).toString() != oldPresence.activities.map(a => a.name).toString()) {
       const mapped = newPresence?.activities.map(a => a.name).join(' ') ?? '';
       const oldMapped = oldPresence?.activities.map(a => a.name).join(' ') ?? '';
-      if (harshFilter(mapped)) {
+      if (u.harshFilter(mapped)) {
         const logs = oldPresence.client.channels.cache.get(logChannel);
         const g = oldPresence.client.guilds.cache.get(guild);
         await new mU(null, logs).sendLog("Language In Activity",

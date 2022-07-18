@@ -6,9 +6,9 @@ const validUrl = require('valid-url');
 const jimp = require('jimp');
 const errorLog = new WebhookClient({ id: config.error.id, token: config.error.token });
 const events = require('events');
-const fs = require('fs');
 const db = require('./dbModels');
-const langFilter = fs.readFileSync('./jsons/naughty.txt', 'utf-8').split('\n');
+const lang = require('../jsons/badwords.json');
+const sites = require('../jsons/blockedsites.json');
 const em = new events.EventEmitter();
 const Utils = {
   /**
@@ -109,22 +109,14 @@ const Utils = {
     } catch (e) {console.log(e);}
   },
 
-  /**
-     *
-     * @param {Message} msg
-     * @param {string} content
-     */
-  hasLang: async (msg, content) => {
-    const status = 0;// await Utils.db().guildconfig.getLanguageFilter(msg.guild.id)
-    if (status == 0) return false;
-    let filter;
-    if (status == 1) filter = langFilter[0].split(',');
-    else if (status == 2) filter = langFilter[1].split(',');
-    else filter = langFilter.join(',').split(',');
-    const filtered = filter.filter(a => content.includes(a)).filter(a => a.length > 0);
-    console.log(filtered);
-    if (filtered.length > 0) return filtered;
-    else return false;
+  harshFilter: (str) => {
+    return lang.find(l => str.includes(l));
+  },
+  siteFilter: (str) => {
+    for (const category in sites) {
+      const site = sites[category].find(c => str.includes(c));
+      if (site) return { category, site };
+    }
   },
 
   /**
