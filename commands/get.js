@@ -1,6 +1,21 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils');
 function toEpoch(time) {return `<t:${Math.floor(time / 1000)}>`;}
+const cType = [
+  "Text",
+  "DM",
+  "Voice",
+  "Group DM",
+  "Category",
+  "News",
+  "", "", "", "",
+  "News Thread",
+  "Public Thread",
+  "Private Thread",
+  "Stage",
+  "Directory",
+  "Forum"
+];
 const Module = new Augur.Module();
 Module.addInteractionCommand({ name: 'get',
   commandId: "998829106206605342",
@@ -160,18 +175,18 @@ Module.addInteractionCommand({ name: 'get',
             { name: 'ID', value: channel.id, inline: true },
             { name: 'Category', value: channel.parent || 'None', inline: true },
             { name: 'Created at', value: toEpoch(channel.createdTimestamp) || 'Unknown', inline: true },
-            { name: 'Type', value: channel.type, inline: true }
+            { name: 'Type', value: cType[channel.type], inline: true }
           ]);
-          if (u.cType(channel, 'GuildVoice')) {
+          if (channel.isVoiceBased()) {
             embed.addFields([
-              { name: 'Bitrate', value: channel.bitrate || 'Unknown', inline: true },
-              { name: 'User Limit', value: channel.userLimit || 'None', inline: true },
-              { name: 'Members in the VC', value: channel.members.map(m => m).join('\n') || 'None', inline: true }
+              { name: 'Bitrate', value: channel.bitrate?.toString() || 'Unknown', inline: true },
+              { name: 'User Limit', value: channel.userLimit?.toString() || 'None', inline: true },
+              { name: 'Members in the VC', value: channel.members.toJSON().join('\n') || 'None', inline: true }
             ]);
-          } else if (u.cType(channel, 'GuildText')) {
-            if (u.cType(channel, 'GuildPrivateThread') || u.cType(channel, 'GuildPublicThread')) {
+          } else if (channel.isTextBased()) {
+            if (channel.isThread()) {
               embed.addFields([
-                { name: 'Thread Channel', value:'true', inline:true },
+                { name: 'Thread Channel', value: 'true', inline: true },
                 { name: 'Archived', value: toEpoch(channel.archiveTimestamp()) ?? channel.archived.toString() },
                 { name: 'Auto Archive', value: `${channel.autoArchiveDuration / 1440} Day(s)`, inline: true },
                 { name: 'Invitable', value: (channel.invitable ?? 'PUBLIC').toString(), inline: true },
@@ -179,15 +194,19 @@ Module.addInteractionCommand({ name: 'get',
                 { name: 'Members', value: channel.members.size.toString(), inline: true },
                 { name: 'Created By', value: (await channel.fetchOwner())?.toString(), inline: true }
               ]);
+            } else if (!channel.isDMBased()) {
+              embed.addFields([
+                { name: 'Description', value: channel.topic || 'Unknown', inline: true },
+                { name: 'NSFW', value: `${channel.nsfw ?? 'false'}`, inline: true },
+              ]);
+              if (int.guild.rulesChannel?.id == channel.id) embed.addFields([{ name: "Rules Channel", value: "true", inline: true }]);
             }
             embed.addFields([
-              { name: 'Description' || 'Unknown', value: channel.topic, inline: true },
               { name: 'Last pin at', value: channel.lastPinAt || 'N/A', inline: true },
-              { name: 'NSFW', value: `${channel.nsfw ?? 'false'}`, inline: true },
               { name: 'Slowmode', value: channel.rateLimitPerUser || 'None', inline: true }
             ]);
           }
-          return int.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+          return int.reply({ embeds: [embed], ephemeral: true });
         }
       };
       const getBan = async () => {
@@ -197,18 +216,17 @@ Module.addInteractionCommand({ name: 'get',
           const plural = get.size == 1;
           const embed = u.embed().setTitle(`There ${plural ? 'is' : 'are'} \`${get.size}\` banned user${plural ? '' : 's'} in your server`);
           if (object.length > 0) embed.setDescription(object);
-          return int.channel.send({ embeds: [embed] });
+          return int.reply({ embeds: [embed], ephemeral: true });
         } else {
           const object = get.find(b => b.user.username.toLowerCase() == ban || b.user.id == ban || b.user.tag.toLowerCase() == ban.toLowerCase());
-          if (!object) return int.channel.send("I couldn't find that user.");
-          const embed = u.embed().setTitle(object.user.username)
-          .addFields([
+          if (!object) return int.reply({ content: "I couldn't find that user.", ephemeral: true });
+          const embed = u.embed().setTitle(object.user.username).addFields([
             { name: 'ID', value: object.user.id || 'Unknown', inline: true },
             { name: 'Created at', value: toEpoch(object.user.createdTimestamp), inline: true },
-            { name: 'Activity', value: object.user.presence?.status, inline: true },
-            { name: 'Bot', value: object.user.bot, inline: true },
-            { name: 'Partial user', value: object.user.partial, inline: true },
-            { name: 'Ban reason', value: object.reason ? object.reason : 'None given', inline: true }
+            { name: 'Activity', value: object.user.presence?.status ?? "Unknown", inline: true },
+            { name: 'Bot', value: object.user.bot.toString(), inline: true },
+            { name: 'Partial user', value: object.user.partial.toString(), inline: true },
+            { name: 'Ban reason', value: object.reason ?? 'None given', inline: true }
           ]).setThumbnail(object.user.displayAvatarURL({ size: 64 }));
           int.reply({ embeds: [embed], ephemeral: true });
         }
