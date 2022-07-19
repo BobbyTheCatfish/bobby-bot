@@ -17,7 +17,10 @@ const postToBoard = async (reaction, user, force = false) => {
           const channel = msg.guild.channels.cache.get(x.channel);
           const embed = u.embed().setDescription(msg.content);
           if (msg.attachments.first()) embed.setImage(msg.attachments.first().url);
-          embed.addField('Channel', msg.channel).addField('Jump to post', msg.url).setTimestamp(msg.createdAt).setAuthor(msg.member.displayName, msg.author.avatarURL()).setFooter(reaction.emoji.name);
+          embed.addFields([
+            { name: 'Channel', value: `${msg.channel}` },
+            { name: 'Jump to post', value: msg.url }
+          ]).setTimestamp(msg.createdAt).setAuthor({ name: msg.member.displayName, iconURL: msg.author.avatarURL() }).setFooter(reaction.emoji.name);
           if (channel) {
             channel.send({ embeds: [embed] });
             // u.db.guildconfig.saveSBMessage(msg)

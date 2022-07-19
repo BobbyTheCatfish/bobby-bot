@@ -16,7 +16,7 @@
     "@ffmpeg-installer/ffmpeg": "^1.0.20",
     "augurbot": "github:gaiwecoor/augurbot#dev",
     "axios": "^0.21.1",
-    "discord.js": "^13.1.0",
+    "discord.js": "^14.0.2",
     "emoji-aware": "^3.0.5",
     "fast-b64": "^0.1.0",
     "file-type": "^16.5.3",

@@ -33,7 +33,7 @@ Module.addCommand({ name: "ban",
     if (s.length < 1) return msg.reply("Unfortunately, I can't ban anyone on your hit-list.");
     if (reason.trim().length < 1) reason = 'no reason given';
     const plural = s.length > 1 ? "s" : '';
-    const promptEmbed = u.embed().setTitle(`Confirm ban${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't ban the following member${f.length > 1 ? 's' : ''}:\n${f.join('\n')}` : ''}`).addField('Reason', reason);
+    const promptEmbed = u.embed().setTitle(`Confirm ban${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't ban the following member${f.length > 1 ? 's' : ''}:\n${f.join('\n')}` : ''}`).addFields({ name: 'Reason', value: reason });
     const confirmEmbed = u.embed().setTitle(`Ban${plural} confirmed`);
     const cancelEmbed = u.embed().setTitle(`Ban${plural} canceled`).setDescription(`${msg.author} canceled the ban${plural}`);
     const decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed);
@@ -53,10 +53,10 @@ Module.addCommand({ name: "ban",
         i++;
       } while (i < s.length);
       const embed = u.embed().setTitle('Ban Results')
-                .addField('Banned Members', good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned')
-                .setFooter(`Action performed by ${msg.member.displayName}`, msg.author.displayAvatarURL())
-                .setTimestamp(new Date());
-      if (errors.length > 0) embed.addField('Failed To Ban', errors.join('\n'));
+        .addFields([{ name: 'Banned Members', value: good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned' }])
+        .setFooter(`Action performed by ${msg.member.displayName}`, msg.author.displayAvatarURL())
+        .setTimestamp(new Date());
+      if (errors.length > 0) embed.addFields([{ name: 'Failed To Ban', value: errors.join('\n') }]);
       if (logChannel) {
         if (msg.channel != logChannel) msg.reply(`Ban results in ${logChannel} (${`\`${good.length}\` banned`})`).then(m => u.clean(m, 3000));
         u.emit('ban', msg, targets, reason, embed);
@@ -79,7 +79,7 @@ Module.addCommand({ name: "ban",
     if (s.length < 1) return msg.reply(`Unfortunately, I can't kick ${targets.length > 1 ? "them" : "anyone on your kick-list"}`);
     if (reason.trim().length < 1) reason = 'no reason given';
     const plural = s.length > 1 ? "s" : '';
-    const promptEmbed = u.embed().setTitle(`Confirm kick${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't kick the following member${f.length > 1 ? 's' : ''}:\n${f.join('\n')}` : ''}`).addField('Reason', reason);
+    const promptEmbed = u.embed().setTitle(`Confirm kick${plural} for:`).setDescription(`${s.join('\n')}${f.length > 0 ? `\n\nNote: I can't kick the following member${f.length > 1 ? 's' : ''}:\n${f.join('\n')}` : ''}`).addFields([{ name: 'Reason', value: reason }]);
     const confirmEmbed = u.embed().setTitle(`Kick${plural} confirmed`);
     const cancelEmbed = u.embed().setTitle(`Kick${plural} canceled`).setDescription(`${msg.author} canceled the kick${plural}`);
     const decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed);
@@ -99,10 +99,10 @@ Module.addCommand({ name: "ban",
         i++;
       } while (i < s.length);
       const embed = u.embed().setTitle('Kick Results')
-            .addField(`Kicked Member${good.length > 1 ? 's' : ''}`, good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned')
+            .addFields([{ name: `Kicked Member${good.length > 1 ? 's' : ''}`, value: good.length > 0 ? good.map(a => a.displayName).join('\n') : 'Nobody was banned' }])
             .setFooter(`Action performed by ${msg.member.displayName}`, msg.author.displayAvatarURL())
             .setTimestamp(new Date());
-      if (errors.length > 0) embed.addField('Failed To Kick', errors.join('\n'));
+      if (errors.length > 0) embed.addFields([{ name: 'Failed To Kick', value: errors.join('\n') }]);
       if (logChannel) {
         if (msg.channel != logChannel) msg.reply(`Kick results in ${logChannel} (${`\`${good.length}\` kicked`})`).then(m => u.clean(m, 3000));
         u.emit('kick', msg, targets, reason, embed);
@@ -255,8 +255,8 @@ Module.addCommand({ name: "ban",
     } while (i < mutedUsers.length);
     if (logChannel) u.modEvent('muteAll', msg.member, msg.channel, null,);
     const embed = u.embed().setTitle(`Mute Results:`);
-    if (s.length > 0) embed.addField("Successfully muted", `${s.join('\n')}`);
-    if (err.length > 0) embed.addField("Failed to add role", `${err.join('\n')}`);
+    if (s.length > 0) embed.addFields([{ name: "Successfully muted", value: `${s.join('\n')}` }]);
+    if (err.length > 0) embed.addFields([{ name: "Failed to add role", value: `${err.join('\n')}` }]);
     const message = msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
     if (logChannel && logChannel != msg.channel) {
       logChannel.send({ embeds: [embed], allowedMentions: { parse: [] } });
@@ -294,8 +294,8 @@ Module.addCommand({ name: "ban",
       i++;
     } while (i < mutedUsers.length);
     const embed = u.embed().setTitle(`Unmute Results:`);
-    if (s.length > 0) embed.addField("Successfully unmuted", s.join('\n'));
-    if (err.length > 0) embed.addField("Failed to remove role", err.join('\n'));
+    if (s.length > 0) embed.addFields([{ name: "Successfully unmuted", value: s.join('\n') }]);
+    if (err.length > 0) embed.addFields([{ name: "Failed to remove role", value: err.join('\n') }]);
     return msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
 })
@@ -323,7 +323,7 @@ Module.addCommand({ name: "ban",
       i++;
     } while (i < members.length);
     const embed = u.embed().setTitle(`Muted All in ${channel.name}`).setDescription(`Muted \`${s.length}\` members`);
-    if (f.length > 0) embed.addField('Failed to Mute', f.join('\n'));
+    if (f.length > 0) embed.addFields([{ name: 'Failed to Mute', value: f.join('\n') }]);
     if (logChannel) logChannel.send({ embeds: [embed] });
   }
 })
@@ -351,7 +351,7 @@ Module.addCommand({ name: "ban",
       i++;
     } while (i < members.length);
     const embed = u.embed().setTitle(`Muted All in ${channel.name}`).setDescription(`Muted \`${s.length}\` members`);
-    if (f.length > 0) embed.addField('Failed to Mute', f.join('\n'));
+    if (f.length > 0) embed.addFields([{ name:'Failed to Mute', value: f.join('\n') }]);
     if (logChannel) logChannel.send({ embeds: [embed] });
   }
 })

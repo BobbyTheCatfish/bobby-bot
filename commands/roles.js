@@ -6,7 +6,7 @@ Module.addCommand({ name: "inventory",
   onlyGuild: true,
   process: async (msg) => {
     const inventory = msg.guild.roles.cache.filter(r => msg.member.roles.cache.find(e => e.name.toLowerCase() + ' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
-    const embed = u.embed().setAuthor(msg.member.displayName, msg.member.user.displayAvatarURL({ format: 'png' }))
+    const embed = u.embed().setAuthor({ name: msg.member.displayName, iconURL: msg.member.user.displayAvatarURL({ format: 'png' }) })
       .setTitle("Equippable Color Inventory")
       .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`).setFooter('Use !equip none to unequip any roles.');
     if (!inventory) return msg.channel.send("You don't have any colors in your inventory!").then(u.clean);
@@ -43,7 +43,7 @@ Module.addCommand({ name: "inventory",
     } else if (words[0].toLowerCase() == 'help') {
       const embed = u.embed()
         .setTitle("How to set up role color equiping")
-        .setAuthor("Bobby Bot", "https://images-ext-1.discordapp.net/external/PnqhQnz3eY98xD8GMtgLKTv9GJ7ZvVjqg5-oiGbSRjk/https/cdn.discordapp.com/avatars/469983220172324908/480bacea977058eed3ff1032470e8034.webp")
+        .setAuthor({ name: "Bobby Bot", iconURL: "https://images-ext-1.discordapp.net/external/PnqhQnz3eY98xD8GMtgLKTv9GJ7ZvVjqg5-oiGbSRjk/https/cdn.discordapp.com/avatars/469983220172324908/480bacea977058eed3ff1032470e8034.webp" })
         .setColor('#2e93ff')
         .addFields([{ name: 'Step 1:', value: 'Create a new role below all other ones. Make sure that it has the same name, followed by `Colors` (example: the new role for the role `Bob Boi` would be `Bob Boi Colors`)', inline: true },
           { name: 'Step 2', value: 'Set the color of the new role to the color of the old one', inline: false },
@@ -80,7 +80,7 @@ Module.addCommand({ name: "inventory",
     const sendNSave = async () => {
       const embed = u.embed().setTitle('Should the roles be removed when the user unreacts?');
       msg.author.send({ embeds: [embed] }).then(async m => {
-        await u.react(m, yesNo);
+        await msg.react(m, yesNo);
         await m.awaitReactions({ filter, max: 1, time, errors: ['time'] }).then(async collected => {
           let removeOnUnreact = false;
           if (collected.first().emoji.name == yesNo[0]) removeOnUnreact = true;
@@ -90,7 +90,7 @@ Module.addCommand({ name: "inventory",
           msg.author.send(`Sending the message in ${msg.channel}`);
           msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).then(async message => {
             await u.db.reactionRoles.saveReactionRoles(message, things, removeOnUnreact);
-            await u.react(message, things.map(t => t.id || t.name));
+            await msg.react(message, things.map(t => t.id || t.name));
             await message.pin();
           });
         });
@@ -120,7 +120,7 @@ Module.addCommand({ name: "inventory",
             if (things.length >= 10) return await sendNSave();
             embed = u.embed().setTitle(`Do you want to add more? (*${10 - things.length}* left)`).setDescription(`The following has been added:\n${emote.id ? `<:${emote.name}:${emote.id}` : emote.name} - ${role.name}`);
             msg.author.send({ embeds: [embed] }).then(async message => {
-              await u.react(message, yesNo);
+              await msg.react(message, yesNo);
               await message.awaitReactions({ filter, max: 1, time, errors: ['time'] }).then(async collect => {
                 const reacted = collect.first().emoji.name;
                 if (reacted == yesNo[0]) return await prompt();
@@ -143,7 +143,8 @@ Module.addCommand({ name: "inventory",
       const member = message.guild.members.cache.get(user.id);
       const role = dbLookup[0].reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
       if (!role) reaction.users.remove(member.user);
-      else if (!message.guild.roles.cache.get(role)) return (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
+      else if (!message.guild.roles.cache.get(role)) return;
+      // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
       else if (!member.roles.cache.get(role)) member.roles.add(role);
     }
   } catch (error) {u.errorHandler(error, 'Error on adding reaction role');}
@@ -155,7 +156,8 @@ Module.addCommand({ name: "inventory",
       const message = await reaction.message.fetch();
       const member = message.guild.members.cache.get(user.id),
         role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
-      if (!message.guild.roles.cache.get(role)) (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
+      if (!message.guild.roles.cache.get(role)) return;
+      // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
       else if (member.roles.cache.get(role)) member.roles.remove(member.guild.roles.cache.get(role));
     }
   } catch (error) {u.errorHandler(error, 'Error on reaction role removal');}

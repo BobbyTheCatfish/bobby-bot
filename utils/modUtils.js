@@ -1,19 +1,19 @@
 const Discord = require("discord.js"),
   u = require("../utils/utils"),
-  { MessageActionRow, MessageButton } = require("discord.js");
+  { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const slowmodes = new Map();
 const modActions = (id, mute) => [
-  new MessageActionRow().addComponents(
-    new MessageButton().setCustomId(`mCClear${id}`).setEmoji("✅").setLabel(mute ? "Unmute" : "False Alarm").setStyle("SUCCESS"),
-    new MessageButton().setCustomId(`mCVerbal${id}`).setEmoji("🗣").setLabel("Light Warning").setStyle("PRIMARY"),
-    new MessageButton().setCustomId(`mCMinor${id}`).setEmoji("⚠").setLabel("Minor Infraction").setStyle("DANGER"),
-    new MessageButton().setCustomId(`mCMajor${id}`).setEmoji("⛔").setLabel("Major Infraction").setStyle("DANGER"),
-    new MessageButton().setCustomId(`mCMute${id}`).setEmoji("🔇").setLabel("Mute").setStyle("DANGER")
+  new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`mCClear${id}`).setEmoji("✅").setLabel(mute ? "Unmute" : "False Alarm").setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`mCVerbal${id}`).setEmoji("🗣").setLabel("Light Warning").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`mCMinor${id}`).setEmoji("⚠").setLabel("Minor Infraction").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`mCMajor${id}`).setEmoji("⛔").setLabel("Major Infraction").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`mCMute${id}`).setEmoji("🔇").setLabel("Mute").setStyle(ButtonStyle.Danger)
   ),
-  new MessageActionRow().addComponents(
-    new MessageButton().setCustomId(`mCTimeout${id}`).setEmoji("⏰").setLabel("Timeout").setStyle("DANGER"),
-    new MessageButton().setCustomId(`mCInfo${id}`).setEmoji("👤").setLabel("User Info").setStyle("SECONDARY"),
-    new MessageButton().setCustomId(`mCLink${id}`).setEmoji("🔗").setLabel("Thread to Discuss").setStyle("SECONDARY")
+  new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`mCTimeout${id}`).setEmoji("⏰").setLabel("Timeout").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`mCInfo${id}`).setEmoji("👤").setLabel("User Info").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`mCLink${id}`).setEmoji("🔗").setLabel("Thread to Discuss").setStyle(ButtonStyle.Secondary)
   )
 ];
 
@@ -23,19 +23,20 @@ function compareRoles(mod, target) {
   return (modHigh.comparePositionTo(targetHigh) > 0);
 }
 const colors = { low: '0x00ff00', med: '0x#ffff00', high: '0xff0000' };
-const logEmbed = (int, target, color) => u.embed().addField("User", `${target}\n(${target.user.tag})`, true)
-  .addField("Mod", int?.member?.toString() ?? "Auto", true)
-  .addField("Joined At", u.toEpoch(target.joinedAt, 'f'), true)
-  .setColor(colors[color])
-  .setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
-const infractionField = (embed, summary) => embed.addField(`Infraction Summary (${summary.time} Day(s))`, `Infractions: ${summary.count}\nPoints: ${summary.points}`);
+const logEmbed = (int, target, color) => u.embed()
+  .addFields([
+    { name: "User", value: `${target}\n(${target.user.tag})`, inline: true },
+    { name: "Mod", value: int?.member?.toString() ?? "Auto", inline: true },
+    { name: "Joined At", value: u.toEpoch(target.joinedAt, 'f'), inline: true }
+  ]).setColor(colors[color]).setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
+const infractionField = (embed, summary) => embed.addFields([{ name: `Infraction Summary (${summary.time} Day(s))`, value: `Infractions: ${summary.count}\nPoints: ${summary.points}` }]);
 class ModCommon {
   /**
-   * @param {Discord.CommandInteraction} interaction
+   * @param {Discord.ChatInputCommandInteraction} interaction
    * @param {Discord.TextChannel} logs
    */
   constructor(interaction, logs) {
-    /** @type {Discord.CommandInteraction} */
+    /** @type {Discord.ChatInputCommandInteraction} */
     this.interaction = interaction;
     /** @type {Discord.TextChannel} */
     this.logs = logs;
@@ -60,6 +61,11 @@ class ModCommon {
       .addFields(fields ?? []);
     this.logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
+  /**
+   * @param {string} untrusted
+   * @param {Discord.GuildMember} target
+   * @param {boolean} testing
+   */
   async ban(untrusted, target, testing = false) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -78,7 +84,7 @@ class ModCommon {
           u.embed().setTitle("User Ban").setDescription(`You have been banned from **${interaction.guild.name}** for:\n${reason}`)
         ] }).catch(() => u.blocked(target, logs, "They were too busy being banned"));
         if (untrusted) await target.roles.add(untrusted);
-        if (!testing) await target.ban({ days, reason });
+        if (!testing) await target.ban({ deleteMessageDays: days, reason });
 
         // Edit interaction
         await interaction.followUp({ embeds: [
@@ -94,9 +100,10 @@ class ModCommon {
         });
 
         // Log it
-        const banEmbed = logEmbed(interaction, target, 'high').setTitle('Member Banned')
-          .addField('Messages Deleted', `${days ?? 0} Days`, true)
-          .addField('Reason', reason);
+        const banEmbed = logEmbed(interaction, target, 'high').setTitle('Member Banned').addFields([
+          { name: 'Messages Deleted', value: `${days ?? 0} Days`, inline: true },
+          { name: 'Reason', value: reason }
+        ]);
         if (proof) banEmbed.setImage(proof.url);
         logs.send({ embeds: [banEmbed], allowedMentions: { parse: [] } });
       }
@@ -112,12 +119,11 @@ class ModCommon {
       let deleted = await interaction.channel.bulkDelete(deleteCount, true).catch(e => { return u.errorHandler(e, interaction); });
       interaction.editReply(`${deleted.size} messages deleted`);
       if (deleted.size > deleteCount) deleted += `\n(note that I couldn't delete ${deleteCount - deleted.size} messages since they were older than 2 weeks)`;
-      const embed = u.embed({ author: interaction.member }).setTitle("Bulk Delete")
-        .addField("Channel", interaction.channel.toString(), true)
-        .addField('Mod', interaction.member.toString(), true)
-        .addField("Messages", `${deleteCount} messages deleted`)
-        .setColor(colors.med)
-        .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
+      const embed = u.embed({ author: interaction.member }).setTitle("Bulk Delete").addFields([
+        { name: "Channel", value: interaction.channel.toString(), inline: true },
+        { name: 'Mod', value: interaction.member.toString(), inline: true },
+        { name: "Messages", value: `${deleteCount} messages deleted` }
+      ]).setColor(colors.med).setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
       logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
     } catch (error) {
       u.errorHandler(error, interaction);
@@ -150,18 +156,20 @@ class ModCommon {
     const embed = u.embed().setColor(colors.med).setAuthor({ name: member.displayName, iconURL: member.displayAvatarURL() });
 
     if (Array.isArray(matches)) matches = matches.join(", ");
-    if (matches) embed.addField("Match", matches);
-    embed.addField("User", member.toString());
+    if (matches) embed.addFields([{ name: "Match", value: matches }]);
+    embed.addFields([{ name: "User", value: member.toString() }]);
 
     if (msg) {
       embed.setTimestamp(msg.editedAt ?? msg.createdAt)
         .setDescription((msg.editedAt ? "[Edited]\n" : "") + msg.cleanContent)
-        .addField("Channel", msg.channel?.toString(), true)
-        .addField("Jump to Post", `[Original Message](${msg.url})`, true);
+        .addFields([
+          { name: "Channel", value: msg.channel?.toString(), inline: true },
+          { name: "Jump to Post", value: `[Original Message](${msg.url})`, inline: true }
+        ]);
     }
-    if (snitch) embed.addField("Flagged By", snitch.toString(), true);
-    if (flagReason) embed.addField("Reason", flagReason, true);
-    if (furtherInfo) embed.addField("Further Information", furtherInfo, true);
+    if (snitch) embed.addFields([{ name: "Flagged By", value: snitch.toString(), inline: true }]);
+    if (flagReason) embed.addFields([{ name: "Reason", value: flagReason, inline: true }]);
+    if (furtherInfo) embed.addFields([{ name: "Further Information", value: furtherInfo, inline: true }]);
     infractionField(embed, infractionSummary);
 
     if (member.user?.bot) embed.setFooter({ text: "The user is a bot and the flag likely originated elsewhere. No action will be processed." });
@@ -212,11 +220,13 @@ class ModCommon {
   async resolveFlag(user, userId, mod, msg, action, additionalFields = []) {
     const embed = u.embed().setAuthor({ name: mod.displayName, iconURL: mod.displayAvatarURL() })
       .setTitle("Mod Card Resolved")
-      .addField("Action", action, true)
-      .addField("User", `${user} (${userId})`, true)
-      .addField("Mod", mod.toString(), true);
-    const component = new MessageActionRow().addComponents(
-      new MessageButton().setCustomId(`mCLink`).setEmoji("🔗").setLabel("Thread to Discuss").setStyle("SECONDARY")
+      .addFields([
+        { name: "Action", value: action, inline: true },
+        { name: "User", value: `${user} (${userId})`, inline: true },
+        { name: "Mod", value: mod.toString(), inline: true }
+      ]);
+    const component = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`mCLink`).setEmoji("🔗").setLabel("Thread to Discuss").setStyle(ButtonStyle.Secondary)
     );
     if (additionalFields.length > 0) embed.addFields(additionalFields);
     await msg.edit({ components: [component], content: `Resolved by ${mod} (${action})` }).catch(e => {
@@ -251,10 +261,11 @@ class ModCommon {
       } while (i < members.length);
       interaction.editReply(`Disconnected ${members.length - failed.length} user(s) from ${channel}. ${failed.length > 0 ? `There was an issue, and I wasn't able to disconnect ${failed.length} user(s)` : ""}`);
       const embed = u.embed().setTitle("Disconnected All Users")
-        .addField("Channel", channel.toString(), true)
-        .addField("Mod", interaction.member.toString(), true)
-        .addField("User Count", `${members.length - failed.length - mods.length}/${members.length}`)
-        .setColor(colors.med)
+        .addFields([
+          { name: "Channel", value: channel.toString(), inline: true },
+          { name: "Mod", value: interaction.member.toString(), inline: true },
+          { name: "User Count", value: `${members.length - failed.length - mods.length}/${members.length}` }
+        ]).setColor(colors.med)
         .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
       logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
     } catch (error) {
@@ -320,7 +331,7 @@ class ModCommon {
 
         // Log it
         const embed = logEmbed(interaction, target, 'high').setTitle("User Kick")
-          .addField('Reason', reason)
+          .addFields({ name: 'Reason', value: reason })
           .setColor(0x0000ff);
         if (proof) embed.setImage(proof.url);
         logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
@@ -354,7 +365,7 @@ class ModCommon {
       const embed = logEmbed(interaction, target, 'med')
         .setTitle(`Member ${unmute ? 'Unm' : 'M'}uted`)
         .setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
-      if (reason && !unmute) embed.addField('Reason', reason);
+      if (reason && !unmute) embed.addFields({ name: 'Reason', value: reason });
       await logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
       let thread = muteChannel.threads.cache.find(f => f.name == `${target.id} Mute Session`);
       if (thread) await thread.setArchived(unmute);
@@ -382,10 +393,11 @@ class ModCommon {
       channel.permissionOverwrites.edit(interaction.guild.id, { SPEAK: unmute ? null : false });
       interaction.editReply(`Everyone without permissions will now be ${unmute ? 'able to talk' : 'muted'} in ${channel}`);
       const embed = u.embed().setTitle(`${unmute ? 'Unm' : 'M'}uted All Users`)
-        .addField("Channel", channel.toString(), true)
-        .addField("Mod", interaction.member.toString(), true)
-        .addField("User Count", `${channel.members.size} User(s)`)
-        .setColor(colors.med)
+        .addFields([
+          { name: "Channel", value: channel.toString(), inline: true },
+          { name: "Mod", value: interaction.member.toString(), inline: true },
+          { name: "User Count", value: `${channel.members.size} User(s)` }
+        ]).setColor(colors.med)
         .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
       logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
     } catch (error) {
@@ -409,7 +421,7 @@ class ModCommon {
       await logs.send({ embeds: [
         logEmbed(interaction, target, 'low')
           .setTitle("New note").setDescription(note)
-          .addField(`Infraction Summary (${summary.time} Days)`, `Infractions: ${summary.count ?? 0}\nPoints: ${summary.points ?? 0}`)
+          .addFields([{ name: `Infraction Summary (${summary.time} Days)`, value: `Infractions: ${summary.count ?? 0}\nPoints: ${summary.points ?? 0}` }])
       ], allowedMentions: { parse: [] } });
 
       await interaction.reply({ content: `Note added for user ${target}.`, ephemeral: true });
@@ -440,8 +452,10 @@ class ModCommon {
       const summary = await u.db.infraction.getSummary(interaction.guild.id, target.id);
       logs.send({ embeds: [
         logEmbed(interaction, target, 'med').setTitle("User Renamed")
-        .addField("Change", `**${oldNick}** >>> **${name}**`)
-        .addField(`Infraction Summary (${summary.time} Days) `, `Infractions: ${summary.count ?? 0}\nPoints: ${summary.points ?? 0}`)
+        .addFields([
+          { name: "Change", value: `**${oldNick}** >>> **${name}**` },
+          { name: `Infraction Summary (${summary.time} Days) `, value: `Infractions: ${summary.count ?? 0}\nPoints: ${summary.points ?? 0}` }
+        ])
       ], allowedMentions: { parse: [] } });
       await interaction.editReply({ content: comment });
     } catch (error) {
@@ -470,12 +484,13 @@ class ModCommon {
           }
           await interaction.editReply("Slowmode was disabled");
           const embed = u.embed().setTitle("Slowmode Disabled")
-            .addField("Channel", channel.toString())
-            .addField("Old Message Delay", `${old} seconds`)
-            .setColor(colors.med)
+            .addFields([
+              { name: "Channel", value: channel.toString() },
+              { name: "Old Message Delay", value: `${old} seconds` }
+            ]).setColor(colors.med)
             .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
-          if (slow) embed.addField("Would Have Expired At", `${u.toEpoch(new Date(slow.started.getTime() + (duration * 60000)), 'f')}`);
-          embed.addField("Mod", interaction.member.toString());
+          if (slow) embed.addFields([{ name: "Would Have Expired At", value: `${u.toEpoch(new Date(slow.started.getTime() + (duration * 60000)), 'f')}` }]);
+          embed.addFields([{ name: "Mod", value: interaction.member.toString() }]);
           return logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
         }
         const prev = slowmodes.get(channel.id);
@@ -488,21 +503,24 @@ class ModCommon {
             c.edit({ rateLimitPerUser }).catch(error => u.errorHandler(error, "Reset rate limit after slowmode"));
             slowmodes.delete(c.id);
             const embed = u.embed().setTitle("Slowmode Done")
-              .addField("Channel", channel.toString())
-              .addField("Started By", interaction.member.toString())
-              .addField("Delay", `${rateLimitPerUser} seconds`)
-              .addField("Duration", `${duration} minutes`)
-              .setColor(colors.med)
+              .addFields([
+                { name: "Channel", value: channel.toString() },
+                { name: "Started By", value: interaction.member.toString() },
+                { name: "Delay", value: `${rateLimitPerUser} seconds` },
+                { name: "Duration", value: `${duration} minutes` }
+              ]).setColor(colors.med)
               .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
             logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
           }, duration * 60000, channel, limit),
           limit, duration, started: new Date()
         });
         const embed = u.embed().setTitle("Slowmode Activated")
-          .addField("Channel", channel.toString(), true)
-          .addField("Mod", interaction.member.toString(), true)
-          .addField("Duration", `${duration} minutes\n${prev ? `(Was ${prev.duration} minutes)` : ""}`)
-          .addField("Message Delay", `${delay} seconds\n${prev ? `(Was ${prev.limit} seconds)` : ""}`)
+          .addFields([
+            { name: "Channel", value: channel.toString(), inline: true },
+            { name: "Mod", value: interaction.member.toString(), inline: true },
+            { name: "Duration", value: `${duration} minutes\n${prev ? `(Was ${prev.duration} minutes)` : ""}` },
+            { name: "Message Delay", value: `${delay} seconds\n${prev ? `(Was ${prev.limit} seconds)` : ""}` }
+          ])
           .setColor(colors.med)
           .setAuthor({ name: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
         logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
@@ -529,8 +547,10 @@ class ModCommon {
       const time = previous ? `Was until ${u.toEpoch(previous, 'T')}${length != 0 ? `, and is now for ${length} minutes` : ''}` : `${length} minutes`;
       await logs.send({ embeds: [
         logEmbed(interaction, target, 'med').setTitle("User Timeout" + length == 0 ? " Removed" : "")
-        .addField("Length", time, true)
-        .addField('Reason', reason)
+        .addFields([
+          { name: "Length", value: time, inline: true },
+          { name: 'Reason', value: reason }
+        ])
       ], allowedMentions: { parse: [] } });
     } catch (error) {
       u.errorHandler(error, interaction);
@@ -558,7 +578,7 @@ class ModCommon {
       const embed = logEmbed(interaction, target, 'low').setTitle(`User ${untrust ? 'Removed From' : 'Given'} Trusted`);
       if (!untrust && target.roles.cache.has(untrusted)) {
         await target.roles.remove(untrusted);
-        embed.addField("Untrusted", "User was previously untrusted");
+        embed.addFields([{ name: "Untrusted", value: "User was previously untrusted" }]);
       }
       if (untrust) await target.roles.remove(trusted);
       else await target.roles.add(trusted);
@@ -606,16 +626,18 @@ class ModCommon {
       const trustStatus = target.roles.cache.has(untrusted) ? "Untrusted" : target.roles.cache.has(trusted) ? "Trusted" : target.roles.cache.has(trustPlus) ? "Trusted+" : "Not Trusted";
       const userEmbed = u.embed({ author: target }).setColor(target.displayColor)
         .setTitle(`User Info for ${target.displayName}`)
-        .addField("Name", `${target.user.username} ${target.nickname ? `(${target.nickname})` : ''}`, true)
-        .addField("Joined", u.toEpoch(target.joinedAt, 'f'), true)
-        .addField("Account Created", u.toEpoch(target.user.createdAt, 'f'), true)
-        .addField("Trusted Status", trustStatus, true)
-        .addField("Posts", `${userdoc?.posts ?? 0} tracked posts`, true)
-        .addField("Roles", target.roles.cache.map(r => r.toString()).join('\n'));
-      if (target.premiumSince) userEmbed.addField("Boosting Since", u.toEpoch(target.premiumSince), true);
-      if (target.roles.cache.has(muted)) userEmbed.addField("Muted", "User is currently muted", true);
-      if (target.user.bot) userEmbed.addField("Bot", "Yup", true);
-      if (target.user.flags.toArray().length > 0) userEmbed.addField("Flags", target.user.flags.toArray().join('\n'));
+        .addFields([
+          { name: "Name", value: `${target.user.username} ${target.nickname ? `(${target.nickname})` : ''}`, inline: true },
+          { name: "Joined", value: u.toEpoch(target.joinedAt, 'f'), inline: true },
+          { name: "Account Created", value: u.toEpoch(target.user.createdAt, 'f'), inline: true },
+          { name: "Trusted Status", value: trustStatus, inline: true },
+          { name: "Posts", value: `${userdoc?.posts ?? 0} tracked posts`, inline: true },
+          { name: "Roles", value: target.roles.cache.map(r => r.toString()).join('\n') }
+        ]);
+      if (target.premiumSince) userEmbed.addFields([{ name: "Boosting Since", value: u.toEpoch(target.premiumSince), inline: true }]);
+      if (target.roles.cache.has(muted)) userEmbed.addFields([{ name: "Muted", value: "User is currently muted", inline: true }]);
+      if (target.user.bot) userEmbed.addFields({ name: "Bot", value: "Yup", inline: true });
+      if (target.user.flags.toArray().length > 0) userEmbed.addFields([{ name: "Flags", value: target.user.flags.toArray().join('\n') }]);
       await interaction?.editReply({ embeds: [userEmbed, infractions] });
       return [userEmbed, infractions];
     } catch (error) {
@@ -639,7 +661,7 @@ class ModCommon {
 
 
       const embed = logEmbed(interaction, target, 'low').setTitle("Watching User")
-        .addField(`Trusted ${undo ? "Regained" : "Removed"}`, `${(remove || undo) ? "YES" : "NO"}`, true);
+        .addFields([{ name: `Trusted ${undo ? "Regained" : "Removed"}`, value: `${(remove || undo) ? "YES" : "NO"}`, inline: true }]);
       if (undo) {
         await target.roles.remove(untrusted);
         if (!target.roles.cache.has(trusted)) target.roles.add(trusted);

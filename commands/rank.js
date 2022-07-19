@@ -79,10 +79,12 @@ const Module = new Augur.Module()
           userDoc.lifetimeRank = Rank.getLifeRank(allRanks.users, member.id);
           response = u.embed()
             .setAuthor({ name: member.displayName, iconURL: member.displayAvatarURL({ dynamic: true }) })
-            .addField("Rank", `Season: ${userDoc.currentRank}/${int.guild.memberCount}\nLifetime: ${userDoc.lifetimeRank}/${Math.max(allRanks.users.length, int.guild.memberCount)}`, true)
-            .addField("Level", `Current Level: ${userDoc.level}\nNext Level: ${userDoc.nextLevel} XP`, true)
-            .addField("Exp.", `Season: ${parseInt(userDoc.xp, 10).toLocaleString()} XP\nLifetime: ${parseInt(userDoc.lifeXP, 10).toLocaleString()} XP`, true)
-            .setTitle(`${int.guild.name} Chat Ranking`);
+            .setTitle(`${int.guild.name} Chat Ranking`)
+            .addFields([
+              { name: "Rank", value: `Season: ${userDoc.currentRank}/${int.guild.memberCount}\nLifetime: ${userDoc.lifetimeRank}/${Math.max(allRanks.users.length, int.guild.memberCount)}`, inline: true },
+              { name: "Level", value: `Current Level: ${userDoc.level}\nNext Level: ${userDoc.nextLevel} XP`, inline: true },
+              { name: "Exp.", value: `Season: ${parseInt(userDoc.xp, 10).toLocaleString()} XP\nLifetime: ${parseInt(userDoc.lifeXP, 10).toLocaleString()} XP`, inline: true }
+            ]);
           return int.reply({ embeds: [response] });
         }
       } catch (e) {
@@ -150,12 +152,13 @@ const Module = new Augur.Module()
         let doc = await u.db.ranks.getAllRanks(int.guild.id);
         if (!doc && enable == null && !see) return int.reply({ content: "Looks like the leaderboard hasn't been configured yet. You can do that with `/rank config enable: true`", ephemeral: true });
         if (see) {
-          const embed = u.embed().setTitle("Leaderboard Settings")
-            .addField("Enabled", `${doc.enabled}`)
-            .addField("Leveling Rate", `${doc.rate} (on a scale of 1 being easy, 10 being hard)`);
-          if (doc.exclude?.roles?.length > 0) embed.addField("Excluded Roles", doc.exclude.roles.map(r => `<@&${r}>`).join('\n'));
-          if (doc.exclude?.channels?.length > 0) embed.addField("Excluded Channels", doc.exclude.channels.map(r => `<#${r}>`).join('\n'));
-          if (doc.roles?.length > 0) embed.addField("Rewards", doc.roles.sort((a, b) => a.lvl - b.lvl).map(r => `<@&${r.id}> at level ${r.lvl}`).join('\n'));
+          const embed = u.embed().setTitle("Leaderboard Settings").addFields([
+            { name: "Enabled", value: `${doc.enabled}` },
+            { name: "Leveling Rate", value: `${doc.rate} (on a scale of 1 being easy, 10 being hard)` }
+          ]);
+          if (doc.exclude?.roles?.length > 0) embed.addFields([{ name: "Excluded Roles", value: doc.exclude.roles.map(r => `<@&${r}>`).join('\n') }]);
+          if (doc.exclude?.channels?.length > 0) embed.addFields([{ name: "Excluded Channels", value: doc.exclude.channels.map(r => `<#${r}>`).join('\n') }]);
+          if (doc.roles?.length > 0) embed.addFields([{ name: "Rewards", value: doc.roles.sort((a, b) => a.lvl - b.lvl).map(r => `<@&${r.id}> at level ${r.lvl}`).join('\n') }]);
           return int.reply({ embeds: [embed], allowedMentions: { parse: [] } });
         }
         if (enable == null && !excludeR && !excludeC && !reward && level == null && !rate) return int.reply({ content: "You need to provide some options.", ephemeral: true });

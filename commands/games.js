@@ -175,7 +175,7 @@ Module.addCommand({ name: "playing",
       const min = Math.min(gameList.length, 25);
       const embed = u.embed().setTimestamp().setTitle(`Currently played games in ${msg.guild.name}`)
                 .setDescription(`The ${min == 1 ? 'only game' : `top ${min} games`} currently being played in ${msg.guild.name}:`);
-      if (gameList.length > 0) for (let i = 0; i < min; i++) embed.addField(gameList[i].game, gameList[i].people.join('\n'), true);
+      if (gameList.length > 0) for (let i = 0; i < min; i++) embed.addFields([{ name: gameList[i].game, value: gameList[i].people.join('\n'), inline: true }]);
       else embed.setDescription("Well, this is awkward... Nobody is playing anything.");
       msg.reply({ embeds: [embed], allowedMentions: { parse: [] } });
     }

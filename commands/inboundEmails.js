@@ -40,7 +40,7 @@ async function getEmails() {
     if (from) {
       const { subject, text, attachments, date } = mail;
       const author = Module.client.users.cache.get(from.id);
-      const embed = u.embed().setTitle(subject).setDescription(text).setAuthor(author.username, author.displayAvatarURL()).setTimestamp(date);
+      const embed = u.embed().setTitle(subject).setDescription(text).setAuthor({ name: author.username, iconURL: author.displayAvatarURL() }).setTimestamp(date);
       const channel = Module.client.channels.cache.get('');
       if (attachments.length > 0) {
         if (attachments.map(a => a.size).reduce((a, b) => a + b) < 94371840) {

@@ -354,7 +354,7 @@ Module.addCommand({name: 'play',
         msg.reply({embeds: [
           u.embed().setTitle(`Now playing ${title}`)
             .setDescription(url)
-            .setAuthor(author.name ?? 'Unknown', author.thumbnails[0].url ?? '')
+            .setAuthor({ name: author.name ?? 'Unknown', iconURL: author.thumbnails[0].url ?? ''})
             .setThumbnail(thumbnails?.[0]?.url ?? '')
             .setTimestamp(new Date(publishDate) ?? '')
         ], allowedMentions: {repliedUser: false}, failIfNotExists: false})

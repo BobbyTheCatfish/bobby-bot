@@ -1,5 +1,5 @@
-const { Util, WebhookClient, MessageButton, MessageActionRow, Message, MessageSelectMenu, MessageEmbed } = require("discord.js");
-const { GuildMember, GuildChannel, GuildEmoji, Guild, Interaction, CommandInteraction } = require('discord.js');
+const { Util, WebhookClient, ButtonBuilder, ActionRowBuilder, Message, SelectMenuBuilder, EmbedBuilder, Embed } = require("discord.js");
+const { GuildMember, GuildChannel, GuildEmoji, Guild, BaseInteraction, CommandInteraction, ButtonStyle } = require('discord.js');
 const discord = require('discord.js');
 const config = require("../config/config.json");
 const validUrl = require('valid-url');
@@ -20,22 +20,26 @@ const Utils = {
      * @param {string|number} statistic
      * @param {any[]} succeeded
      * @param {any[]} failed
-     * @param {MessageEmbed} embed
+     * @param {Embed} embed
      * @returns {em} Emits a modEvent
      */
   emit: (name, ...options) => em.emit(name, options),
 
   db,
-  /** @param {discord.MessageActionRowOptions} data */
-  actionRow: (data) => new MessageActionRow(data),
-  /** @param {discord.MessageEmbedOptions} data */
-  embed: (data) => new MessageEmbed(data).setColor(config.color),
-  /** @param {discord.MessageButtonOptions} data */
-  button: (data) => new MessageButton(data),
-  /** @param {discord.MessageSelectMenuOptions} data */
-  selectMenu: (data) => new MessageSelectMenu(data),
+  /** @param {discord.ActionRowData} data */
+  actionRow: (data) => new ActionRowBuilder(data),
+  /** @param {discord.EmbedData} data */
+  embed: (data) => new EmbedBuilder(data).setColor(config.color),
+  /** @param {discord.ButtonComponentData} data */
+  button: (data) => new ButtonBuilder(data),
+  /** @param {discord.SelectMenuComponentData} data */
+  selectMenu: (data) => new SelectMenuBuilder(data),
   /** @param {[string, any]} data */
   collection: (data) => new discord.Collection(data),
+  /** @param {discord.ModalComponentData} data */
+  modal: (data) => new discord.ModalBuilder(data),
+  /** @param {discord.TextInputComponentOptions} data */
+  textInput: (data) => new discord.TextInputBuilder(data),
   toEpoch: (date = new Date(), format = 'f') => `<t:${Math.floor(date.getTime() / 1000)}:${format}>`,
   /**
      * Deletes 1 or more messages
@@ -61,7 +65,7 @@ const Utils = {
 
   /**
      * @param {error} error error
-     * @param {Message|Interaction|CommandInteraction} msg Message Object
+     * @param {Message|BaseInteraction|CommandInteraction} msg Message Object
      * @returns Handles the error (don't worry about it)
      */
   errorHandler: async (error, msg) => {
@@ -73,38 +77,45 @@ const Utils = {
       if (msg instanceof Message) {
         console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM")}: ${msg.cleanContent}`);
         msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
-        embed.addField("User", msg.author?.username || 'Unknown', true).addField("Location", (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), true).addField("Command", msg.cleanContent ?? "`undefined`", true);
+        embed.addFields([
+          { name: "User", value: msg.author?.username, inline: true },
+          { name: "Location", value: (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), inline: true },
+          { name: "Command", value: (msg.cleanContent || "`undefined`"), inline: true }
+        ]);
       } if (msg instanceof CommandInteraction) {
         msg.client.interactionFailed(msg, "ERROR");
         const subcmd = `/${msg.commandName} ${msg.options.getSubcommand(false) ?? ''}`;
         const options = msg.options.data.map(a => {return { name: a.name ?? "Unknown Name", value: a.value ?? 'Unkonwn Value' };});
         const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
         console.error(`${msg.user.username} in ${location}: ${subcmd} ${options.map(a => a.value).join(' ')}`);
-        embed.addField("User", msg.user?.username ?? "Unknown", true)
-          .addField("Location", location, true)
-          .addField("Command", subcmd, true)
-          .addFields(options);
-      } else if (msg instanceof Interaction) {
+        embed.addFields([
+          { name: "User", value: msg.user?.username ?? "Unknown", inline: true },
+          { name: "Location", value: location, inline: true },
+          { name: "Command", value: subcmd, inline: true }
+        ]).addFields(options);
+      } else if (msg instanceof BaseInteraction) {
         const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
         console.error(`${msg.user.username} in ${location}: ${msg.type}: ${msg.valueOf()}`);
         msg.client.interactionFailed(msg, "ERROR");
         let { type } = msg;
         if (msg.isMessageComponent()) type = msg.componentType;
-        embed.addField("User", msg.user.username, true)
-                .addField("Location", location, true)
-                .addField("Type", type, true)
-                .addField("Full interaction", msg.valueOf(), true);
+        embed.addFields([
+          { name: "User", value: msg.user.username, inline: true },
+          { name: "Location", value: location, inline: true },
+          { name: "Type", value: type, inline: true },
+          { name: "Full interaction", value: msg.valueOf(), inline: true },
+        ]);
         console.error(`${msg.user.username} in ${location}: ${type}: ${msg.valueOf()}`);
       } else if (typeof msg === "string") {
         console.error(msg);
-        embed.addField("Message", msg.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
+        embed.addFields([{ name: "Message", value: msg.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, '') }]);
       }
       console.trace(error);
 
       let stack = (error.stack ? error.stack : error.toString());
       if (stack.length > 1024) stack = stack.slice(0, 1000);
 
-      embed.addField("Error", stack.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, ''));
+      embed.addFields([{ name: "Error", value: stack.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, '') }]);
       return errorLog.send({ embeds: [embed] });
     } catch (e) {console.log(e);}
   },
@@ -131,17 +142,17 @@ const Utils = {
 
   /**
      * @param {Message} message Message Object
-     * @param {MessageEmbed}promptEmbed Initial embed to send
-     * @param {MessageEmbed}confirmEmbed Embed to send if the user reacts with ✅
-     * @param {MessageEmbed}cancelEmbed Embed to send if the user reacts with 🛑
-     * @param {MessageEmbed}timeoutEmbed Embed to send if the user runs out of time
+     * @param {Embed}promptEmbed Initial embed to send
+     * @param {Embed}confirmEmbed Embed to send if the user reacts with ✅
+     * @param {Embed}cancelEmbed Embed to send if the user reacts with 🛑
+     * @param {Embed}timeoutEmbed Embed to send if the user runs out of time
      * @param {number} time Time in ms
      * @returns boolean/null
      */
   confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed, time = 300000) => {
     if (!timeoutEmbed) timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!');
-    const confirmButton = Utils.button().setStyle('SUCCESS').setLabel('Confirm').setCustomId('confirm');
-    const cancelButton = Utils.button().setStyle('DANGER').setLabel('Cancel').setCustomId('cancel');
+    const confirmButton = Utils.button().setStyle(ButtonStyle.Success).setLabel('Confirm').setCustomId('confirm');
+    const cancelButton = Utils.button().setStyle(ButtonStyle.Danger).setLabel('Cancel').setCustomId('cancel');
     const buttons = Utils.actionRow().addComponents([confirmButton, cancelButton]);
     let msg;
     if (message instanceof discord.User || message instanceof discord.GuildMember) msg = await message.send({ embeds: [promptEmbed], components: [buttons], allowedMentions: { parse: [] } });
@@ -160,8 +171,8 @@ const Utils = {
    */
   confirmInt: async (int, description, title, time = 300000) => {
     const reply = (int.deferred || int.replied) ? "editReply" : "reply";
-    const confirmButton = Utils.button().setStyle('SUCCESS').setLabel('Confirm').setCustomId(`confirm${int.id}`);
-    const cancelButton = Utils.button().setStyle('DANGER').setLabel('Cancel').setCustomId(`cancel${int.id}`);
+    const confirmButton = Utils.button().setStyle(ButtonStyle.Success).setLabel('Confirm').setCustomId(`confirm${int.id}`);
+    const cancelButton = Utils.button().setStyle(ButtonStyle.Danger).setLabel('Cancel').setCustomId(`cancel${int.id}`);
     const buttons = Utils.actionRow().addComponents([confirmButton, cancelButton]);
 
     const embed = Utils.embed({ author: int.member ?? int.user })
@@ -175,10 +186,6 @@ const Utils = {
     await res.reply({ content: status ? "Confirmed" : "Canceled", components: [], ephemeral: true });
     return status;
   },
-  /** @param {discord.ModalOptions} data */
-  modal: (data) => new discord.Modal(data),
-  /** @param {discord.TextInputComponentOptions} data */
-  textInput: (data) => new discord.TextInputComponent(data),
   blocked: (member, logs, extra) => logs.send({ embeds: [
     Utils.embed().setAuthor({ name: member.displayName, iconURL: member.displayAvatarURL() })
       .setDescription(extra ?? null)
@@ -188,7 +195,7 @@ const Utils = {
   /**
      *
      * @param {Message} msg
-     * @param {Message|Interaction} initMessage
+     * @param {Message|BaseInteraction} initMessage
      * @param {discord.MessageActionRow[]} actionRows
      * @returns {Promise<discord.MessageComponentInteraction>}
      */
@@ -204,7 +211,7 @@ const Utils = {
   },
   /**
    *
-   * @param {Interaction} msg
+   * @param {BaseInteraction} msg
    * @param {discord.AwaitMessageCollectorOptionsParams} options
    * @returns {Promise<discord.Collection<string, Message> | null>}
    */
@@ -224,40 +231,7 @@ const Utils = {
   rand: (array) => array[Math.floor(Math.random() * array.length)],
 
   /**
-     * Kinda borked, I wouldnt use tbh
-     */
-  getMention: async (message, parse = '', getMember = true) => {
-    try {
-      message;
-      if (!parse) {
-        const { suffix } = await Utils.parse(message);
-        if (message.guild) {
-          const memberMentions = message.mentions.members;
-          if (memberMentions.size > 0) {
-            return (getMember ? memberMentions.first() : memberMentions.first().user);
-          } else if (suffix) {
-            const member = (await message.guild.members.fetch({ query: suffix })).first();
-            if (member) return (getMember ? member : member.user);
-            else return getMember ? message.member : message.author;
-          } else {return (getMember ? message.member : message.author);}
-        } else {
-          const userMentions = message.mentions.users;
-          return userMentions.first() || message.author;
-        }
-      } else if (message.guild) {
-        const memberMentions = message.mentions.members;
-        if (memberMentions.size > 0) {
-          return (getMember ? memberMentions.first() : memberMentions.first().user);
-        } else if (parse) {
-          const member = (await message.guild.members.fetch({ query: parse })).first();
-          if (member) return (getMember ? member : member.user);
-          else return getMember ? message.member : message.author;
-        } else {return getMember ? message.member : message.author;}
-      }
-    } catch (error) {return null;}
-  },
-
-  /**
+     * @deprecated
      * @param {string} str String to find mentions in
      * @returns {{targets: GuildMember[], reason: string}} Guild members
      */
@@ -280,7 +254,7 @@ const Utils = {
      */
   prefix: async (msg) => {
     try {
-      if (msg.channel?.parentId == '813847559252344862') return '>';
+      if (msg.channel?.parent?.id == '813847559252344862') return '>';
       else if (msg.guild) return await Utils.db.guildconfig.getPrefix(msg.guild.id);
       else return config.prefix;
     } catch (e) {
@@ -317,15 +291,6 @@ const Utils = {
   },
 
   /**
-     * @param {...string} segments
-     * @returns {Promise<string>} idk the path? i've never used this before
-     */
-  path: async (...segments) => {
-    const path = require("path");
-    return path.resolve(path.dirname(require.main.filename), ...segments);
-  },
-
-  /**
      * @param {string} txt Text to put into proper case
      * @param {boolean} replace Replace _ with spaces
      * @returns {string} Proper case string
@@ -334,22 +299,6 @@ const Utils = {
     if (!txt) return txt;
     if (replace) txt = txt.replace(/_/g, ' ');
     return txt.split(" ").map(word => (word[0].toUpperCase() + word.substr(1).toLowerCase())).join(" ");
-  },
-
-  /**
-     * Kidna pointless but helps in low-traffic scenarios
-     * @param {Message} message Message Object
-     * @param {string} reactions Reaction ID/name
-     * @returns {Promise<null>}
-     */
-  react: async (message, reactions) => {
-    let i = 0;
-    const x = setInterval(() => {
-      message.react(reactions[i]);
-      i++;
-      if (i == reactions.length) clearInterval(x);
-    }, 1500);
-    return null;
   },
 
   /**
@@ -363,22 +312,17 @@ const Utils = {
     else msg.reply({ content, allowedMentions: { repliedUser: mention }, failIfNotExists: false }).then(m => {if (clean) Utils.clean(m);});
   },
 
-  /**
-     * @param {string} txt text to verify
-     * @returns {boolean} is link or not
-     */
-  validUrl: (txt) => {
-    return validUrl.isWebUri(txt);
-  },
+  validUrl: (txt) => validUrl.isWebUri(txt),
 
   /**
      * @param {string} image Image URL
+     * @param {boolean} size Determine if file size is > 7.5MB
      * @returns {Promise<jimp>} is image or not
      */
-  validImage: async (image) => {
+  validImage: async (image, size) => {
     try {
       const img = await jimp.read(image);
-      // if (img.bitmap.data.byteLength >= 7500000) return null;
+      if (size && img.bitmap.data.byteLength >= 7500000) return null;
       return img;
     } catch {
       return false;
@@ -393,16 +337,6 @@ const Utils = {
     if (!msg.guild) return msg.channel;
     const channel = await Utils.db.guildconfig.getBotLobby(msg.guild.id);
     return msg.client.channels.cache.get(channel) ?? msg.channel;
-  },
-
-  /**
-     * @param {Guild} guild Message Object
-     * @returns {Promise<GuildChannel>} error channel or current channel
-     */
-  errorChannel: async (guild) => {
-    if (!guild) return null;
-    const channel = await Utils.db.guildconfig.getErrorChannel(guild.id);
-    return guild.channels.cache.get(channel) ?? null;
   },
 
   /**

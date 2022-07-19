@@ -129,7 +129,7 @@ Module.addCommand({ name: "8ball",
         if (err) {u.errorHandler(err, 'Poll Error');} else {
           body = JSON.parse(body);
           const embed = u.embed()
-                    .setAuthor(`New poll from ${msg.member?.displayName ?? msg.author.username}`)
+                    .setAuthor({ name: `New poll from ${msg.member?.displayName ?? msg.author.username}` })
                     .setTimestamp()
                     .setTitle(decodeURI(body.title))
                     .setURL(`https://www.strawpoll.me/${body.id}`)

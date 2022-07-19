@@ -29,7 +29,7 @@ const Module = new Augur.Module()
       let i = 1;
       for (const category of categories) {
         for (const [name, command] of commands.filter(c => c.category == category).sort((a, b) => a.name.localeCompare(b.name))) {
-          embed.addField(`${prefix}${name} ${command.syntax}`, `${command.description || `No Description`}`);
+          embed.addFields([{ name: `${prefix}${name} ${command.syntax}`, value: `${command.description || `No Description`}` }]);
           if (i == 20) {
             const result = await sendUser(embed);
             if (result == null) return;
@@ -45,8 +45,8 @@ const Module = new Augur.Module()
       let command = commands.get(suffix);
       command ??= msg.client.commands.aliases.get(suffix);
       if (command) {
-        embed.setTitle(`${prefix}${command.name} help`).setDescription(command.info).addField("Category", command.category).addField("Usage", `${prefix}${command.name} ${command.syntax}`);
-        if (command.aliases.length > 0) embed.addField("Aliases", command.aliases.map(a => `!${a}`).join(", "));
+        embed.setTitle(`${prefix}${command.name} help`).setDescription(command.info).addFields([{ name: "Category", value: command.category }]).addFields([{ name: "Usage", value: `${prefix}${command.name} ${command.syntax}` }]);
+        if (command.aliases.length > 0) embed.addFields([{ name: "Aliases", value: command.aliases.map(a => `!${a}`).join(", ") }]);
         return await sendUser(embed);
       } else {msg.reply("I don't have a command by that name. If it's a tag, you can do !tags").then(u.clean);}
     }

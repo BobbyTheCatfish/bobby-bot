@@ -1,257 +1,455 @@
+/* eslint-disable no-inner-declarations */
 /* THINGS TO ADD
     member activity log channel
     member actiivty log toggles
-    change exclusive SBs to arrays
     add main property to sb, only one can have it per guild
-    able to set sb exclusive to category
     language filter
     //muted role
-
-
-    in the distant future
-    rank systems
-    enable/disable commands
-
 */
 // N C D U CD CU DU CDU
 // 0 1 2 3 4  5  6  7
 // 0000000
 const Augur = require('augurbot');
-const { onlyEmoji } = require( 'emoji-aware');
+const { onlyEmoji } = require('emoji-aware');
 const u = require('../utils/utils');
+const { ButtonStyle } = require('discord.js');
 // const { events } = require( '../jsons/events.json');
 const Module = new Augur.Module();
-let configuring = [];
+// let configuring = [];
 // const roleFilter = m => m.guild.roles.cache.get(m.content.replace(/[^0-9]/g, '')) || m.content.toLowerCase() == 'none';
+// const contentOptions = (m, i) => ({ filter: contentFilter(m, i), max: 1, time, errors: ['time'] });
 const time = 5000 * 60;
-const contentFilter = (m, int) => m.content && m.author.id == int.user.id;
-const contentOptions = (m, i) => ({ filter: contentFilter(m, i), max: 1, time, errors: ['time'] });
+
 
 Module.addInteractionCommand({ name: 'config',
+  commandId: '970061388502433792',
   onlyGuild: true,
   category: "Mod",
   process: async (int) => {
-    if (configuring.includes(int.guildId)) return int.reply("Someone else is already configuring me!");
-    configuring.push(int.guildId);
-    await int.deferReply({ ephemeral: true });
-    const timeoutEmbed = u.embed().setTitle("Time's Up!").setDescription("I got tired of waiting around for you to hit a button.\nIf you want to continue configuring, use the command again.");
-    const channelFilter = m => int.guild.channels.cache.get(m.content.replace(/[^0-9]/g, '')) || m.content.toLowerCase() == 'none';
-    let embed = u.embed().setTitle('Bot Config').setDescription("What do you need to configure?");
-    let buttons = [
-      u.button().setLabel('Bot Lobby').setCustomId('channel'),
-      u.button().setLabel('Starboards').setCustomId('starboards'),
-      u.button().setLabel('Logging').setCustomId('logging'),
-      u.button().setLabel('Roles').setCustomId('roles'),
-      u.button().setLabel('Language Filter').setCustomId('filter'),
-    ];
-    buttons = u.actionRow().addComponents(buttons);
-    const msg = await int.reply({ embeds: [embed], components: [buttons] });
-    const interaction = await u.awaitButton(msg);
-    switch (interaction.customId) {
-    case "channel": return await channel();
-    case "starboards": return await starboards();
-    case "logging": return;
-    case "roles": return;
-    case "filter": return;
-    case "time": {
-      configuring = configuring.filter(a => a != int.guildId);
-      return interaction.update({ embeds: [timeoutEmbed], components: [] });
-    }
-    }
-    async function channel() {
-      const currentChannel = await Module.db.guildconfig.getBotLobby(int.guildId);
-      let embed2 = u.embed().setTitle("Bot Lobby").setDescription(`What channel should be used for large bits of text?${currentChannel ? `The current channel is ${currentChannel}` : ''}`).setFooter('Pro Tip: type none to disable the bot lobby feature');
-      interaction.update({ embeds: [embed2], components: [] });
-      const selectedChannel = await channelInput();
-      if (await Module.db.guildconfig.saveErrorChannel(int, int.guildId, selectedChannel?.id) == null) {
-        u.errorHandler('Database Save Error', int);
-        configuring = configuring.filter(a => a != int.guildId);
-        return int.editReply({ embeds: [u.embed().setTitle("I had a problem saving that").setDescription("Sorry about this. I've let my developers know, so it should be fixed soon.")] });
+    try {
+      console.log(int.locale);
+      const contentFilter = (m) => m.content && m.author.id == int.user.id;
+      const timeoutEmbed = u.embed().setTitle("Time's Up!").setDescription("I got tired of waiting around for you to hit a button.\nIf you want to continue configuring, use the command again.");
+      const saveErrorEmbed = u.embed().setTitle("I had a problem saving that").setDescription("Sorry about this. I've let my developers know, so it should be fixed soon.");
+      const channelFilter = m => int.guild.channels.cache.get(m.content.replace(/[^0-9]/g, '')) || m.content.toLowerCase() == 'none';
+      switch (int.options.getString('setting', true)) {
+      case "channel": return channel();
+      case "star": return starboards();
+      case "logs": return logging();
+      case "roles": return;
+      case "filter": return filter();
       }
-      embed2 = u.embed().setTitle(`Bot Lobby ${selectedChannel.id ? "Saved" : "Disabled"}`).setDescription(`Large bits of text will be sent ${selectedChannel.id ? `in ${selectedChannel}` : 'in the channel the command is used in'}`);
-      int.editReply({ embeds: [embed2] });
-      return configuring = configuring.filter(a => a != int.guildId);
-    }
-    async function channelInput(resultFilter = function() {true;}, embed2) {
-      const badChannel = u.embed().setTitle("Invalid channel").setDescription(`Please try again. It should look something like ${int.channel} \n\n(or \`none\`)`);
-      embed2 ??= badChannel;
-      return await int.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] }).then(async collected => {
-        collected = collected.first();
+
+      async function channel() {
+        async function input(embed, embed2, saveFunct, errMsg) {
+          int.followUp({ embeds: [embed], components: [] });
+          const selectedChannel = await channelInput();
+          if (typeof await saveFunct(int.guild.id, selectedChannel?.id) == Error) {
+            u.errorHandler(errMsg, int);
+            return int.followUp({ embeds: [saveErrorEmbed] });
+          }
+          int.followUp({ embeds: [embed2(selectedChannel)] });
+        }
+        async function botLobby() {
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getBotLobby(int.guild.id));
+          const embed = u.embed().setTitle("Bot Lobby").setDescription(`What channel should be used for large bits of text? ${currentChannel ? `\nThe current channel is ${currentChannel}` : ''}`).setFooter('Pro Tip: type none to disable this feature');
+          const embed2 = s => u.embed().setTitle(`Bot Lobby ${s.id ? "Saved" : "Disabled"}`).setDescription(`Large bits of text will be sent ${s.id ? `in ${s}` : 'in the channel the command is used in'}`);
+          return await input(embed, embed2, u.db.guildconfig.saveBotLobby, "Bot Lobby DB Save Error");
+        }
+        async function modLogs() {
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getModLogs(int.guild.id));
+          const embed = u.embed().setTitle("Mod Logs Channel").setDescription(`What channel should things like user updates, possible language, and reported messages be sent to? ${currentChannel ? `\nThe current channel is ${currentChannel}` : ''}`).setFooter('Pro Tip: type none to disable this feature');
+          const embed2 = s => u.embed().setTitle(`Mod Logs Channel ${s.id ? "Saved" : "Disabled"}`).setDescription(`Mod logs will ${s.id ? ` be sent in ${s}` : 'not be sent. This has disabled user reporting.\nIf you\'re using the language filter feature, offending messages will be deleted and the user may be muted if they trigger the filter enough times.'}`);
+          return await input(embed, embed2, u.db.guildconfig.saveModLogs, 'Mod Logs DB Save Error');
+        }
+        const embed = u.embed().setTitle("Which channel do you want to change?");
+        const buttons = u.actionRow().addComponents([
+          u.button().setCustomId("bot").setLabel("Bot Lobby").setStyle(ButtonStyle.Primary),
+          u.button().setCustomId("modlogs").setLabel("Mod Logs").setStyle(ButtonStyle.Primary)
+        ]);
+        let prompt;
+        if (!int.replied) prompt = await int.reply({ embeds: [embed], components: [buttons], fetchReply: true });
+        else prompt = await int.followUp({ embeds: [embed], components: [buttons], fetchReply: true });
+        const result = await u.awaitButton(prompt, int, time);
+        await result.deferReply();
+        await result.deleteReply();
+        switch (result.customId) {
+        case "bot": return await botLobby();
+        case "modlogs": return await modLogs();
+        case "time": {
+          return await int.followUp({ embeds: [timeoutEmbed] });
+        }
+        }
+      }
+      async function channelInput(resultFilter = function() {return true;}, embed) {
+        const badChannel = u.embed().setTitle("Invalid channel").setDescription(`Please try again. It should look something like ${int.channel} \n\n(or \`none\`)`);
+        embed ??= badChannel;
+        const collected = (await u.awaitMessage(int, { filter: channelFilter, max: 1, time, errors: ['time'] }))?.first();
         const content = collected.content;
-        if (collected.deletable) collected.delete();
-        if (!channelFilter(collected)) {
-          int.editReply({ embeds: [badChannel] });
-          return await channelInput();
+        if (!collected) {
+          int.followUp({ embeds: [timeoutEmbed] });
+          return false;
         }
         if (!resultFilter(collected)) {
-          int.editReply({ embeds: [embed2], ephemeral: true });
-          return await channelInput();
-        } else {
-          return int.guild.channels.cache.get(content.replace(/[^0-9]/g, '')) || content.toLowerCase();
+          int.followUp({ embeds: [embed] });
+          return await channelInput(collected);
         }
-      });
-    }
-    async function starboards() {
-      const existingBoards = await Module.db.guildconfig.getStarBoards(int.guild.id);
-      // let boardFilter = m => existingBoards?.find(b => b.channel == m.content.replace(/[^0-9]/g, ''))
-      const newBoard = {};
-      async function createBoard() {
-        const nonDuplicate = m => !existingBoards?.find(b => b.channel == m.content.replace(/[^0-9]/g, ''));
-        async function channelPrompt(editing) {
-          const embed =  u.embed().setTitle('What channel should I send starred messages to?').setDescription('Type in the format of #channel-name\nTo cancel, type \`none\`');
-          await int.editReply({ embeds: [embed] });
-          const channel = await channelInput(nonDuplicate, u.embed().setTitle("Starboard already exists").setDescription("Please select a different channel."));
-          if (!channel == 'none') return await int.editReply({ embeds: [u.embed().setTitle("Starboard creation canceled")] });
-          else if (channel) {
-            newBoard.channel = channel.id;
-            return reactions();
-          }
-          else return;
-        }
+        return int.guild.channels.cache.get(content.replace(/[^0-9]/g, '')) || content.toLowerCase();
+      }
+      async function starboards() {
+        const existingBoards = await u.db.guildconfig.getStarBoards(int.guild.id);
+        // let boardFilter = m => existingBoards?.find(b => b.channel == m.content.replace(/[^0-9]/g, ''))
+        let newBoard = {};
         async function reactions(editing) {
           const existingEmoji = existingBoards.filter(b => b.channel != newBoard.channel).map(b => b.reactions).flat();
-          let embed = u.embed().setTitle("What reactions should trigger the board?").setDescription(`You cannot use these reactions since they trigger other starboards:\n${existingEmoji.join(' ')}`);
+          const reacts = [];
+          const embed = u.embed().setTitle("What reactions should trigger the board?")
+          .setDescription(`You cannot use these reactions since they trigger other starboards:\n${existingEmoji.join(' ')}`)
+          .setFooter(`You can set up to ${5 - reacts.length} more emojis`);
           if (existingBoards.length == 0) embed.setDescription("If you don't select any, it will default to ⭐ and 🌟.\n\nType `done` when you're done");
-          await int.editReply({ embeds: [embed] });
-          let reacts;
+          await int.followUp({ embeds: [embed] });
           async function getEmoji(failTimes = 0) {
-            return await int.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] }).then(async collected =>{
-              const content = collected.first().content;
-              collected.first().delete();
-              if (content.toLowerCase() == 'done') {
-                if (existingBoards.length == 0 && reacts.length == 0) reacts = ['⭐', '🌟'];
-                if (reacts.length == 0) {
-                  if (failTimes == 0 || editing) {
-                    int.editReply({ embeds: [u.embed().setTitle("You need some emoji!").setDescription(editing ? null : 'If you want to cancel the board creation, type \`done\` again. Otherwise, try again.')] });
-                    if (!editing) embed;
-                    return await getEmoji(1);
-                  }
-                  else return [];
-                }
-                return reacts;
+            const collected = await u.awaitMessage(int, { filter: contentFilter, max: 1, time, errors: ['time'] });
+            if (!collected) {
+              int.followUp({ embeds: [timeoutEmbed] });
+              return false;
+            }
+            const content = collected.first().content;
+            if (content.toLowerCase() == 'done') {
+              if (reacts.length == 0) {
+                if (failTimes == 0 || editing) {
+                  int.followUp({ embeds: [u.embed().setTitle("You need some emoji!").setDescription(editing ? null : 'If you want to cancel the board creation, type `done` again. Otherwise, try again.')] });
+                  return await getEmoji(1);
+                } else {return [];}
               }
-              const emoji = msg.guild.emojis.cache.get(u.getEmoji(content))?.id || onlyEmoji(content);
-              // let emoji = msg.guild.emojis.cache.find(e => `<${e.animated ? 'a': ''}:${e.name}:${e.id}>` == content)?.id || onlyEmoji(content)
-              if (!emoji) {
-                embed = u.embed().setTitle("Invalid emoji").setDescription("Please try again.\nKeep in mind that the emoji needs to be default or from this server.\n(like ⭐ or <:starsmile:921150225693966347>)");
-                int.editReply({ embeds: [embed] });
-                return await getEmoji(0);
-              }
-              else if (existingEmoji.includes(emoji)) {
-                embed = u.embed().setTitle("Invalid emoji").setDescription(`That emoji is already used by the starboard in <#${existingBoards.find(b => b.reactions.includes(emoji))}>`);
-              }
-              reacts.push(emoji);
-              if (existingEmoji.length > 0) embed.setDescription(`You cannot use these reactions since they trigger other starboards:\n${existingEmoji.join(' ')}\nCurrent emojis: ${reacts.map(a=> int.guild.emojis.cache.get(a) || a).join(' ')}`);
-              await int.editReply({ embeds: [embed] });
+              return reacts;
+            }
+            const emoji = int.guild.emojis.cache.get(u.getEmoji(content)?.id)?.id || onlyEmoji(content)?.[0];
+            if (!emoji) {
+              embed.setTitle("Invalid emoji").setDescription("Please try again.\nKeep in mind that the emoji needs to be default or from this server.\n(like ⭐ or <:starsmile:921150225693966347>)");
+              int.followUp({ embeds: [embed] });
               return await getEmoji(0);
-            });
+            } else if (existingEmoji.includes(emoji)) {
+              embed.setTitle("Invalid emoji").setDescription(`That emoji is already used by the starboard in <#${existingBoards.find(b => b.reactions.includes(emoji))}>`);
+              int.followUp({ embeds: [embed] });
+              return await getEmoji(0);
+            } else if (reacts.includes(emoji)) {
+              embed.setTitle("Invalid emoji").setDescription(`You're already using that emoji for this starboard`);
+              int.followUp({ embeds: [embed] });
+              return await getEmoji(0);
+            }
+            reacts.push(emoji);
+            if (existingEmoji.length > 0) {
+              embed.setTitle("Emoji Added")
+            .setDescription(`You cannot use these reactions since they trigger other starboards:\n${existingEmoji.join(' ')}\nAdded emojis: ${reacts.map(a => int.guild.emojis.cache.get(a) || a).join(' ')}`)
+            .setFooter(`You can set up to ${5 - reacts.length} more emojis`);
+            }
+            if (reacts.length > 4) {
+              embed.setDescription("Max emojis reached").setFooter("");
+              int.followUp({ embeds: [embed] });
+              return reacts;
+            }
+            await int.followUp({ embeds: [embed] });
+            return await getEmoji(0);
           }
           const emoji = await getEmoji();
-          if (emoji.length == 0) return int.editReply({ embeds: [u.embed().setTitle("Starboard creation canceled")] });
-          newBoard.emoji = emoji;
+          if (emoji === false) return;
+          if (emoji.length == 0) return int.followUp({ embeds: [u.embed().setTitle("Starboard creation canceled")] });
+          newBoard.reactions = emoji;
           if (editing) return await modifyBoard();
           return await singleChannel();
         }
         async function singleChannel(editing) {
-          let embed = u.embed().setTitle("Which channel(s)/category(s) should this starboard be restricted to getting posts from?").setDescription("Type in the format of `#channel-name` or `category name`. Type `done` if you don't want any restrictions.");
-          await int.editReply({ embeds: [embed], ephemeral: true });
           const channels = [];
+          const embed = u.embed().setTitle("Which channel(s)/category(s) should this starboard be restricted to getting posts from?")
+          .setDescription("Type in the format of `#channel-name` or `category name`. Type `done` if you don't want any restrictions.")
+          .setFooter(`You can add up to ${5 - (newBoard.whitelist?.length || channels.length)} channel(s)/category(s)`);
+          await int.followUp({ embeds: [embed] });
           async function getChannels() {
-            return await int.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] }).then(async collected =>{
-              collected = collected.first();
-              collected.delete();
-              const categories = int.guild.channels.cache.filter(c => c.type == 'GUILD_CATEGORY');
-              const category = categories.filter(c => c.name.toLowerCase() == collected.content.toLowerCase());
-              const filter = int.guild.channels.cache.get(collected.content.replace(/[^0-9]/g, ''));
-              embed = u.embed().addField('Channels/Categories', channels.length > 0 ? channels.map(a => categories.find(c => c.id == a) ? `${a} (category)` :`<#${a}>`).join('\n') :'None yet');
-              if (collected.content.toLowerCase() == 'done') {
-                return channels;
-              }
-              if (!filter) {
-                embed = embed.setTitle("Invalid channel").setDescription(`Please try again. It should look something like ${int.channel} ${categories.size > 0 ? `or \`${int.channel.parent?.name || categories.first().name}\``:''}`);
-                if (category.size > 0) {
-                  if (category.size != 1) embed = embed.setTitle("Duplicate category found").setDescription(`Looks like there are multiple categories with that name. You can try again either with the category's id or after you've changed its name (you can change it back right after its been added)`);
-                  else {
-                    embed = embed.setTitle("Category added").setDescription("Add another channel by typing in the format of `#channel-name` or `category name`. Type `done` if you're done");
-                    channels.push(category.first().id);
-                  }
+            let collected = await u.awaitMessage(int, { filter: contentFilter, max: 1, time, errors: ['time'] });
+            if (!collected) {
+              await int.followUp({ embeds: [timeoutEmbed] });
+              return false;
+            }
+            collected = collected.first();
+            const categories = int.guild.channels.cache.filter(c => c.type == 4);
+            const category = categories.filter(c => c.name.toLowerCase() == collected.content.toLowerCase());
+            const exclusiveChannel = int.guild.channels.cache.get(collected.content.replace(/[^0-9]/g, ''));
+
+            if (collected.content.toLowerCase() == 'done') return channels;
+            if (!exclusiveChannel) {
+              embed.setTitle("Invalid channel").setDescription(`Please try again. It should look something like ${int.channel} ${categories.size > 0 ? `or \`${int.channel.parent?.name || categories.first().name}\`` : ''}`);
+              if (category.size > 0) {
+                if (category.size != 1) {
+                  embed.setTitle("Duplicate category found")
+                  .setDescription(`Looks like there are multiple categories with that name. You can try again either with the category's id or after you've changed its name (you can change it back right after its been added)`);
+                  await int.followUp({ embeds: [embed] });
+                  return await getChannels();
+                } else if (channels.includes(category.first().id)) {
+                  embed.setTitle("Invalid category")
+                  .setDescription("That category has already been added to this starboard. Try again with a different one.");
+                  await int.followUp({ embeds: [embed] });
+                  return await getChannels();
+                } else {
+                  embed.setTitle("Category added")
+                  .setDescription("Add another channel by typing in the format of `#channel-name` or `category name`. Type `done` if you're done");
+                  channels.push(category.first().id);
                 }
               }
-              else {
-                embed = embed.setTitle("Channel added").setDescription("Add another channel by typing in the format of `#channel-name` or `category name`. Type `done` if you're done");
-                channels.push(filter.id);
-              }
-              int.editReply({ embeds: [embed], ephemeral: true });
-              return await getChannels();
-            });
+            } else if (channels.includes(exclusiveChannel.id)) {
+              embed
+              .setTitle("Invalid channel").setDescription(`That channel has already been added to this starboard. Try again with a different one.`);
+              await int.followUp({ embeds: [embed] });
+            } else {
+              embed.setTitle("Channel added")
+              .setDescription("Add another channel by typing in the format of `#channel-name` or `category name`. Type `done` if you're done");
+              channels.push(exclusiveChannel.id);
+            }
+            embed.spliceFields(0, 1, [{ name: 'Channels/Categories', value: channels.length > 0 ? channels.map(a => `<#${a}>`).join('\n') : 'None yet' }]);
+            await int.followUp({ embeds: [embed] });
+            return await getChannels();
           }
-          newBoard.whitelist = await getChannels();
+          const result = await getChannels();
+          if (result === false) return;
+          newBoard.whitelist = result;
+          if (editing) return await modifyBoard();
           return await toPost();
-          // let restrictions = await getChannels()
-          // if(restrictions) return await toStar(channel, reactions, restrictions)
         }
-
         async function toPost(editing) {
-          let embed = u.embed().setTitle(`How many reactions should a post have?`).setDescription(`The minimum (and default) is 5.`);
-          await int.editReply({ embeds: [embed] });
+          const embed = u.embed().setTitle(`How many reactions should a post have?`).setDescription(`The minimum (and default) is 5.`);
+          await int.followUp({ embeds: [embed] });
           async function getNumber() {
-            return await int.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] }).then(async collected =>{
-              collected = collected.first();
-              if (isNaN(collected.content) || collected.content < 5) {
-                embed = u.embed().setTitle("Invalid input").setDescription("Your input needs to be a number");
-                await int.editReply({ embeds: [embed], ephemeral: true });
-                await getNumber();
-              }
-              else return Math.round(collected.content);
-            });
+            let collected = await u.awaitMessage(int, { filter: contentFilter, max: 1, time, errors: ['time'] });
+            if (!collected) {
+              await int.followUp({ embeds: [embed] });
+              return false;
+            }
+            collected = collected.first();
+            if (isNaN(collected.content) || collected.content < 5) {
+              embed.setTitle("Invalid input").setDescription("Your input needs to be a number");
+              await int.folowUp({ embeds: [embed] });
+              await getNumber();
+            } else {return Math.round(collected.content);}
           }
-
-          newBoard.toPost = await getNumber();
-
-          msg.channel.send({ embeds: [embed] }).then(async m=>{
-            await m.channel.awaitMessages(contentOptions).then(async collected =>{
-              const content = collected.first().content;
-              if (isNaN(content) || content > 100 || content < 1) {
-                msg.channel.send("That's not a valid number. (Must be between 1 and 100");
-                return toPost(channel, reactions, singleChannel);
-              }
-              else if (await Module.db.guildconfig.saveStarBoard(msg.guild.id, channel, reactions, singleChannel, Math.round(content)) != null) {
-                const embed = u.embed().setTitle(`${msg.guild.channels.cache.get(channel).name} is now a starboard!`).setFooter(reactions.join(' '));
-                if (singleChannel) embed.setDescription(`Only messages in ${msg.guild.channels.cache.get(singleChannel)} will appear on this starboard.`);
-                msg.channel.send({ embeds: [embed] });
-              }
-              else msg.channel.send("I had a problem saving the starboard.");
-              return mainMenu();
-            }).catch(()=> timedOut(m));
-          });
+          const result = await getNumber();
+          if (result === false) return;
+          newBoard.toPost = result;
+          if (editing) return await modifyBoard();
+          return await save();
         }
         async function save(editing) {
-          embed = u.embed().setTitle(`${msg.guild.channels.cache.get(newBoard.channel)} ${editting ? "has been updated" : "is now a starboard!"}`).setFooter(newBoard.reactions.join(' '));
-          if (newBoard.whitelist.length > 0) embed.setDescription(`Only messages in ${newBoard.whitelist.length > 1 ? `the following channels/categories will be eligible to appear on this starboard\n${newBoard.whitelist.map(a => msg.guild.channels.cache.get(a)).join('\n')}` : `${msg.guild.channels} will be eligible to appear on this starboard`}`);
+          if ((await u.db.guildconfig.saveStarBoard(int.guild.id, newBoard)) == null) {
+            u.errorHandler("Starboard DB Save Error", int);
+            return int.followUp({ embeds: [saveErrorEmbed] });
+          }
+          const embed = u.embed().setDescription(`${int.guild.channels.cache.get(newBoard.channel)} ${editing ? "has been updated" : "is now a starboard!"}\nReactions: ${newBoard.reactions.map(a => int.guild.emojis.cache.get(a) || a).join(' ')}`);
+          if (newBoard.whitelist.length > 0) embed.setDescription(`Only messages in ${newBoard.whitelist.length > 1 ? `the following channels/categories will be eligible to appear on this starboard\n${newBoard.whitelist.map(a => int.guild.channels.cache.get(a)).join('\n')}` : `${int.guild.channels} will be eligible to appear on this starboard`}`);
+          return await int.followUp({ embeds: [embed] });
         }
-        if (existingBoards?.length >= 5) return int.editReply({ embeds: [u.embed().setTitle('Max Starboards Reached').setDescription("You can't have more than 5 starboards at a time.")] });
-        await channelPrompt();
+        async function channelPrompt(editing) {
+          const nonDuplicate = m => !existingBoards?.find(b => b.channel == m.content.replace(/[^0-9]/g, ''));
+          const embed = u.embed().setTitle('What channel should I send starred messages to?').setDescription('Type in the format of #channel-name\nTo cancel, type `none`');
+          await int.followUp({ embeds: [embed] });
+          const boardChannel = await channelInput(nonDuplicate, u.embed().setTitle("Starboard already exists").setDescription("That channel is already a starboard.\nPlease select a different channel.").setFooter('Type `none` to cancel'));
+          if (boardChannel === false) return;
+          if (boardChannel == 'none') {
+            await int.followUp({ embeds: [u.embed().setTitle("Starboard creation canceled")] });
+            return starboards();
+          } else if (boardChannel) {
+            newBoard.channel = boardChannel.id;
+            return reactions(editing);
+          } else {return;}
+        }
+        async function changeChannel() {
+          const channelId = newBoard.channel;
+          const nonDuplicate = m => !existingBoards.filter(b => b.channel != channelId)?.find(b => b.channel == m.content.replace(/[^0-9]/g, ''));
+          const embed = u.embed().setTitle('What channel should I send starred messages to?')
+          .setDescription(`They are currently being sent to <#${channelId}>.`)
+          .setFooter(`Type \`none\` to cancel this operation`);
+          await int.followUp({ embeds: [embed] });
+          const failEmbed = u.embed().setTitle("Starboard already exists").setDescription("That channel is already a starboard.\nPlease select a different channel.").setFooter("Type `none` to cancel this operation");
+          const collected = await channelInput(nonDuplicate, failEmbed);
+          if (collected === false) return;
+          if (collected == 'none') return await modifyBoard();
+          const doneEmbed = u.embed().setTitle("Starboard channel changed").setDescription(`Was: <#${newBoard.channel}>\nChanged to: ${collected}`);
+          newBoard.channel = collected.id;
+          await int.followUp({ embeds: [doneEmbed] });
+          return await modifyBoard();
+        }
+        async function createBoard() {
+          const response = { embeds: [u.embed().setTitle('Max Starboards Reached').setDescription("You can't have more than 5 starboards at a time.")] };
+          if (existingBoards?.length >= 5) return int.followUp(response);
+          await channelPrompt();
+        }
+        async function selectBoard() {
+          const embed = u.embed().setTitle("Select A Board").setDescription(existingBoards.map(b => `<#${b.channel}>`).join('\n'));
+          await int.followUp({ embeds: [embed] });
+          const failEmbed = u.embed().setTitle("Invalid Starboard").setDescription(`That wasn't one of the boards. Please try again.\nIt should look something like ${int.channel}`);
+          const boardFilter = m => existingBoards.find(b => b.channel == m.content.replace(/[^0-9]/g, ''));
+          const board = await channelInput(boardFilter, failEmbed);
+          if (board == false) return int.followUp({ embeds: [timeoutEmbed] });
+          return existingBoards.find(b => b.channel == board.id);
+        }
+        async function modifyBoard() {
+          if (!newBoard.channel) newBoard = await selectBoard();
+          console.log(newBoard);
+          const buttons = u.actionRow().addComponents([
+            u.button().setLabel("Change Starboard Channel").setCustomId("channel").setStyle(ButtonStyle.Primary),
+            u.button().setLabel("Change Reactions").setCustomId("reactions").setStyle(ButtonStyle.Primary),
+            u.button().setLabel("Change Exclusive Channels").setCustomId("singlechannel").setStyle(ButtonStyle.Primary),
+            u.button().setLabel("Reaction Threshold").setCustomId("topost").setStyle(ButtonStyle.Primary),
+            u.button().setLabel("Save").setCustomId("save").setStyle(ButtonStyle.Success),
+          ]);
+          const embed = u.embed().setTitle("What do you want to change?");
+          const prompt = await int.followUp({ embeds: [embed], components: [buttons], fetchReply: true });
+          const decision = await u.awaitButton(prompt, int, time);
+          await decision.deferReply();
+          await decision.deleteReply();
+          switch (decision.customId) {
+          case "channel": return changeChannel();
+          case "reactions": return reactions(true);
+          case "singlechannel": return singleChannel(true);
+          case "topost": return toPost(true);
+          case "save": return save(true);
+          case "time": return int.followUp({ embeds: [timeoutEmbed] });
+          }
+          return;
+        }
+        async function removeBoard() {
+          const board = await selectBoard();
+          console.log(board);
+          const confirmEmbed = u.embed().setTitle("Are you sure you want to do this?")
+          .setDescription(`<#${board.channel}> will no longer have starred posts go to it. If you just need to change some settings or have posts sent to a different channel, press the modify button.`)
+          .setFooter("Removing the starboard won't delete the actual channel");
+          const buttons = u.actionRow().addComponents([
+            u.button().setLabel('Cancel').setCustomId('cancel').setStyle(ButtonStyle.Secondary),
+            u.button().setLabel('Delete').setCustomId('delete').setStyle(ButtonStyle.Danger),
+            u.button().setLabel('Modify').setCustomId('modify').setStyle(ButtonStyle.Primary)
+          ]);
+          const prompt = await int.followUp({ embeds: [confirmEmbed], components: [buttons], fetchReply: true });
+          const response = await u.awaitButton(prompt, int, time);
+          await response.deferReply();
+          await response.deleteReply();
+          switch (response.customId) {
+          case "cancel": return cancel();
+          case "delete": return remove();
+          case "modify": return modify();
+          case "time": return int.followUp({ embeds: [timeoutEmbed] });
+          }
+          async function cancel() {
+            const embed = u.embed().setTitle("Removal Canceled").setDescription(`<#${board.channel}> will remain as a starboard`);
+            int.followUp({ embeds: [embed] });
+            return await starboards();
+          }
+          async function remove() {
+            const embed = u.embed().setTitle("Starboard Removed").setDescription(`Starred posts will no longer be sent to <#${board.channel}>`);
+            if ((await u.db.guildconfig.removeStarBoard(int.guild.id, board.channel)) == null) {
+              u.errorHandler("Starboard DB Save Error", int);
+              return await int.followUp({ embeds: [saveErrorEmbed] });
+            }
+            await int.followUp({ embeds: [embed] });
+            return await starboards();
+          }
+          async function modify() {
+            return await modifyBoard();
+          }
+        }
+        if (existingBoards?.length == 0) {
+          const embed = u.embed().setTitle("Starboard Creation").setDescription("Since you don't have any starboards set up right now, let's create a new one.");
+          await int.followUp({ embeds: [embed] });
+          return await createBoard();
+        }
+        const embed = u.embed().setTitle("What do you want to do?").setDescription("You can create, modify, or delete a starboard");
+        const buttons = u.actionRow().addComponents([
+          u.button().setCustomId("create").setLabel("Create").setStyle(ButtonStyle.Success),
+          u.button().setCustomId("modify").setLabel("Modify").setStyle(ButtonStyle.Primary),
+          u.button().setCustomId("delete").setLabel("Delete").setStyle(ButtonStyle.Danger)
+        ]);
+        let prompt;
+        if (!int.replied) prompt = await int.reply({ embeds: [embed], components: [buttons], fetchReply: true });
+        else prompt = await int.followUp({ embeds: [embed], components: [buttons], fetchReply: true });
+        const result = await u.awaitButton(prompt, int, time);
+        await result.deferReply();
+        await result.deleteReply();
+        switch (result.customId) {
+        case "create": return await createBoard();
+        case "modify": return await modifyBoard();
+        case "delete": return await removeBoard();
+        case "time": {
+          return await int.followUp({ embeds: [timeoutEmbed] });
+        }
+        }
       }
-      async function modifyBoard() {}
-      async function removeBoard() {}
-      switch (data.getString('action')) {
-      case "create": return await createBoard();
-      case "modify": return await modifyBoard();
-      case "delete": return await removeBoard();
-      default: break;
+      async function logging() {
+        return;
       }
-    }
-    async function logging() {}
-    async function filter() {
-
-    }
-    switch (cmd) {
-    case "channel": return await channel();
-    case "starboards": return await starboards();
-    case "logging": return await logging();
-    case "roles": return await roles();
-    case "filter": return await filter();
-    default: break;
+      async function filter(existingPrompt) {
+        const embed = u.embed().setTitle("How strict do you want the language filter to be, and which sources should I monitor?").setDescription("Green indicates selected");
+        let lvl = await u.db.guildconfig.getLangFilter(int.guild.id)?.level ?? 0;
+        let src = await u.db.guildconfig.getLangFilter(int.guild.id)?.source?.split('') ?? [];
+        const style = (num) => lvl == num ? ButtonStyle.Success : ButtonStyle.Danger;
+        const wordButtons = u.actionRow().addComponents([
+          u.button().setLabel("None").setCustomId("0").setStyle(style(0)),
+          u.button().setLabel("Low (sexual words)").setCustomId("1").setStyle(style(1)),
+          u.button().setLabel("Medium (insults/racism)").setCustomId("2").setStyle(style(2)),
+          u.button().setLabel("High (standard swears)").setCustomId("3").setStyle(style(3)),
+          u.button().setLabel("Ultra (anything remotely bad)").setCustomId("4").setStyle(style(4)),
+        ]);
+        const yes = ButtonStyle.Success;
+        const no = ButtonStyle.Danger;
+        const sourceButtons = u.actionRow().addComponents([
+          // 0 = none, 1 = text, 2 = image, 3 = usernames, 4 = statuses
+          u.button().setLabel("Text").setCustomId("text").setStyle(src.includes('1') ? yes : no),
+          u.button().setLabel("Images").setCustomId("images").setStyle(src.includes('2') ? yes : no),
+          u.button().setLabel("Usernames").setCustomId("usernames").setStyle(src.includes('3') ? yes : no),
+          u.button().setLabel("Statuses").setCustomId("statuses").setStyle(src.includes('4') ? yes : no),
+          u.button().setLabel("Done").setCustomId("done").setStyle(ButtonStyle.Primary)
+        ]);
+        let prompt;
+        if (existingPrompt) prompt = await int.editReply({ embeds: [embed], components: [wordButtons, sourceButtons], fetchReply: true });
+        else prompt = await int.reply({ embeds: [embed], components: [wordButtons, sourceButtons], fetchReply: true });
+        const response = await u.awaitButton(prompt, int, time);
+        if (response.customId == 'time') {
+          return await int.followUp({ embeds: [timeoutEmbed] });
+        }
+        function changeSrc(num) {
+          if (src.includes(num)) src = src.filter(s => s != num);
+          else src.push(num);
+        }
+        if (Number.parseInt(response.customId)) lvl = Number.parseInt(response.customId);
+        switch (response.customId) {
+        case 'text': {
+          changeSrc('1');
+          break;
+        }
+        case 'images': {
+          changeSrc('2');
+          break;
+        }
+        case 'usernames': {
+          changeSrc('3');
+          break;
+        }
+        case 'statuses': {
+          changeSrc('4');
+          break;
+        }
+        default: break;
+        }
+        if (response.customId == 'done') {
+          const old = await u.db.guildconfig.getLangFilter(int.guild.id);
+          const lvlMap = ['None', 'Low', 'Medium', 'High', 'Ultra'];
+          const srcMap = ['None', 'Messages', 'Images', 'Messages & Images'];
+          const saveEmbed = u.embed().setTitle("Language Filter Settings Saved")
+          .addFields([{ name: "Was", value: `Level: ${lvlMap[old.level]}\nSource(s): ${srcMap[old.source]}` }])
+          .addFields([{ name: "Is", value: `Level: ${lvlMap[lvl]}\nSource(s): ${srcMap[src]}` }]);
+          if (await u.db.guildconfig.saveLanguageFilter(int.guild.id, { level: lvl, source: src.join('') }) == null) return int.followUp({ embeds: [saveErrorEmbed] });
+          return await int.followUp({ embeds: [saveEmbed] });
+        }
+        return await filter(true);
+      }
+    } catch (error) {
+      return u.errorHandler(error, int);
     }
   }
 });

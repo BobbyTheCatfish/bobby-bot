@@ -1,5 +1,6 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
+  { ChannelType } = require('discord.js'),
   Module = new Augur.Module();
 
 Module.addCommand({ name: 'embed',
@@ -106,7 +107,7 @@ Module.addCommand({ name: 'embed',
             .then(async collected => {
               const reacted = collected.first().emoji.name;
               if (reacted == '✅') isInline = true;
-              finalEmbed.addField(title, desc, isInline);
+              finalEmbed.addFields([{ name: title, value: desc, inline: isInline }]);
               return await prompt();
             });
         });
@@ -240,7 +241,7 @@ Module.addCommand({ name: 'embed',
                   msg.author.send("That's not a valid link.");
                   return await resend(msg, finalEmbed, name, icon, promptEmbed);
                 }
-                finalEmbed.setAuthor(name, icon, url);
+                finalEmbed.setAuthor({ name, iconURL: url });
                 return await prompt();
               });
           };
@@ -253,7 +254,7 @@ Module.addCommand({ name: 'embed',
           .then(async collected => {
             const name = collected.first().content;
             if (name == 'none') {
-              finalEmbed.setAuthor('');
+              finalEmbed.setAuthor(null);
               return await prompt();
             }
             return await authorIcon(name);
@@ -330,7 +331,7 @@ Module.addCommand({ name: 'embed',
           await m.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] })
             .then(async collected => {
               const content = collected.first().content;
-              let channel = msg.guild.channels.cache.filter(b => b.isText()).find(c => c.name.toLowerCase() == content.toLowerCase().replace(/ /g, '-').replace(/#/g, '') || c.id == content);
+              let channel = msg.guild.channels.cache.filter(b => b.type == ChannelType.GuildText).find(c => c.name.toLowerCase() == content.toLowerCase().replace(/ /g, '-').replace(/#/g, '') || c.id == content);
               if (!channel) {
                 msg.author.send("I couldn't find that channel. Try again.");
                 return await resend();
@@ -340,7 +341,7 @@ Module.addCommand({ name: 'embed',
                   const resend2 = async () => {
                     const coll = await ms.channel.awaitMessages({ filter: contentFilter, max: 1, time, errors: ['time'] });
                     const cont = coll.first().content;
-                    channel = msg.guild.channels.cache.filter(b => b.isText()).find(c => c.rawPosition == cont.replace(/^[0-9]/g));
+                    channel = msg.guild.channels.cache.filter(b => b.type == ChannelType.GuildText).find(c => c.rawPosition == cont.replace(/^[0-9]/g));
                     if (!channel) {
                       msg.author.send("That's not one of the channels. Please try again.");
                       return await resend2();

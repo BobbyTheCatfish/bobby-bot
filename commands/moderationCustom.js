@@ -218,7 +218,7 @@ Module.addInteractionCommand({ name: 'mod',
     const additionalFields = [{ name: "Infraction Value", value: `${points} Points` }];
     const embed = u.embed().setTitle(`Warning from ${int.guild.name}`)
       .setDescription(msg)
-      .addField("Message", ogMessage.content ?? "No Message Content")
+      .addFields([{ name: "Message", value: ogMessage.content ?? "No Message Content" }])
       .setImage(ogMessage.attachments.first()?.url);
     await ogMessage.author.send({ embeds: [embed] }).catch(() => u.blocked(user, logs, `They were too busy getting an infraction for ${points} points (someone might want to tell them about that)`));
     await modUtil.resolveFlag(user, user.id, int.member, card, "Warned", additionalFields);
