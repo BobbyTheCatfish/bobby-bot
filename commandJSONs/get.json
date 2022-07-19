@@ -1,0 +1,58 @@
+{
+  "name": "get",
+  "description": "Get server info.",
+  "options": [
+    {
+      "type": 3,
+      "name": "general-info",
+      "description": "Get info about the server.",
+      "choices": [
+        {
+          "name": "Sever",
+          "value": "server"
+        },
+        {
+          "name": "Members",
+          "value": "members"
+        },
+        {
+          "name": "Roles",
+          "value": "roles"
+        },
+        {
+          "name": "Channels",
+          "value": "channels"
+        },
+        {
+          "name": "Bans",
+          "value": "bans"
+        }
+      ]
+    },
+    {
+      "type": 6,
+      "name": "member",
+      "description": "Get info on a member."
+    },
+    {
+      "type": 8,
+      "name": "role",
+      "description": "Get info on a role."
+    },
+    {
+      "type": 3,
+      "name": "emoji",
+      "description": "Get info on an emoji. Give the regular form, name, or ID."
+    },
+    {
+      "type": 7,
+      "name": "channel",
+      "description": "Get info on a channel or category."
+    },
+    {
+      "type": 3,
+      "name": "ban",
+      "description": "Get info on a ban. Give their ID or full tag."
+    }
+  ]
+}

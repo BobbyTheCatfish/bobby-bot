@@ -17,6 +17,7 @@ const guildCommandFiles = [
     id: "406821751905976320",
     cmds: [
       "config.json",
+      "get.json"
     ]
   },
   {
