@@ -5,28 +5,28 @@ const ReactionRoleSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  channelId:{
+  channelId: {
     type: String,
     required: true,
   },
-  messageId:{
+  messageId: {
     type: String,
     required: true
   },
-  reactions:{
+  reactions: {
     type: Array,
     required: true,
-    name:{
+    name: {
       type: String,
     },
     id: {
       type: String
     },
-    roleId:{
+    roleId: {
       type: String
     }
   },
-  removeOnUnreact:{
+  removeOnUnreact: {
     type: Boolean,
     default: true
   }

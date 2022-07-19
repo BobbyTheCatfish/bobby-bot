@@ -50,7 +50,7 @@ const models = {
     },
     saveErrorChannel: async (guildId, channel) => {
       await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.error":channel }, { new: true });
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.error": channel }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
     getErrorChannel: async (guildId) => {
@@ -133,7 +133,7 @@ const models = {
       if (await GuildConfig.exists({ guildId })) {
         const document = await GuildConfig.findOne({ guildId });
         const board = document?.channels?.starboards?.find(c => c.channel == theBoard.channel);
-        if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': theBoard.channel }, { $set: { 'channels.starboards.$.channel':theBoard.channel, 'channels.starboards.$.reactions':theBoard.reactions, 'channels.starboards.$.whitelist': theBoard.whitelist, 'channels.starboards.$.toPost': theBoard.toPost } });
+        if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': theBoard.channel }, { $set: { 'channels.starboards.$.channel': theBoard.channel, 'channels.starboards.$.reactions': theBoard.reactions, 'channels.starboards.$.whitelist': theBoard.whitelist, 'channels.starboards.$.toPost': theBoard.toPost } });
         else return GuildConfig.updateOne({ guildId }, { $push: { 'channels.starboards': theBoard } });
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
@@ -244,7 +244,7 @@ const models = {
       return newDoc?.infractions[0];
     }
   },
-  tags:{
+  tags: {
     getTag: async (guildId, name) => {
       const document = await Tags.findOne({ guildId })?.exec();
       return document?.tags?.find(t => t.name == name);
@@ -268,7 +268,7 @@ const models = {
       const time = Date.now();
       if (document) {
         const tag = document.tags.find(t => t.name == name);
-        if (tag) return Tags.updateOne({ guildId, "tags.name":name }, { $set: { "tags.$.text":text, "tags.$.file": file } });
+        if (tag) return Tags.updateOne({ guildId, "tags.name": name }, { $set: { "tags.$.text": text, "tags.$.file": file } });
         else return Tags.updateOne({ guildId }, { $push: { tags: { name, text, file, time } } });
       } else {return Tags.create({ guildId, tags: [{ name, text, file, time }] });}
     },
@@ -276,7 +276,7 @@ const models = {
       const document = await Tags.findOne({ guildId })?.exec();
       if (document) {
         const tag = document?.tags.find(t => t.name == name);
-        if (tag) return Tags.findOneAndUpdate({ guildId }, { $pull: { "tags":{ name } } });
+        if (tag) return Tags.findOneAndUpdate({ guildId }, { $pull: { "tags": { name } } });
       }
       return null;
     },
@@ -306,7 +306,7 @@ const models = {
       }
     },
   },
-  welcome:{
+  welcome: {
     getWelcome: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
       const document = await GuildConfig.findOne({ guildId })?.exec();
@@ -401,7 +401,7 @@ const models = {
         const guild = guilds[i];
         if (guild.users.length > 0) {
           await models.ranks.addUser(guild.guild, guild.users);
-          await Ranks.findOneAndUpdate({ guildId:  guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.posts': 1 } }).exec();
+          await Ranks.findOneAndUpdate({ guildId: guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.posts': 1 } }).exec();
           await Ranks.findOneAndUpdate({ guildId: guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.xp': xp, 'users.$.lifeXP': lifeXP } }).exec();
           const userDocs = await Ranks.findOne({ guildId: guild.guild }).exec();
           userDocs.users = userDocs?.users.filter(u => guild.users.includes(u.userId));

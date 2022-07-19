@@ -1,27 +1,27 @@
 const mongoose = require('mongoose');
 
 const TagSchema = new mongoose.Schema({
-  guildId:{
+  guildId: {
     type: String,
     required: true,
     unique: true,
   },
-  tags:{
+  tags: {
     type: Array,
-    name:{
+    name: {
       type: String
     },
-    text:{
+    text: {
       type: String
     },
-    file:{
+    file: {
       type: String
     },
-    time:{
+    time: {
       type: Number
     },
   },
-  global:{
+  global: {
     type: Boolean,
     required: true,
     default: false

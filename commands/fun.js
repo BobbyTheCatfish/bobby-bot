@@ -4,7 +4,7 @@ const Augur = require('augurbot'),
   request = require('request');
 const Module = new Augur.Module();
 Module.addCommand({ name: "8ball",
-  aliases:["🎱"],
+  aliases: ["🎱"],
   category: "Fun",
   process: async (msg, args) => {
     if (!args?.endsWith('?')) return msg.channel.send("you need to ask me a question, silly.");
@@ -182,7 +182,7 @@ Module.addCommand({ name: "8ball",
   }
 })
 .addCommand({ name: "enlarge",
-  aliases:['e', 'embiggen'],
+  aliases: ['e', 'embiggen'],
   category: "Fun",
   process: async (msg, args) => {
     console.log('run');

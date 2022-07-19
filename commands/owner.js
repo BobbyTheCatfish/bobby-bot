@@ -119,7 +119,7 @@ Module.addCommand({ name: "pingeveryone",
     if (words[0].toLowerCase() == 'listening') {
       if (!keywords) return msg.channel.send("What are you listening to?");
       if (!url[1]) {
-        client.user.setActivity(keywords, { type: "LISTENING", url:'https://open.spotify.com/track/6jQX8qOBCWffNAXhvPq7n4?si=rLdqxl7xQNKe_WSJSaXSrg' })
+        client.user.setActivity(keywords, { type: "LISTENING", url: 'https://open.spotify.com/track/6jQX8qOBCWffNAXhvPq7n4?si=rLdqxl7xQNKe_WSJSaXSrg' })
                 .then(p => msg.channel.send(`Status has been set to **listening to ${p.activities[0].name}**`))
                 .catch(error => msg.reply(`Couldn't change status because of: ${error}`));
         return;

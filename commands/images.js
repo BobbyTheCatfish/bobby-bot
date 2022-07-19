@@ -145,7 +145,7 @@ Module.addCommand({ name: "amongus",
     try {
       if (color != 255) {
         const img = new Jimp(256, 256, color);
-        return msg.channel.send({ content:`\`#${color}\``, files: [await img.getBufferAsync(Jimp.MIME_PNG)] });
+        return msg.channel.send({ content: `\`#${color}\``, files: [await img.getBufferAsync(Jimp.MIME_PNG)] });
       }
       return msg.reply(`sorry, I couldn't understand the color "${args}"`).then(u.clean);
     } catch (error) {console.log(error);}

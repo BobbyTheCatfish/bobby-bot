@@ -32,7 +32,7 @@ async function getEmails() {
   let i = 0;
   do {
     const item = results[i];
-    const all = item.parts.find({ "which" : "" });
+    const all = item.parts.find({ "which": "" });
     const id = item.attributes.uid;
     const idHeader = `Imap-Id: ${id}\r\n`;
     const mail = await simpleParser(idHeader + all.body);

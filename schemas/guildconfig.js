@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const GuildConfigSchema = new mongoose.Schema({
-  guildId:{
+  guildId: {
     type: String,
     required: true,
     unique: true,
   },
-  prefix:{
+  prefix: {
     type: String,
     required: true,
     default: '!',
@@ -24,32 +24,32 @@ const GuildConfigSchema = new mongoose.Schema({
       required: true,
       default: true,
     },
-    channel:{
+    channel: {
       type: String,
       required: true,
     },
-    roles:{
+    roles: {
       type: Array,
     },
-    emoji:{
+    emoji: {
       type: String
     },
-    ruleChannel:{
+    ruleChannel: {
       type: String
     },
-    custom:{
+    custom: {
       type: String
     },
   },
-  channels:{
+  channels: {
     type: Object,
-    // error:{
+    // error: {
     //   type: String,
     // },
-    botLobby:{
+    botLobby: {
       type: String,
     },
-    starboards:{
+    starboards: {
       type: Array,
       channel: {
         type: String,
@@ -64,7 +64,7 @@ const GuildConfigSchema = new mongoose.Schema({
         type: Number,
       },
     },
-    modLogs:{
+    modLogs: {
       type: Object,
       channel: {
         type: String,

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const InfractionSchema = new mongoose.Schema({
-  guildId:{
+  guildId: {
     type: String,
     required: true,
     unique: true,

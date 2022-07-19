@@ -115,7 +115,7 @@ Module.addCommand({ name: "ban",
   description: "Clears messages",
   info: "Deletes up to 200 messages in a channel, including the one you send",
   category: "Mod",
-  memberPermissions:['MANAGE_MESSAGES'],
+  memberPermissions: ['MANAGE_MESSAGES'],
   onlyGuild: true,
   process: async (msg, suffix) => {
     const deleteCount = suffix;
@@ -224,7 +224,7 @@ Module.addCommand({ name: "ban",
     return msg.reply("That's an invalid action. Valid actions are `create`, `remove`, `steal`, and `rename`.");
   }
 })
-.addCommand({ name:'mute',
+.addCommand({ name: 'mute',
   description: 'Mutes people',
   category: 'Mod',
   memberPermissions: ['MANAGE_ROLES'],
@@ -264,7 +264,7 @@ Module.addCommand({ name: "ban",
     }
   }
 })
-.addCommand({ name:'unmute',
+.addCommand({ name: 'unmute',
   description: 'Unmutes people',
   category: 'Mod',
   memberPermissions: ['MANAGE_ROLES'],
@@ -299,7 +299,7 @@ Module.addCommand({ name: "ban",
     return msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
 })
-.addCommand({ name:'muteall',
+.addCommand({ name: 'muteall',
   description: 'Mutes all members in a VC',
   category: 'Mod',
   memberPermissions: ['MUTE_MEMBERS'],
@@ -327,7 +327,7 @@ Module.addCommand({ name: "ban",
     if (logChannel) logChannel.send({ embeds: [embed] });
   }
 })
-.addCommand({ name:'unmuteall',
+.addCommand({ name: 'unmuteall',
   description: 'Unutes all members in a VC',
   category: 'Mod',
   memberPermissions: ['MUTE_MEMBERS'],
@@ -351,11 +351,11 @@ Module.addCommand({ name: "ban",
       i++;
     } while (i < members.length);
     const embed = u.embed().setTitle(`Muted All in ${channel.name}`).setDescription(`Muted \`${s.length}\` members`);
-    if (f.length > 0) embed.addFields([{ name:'Failed to Mute', value: f.join('\n') }]);
+    if (f.length > 0) embed.addFields([{ name: 'Failed to Mute', value: f.join('\n') }]);
     if (logChannel) logChannel.send({ embeds: [embed] });
   }
 })
-.addCommand({ name:'nick',
+.addCommand({ name: 'nick',
   description: `Changes someone's nickname`,
   category: 'Mod',
   memberPermissions: ['MANAGE_NICKNAMES'],
@@ -372,7 +372,7 @@ Module.addCommand({ name: "ban",
     }
   }
 })
-.addCommand({ name:'say',
+.addCommand({ name: 'say',
   description: `Repeats after you`,
   category: 'Mod',
   onlyGuild: true,
@@ -396,7 +396,7 @@ Module.addCommand({ name: "ban",
     return msg.channel.send('no.');
   }
 })
-.addCommand({ name:'prefix',
+.addCommand({ name: 'prefix',
   description: `Changes the server prefix`,
   category: 'Mod',
   onlyGuild: true,

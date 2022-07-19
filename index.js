@@ -3,7 +3,7 @@ const { AugurClient } = require('augurbot'),
   { Partials } = require('discord.js'),
   u = require('./utils/utils');
 const client = new AugurClient(config, {
-  clientOptions:{
+  clientOptions: {
     allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     partials: [Partials.Reaction, Partials.Channel],
   },

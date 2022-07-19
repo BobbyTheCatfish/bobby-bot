@@ -298,7 +298,7 @@ Module.addCommand({ name: "playing",
     }
   }
 })
-.addCommand({ name:"tictactoe",
+.addCommand({ name: "tictactoe",
   aliases: ['t'],
   process: async (msg, suffix) => {
     db = low(new FileSync('jsons/tictactoe.json'));

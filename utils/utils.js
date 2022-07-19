@@ -265,7 +265,7 @@ const Utils = {
 
   /**
      * @param {Message} msg Message Object
-     * @returns {Promise<{command: string, suffix:string, params: []}>} Parsed message content
+     * @returns {Promise<{command: string, suffix: string, params: []}>} Parsed message content
      */
   parse: async (msg) => {
     try {

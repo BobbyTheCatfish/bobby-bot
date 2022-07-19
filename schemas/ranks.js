@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const RankSchema = new mongoose.Schema({
-  guildId:{
+  guildId: {
     type: String,
     required: true,
     unique: true,
