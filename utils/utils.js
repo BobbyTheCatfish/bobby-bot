@@ -335,57 +335,10 @@ const Utils = {
      */
   botSpam: async (msg) => {
     if (!msg.guild) return msg.channel;
-    const channel = await Utils.db.guildconfig.getBotLobby(msg.guild.id);
+    const channel = await Utils.db.guildconfig.getChannel(msg.guild.id, 'botLobby');
     return msg.client.channels.cache.get(channel) ?? msg.channel;
   },
 
-  /**
-     * @param {{category: string, int: number}[]} flags Array of flag categories and ints
-     * @returns {number} encoded number
-     */
-  encodeLogEvents: (flags) => {
-    const reduce = function(fl) {
-      const numbers = fl.map(f => f.int);
-      let reduced = numbers.length > 1 ? numbers.reduce(function(a, b) {return a + b;}) : numbers;
-      if (numbers.length > 1) reduced++;
-      return reduced.toString();
-    };
-    const channel = reduce(flags.filter(f => f.category == 'channel'));
-    const message = reduce(flags.filter(f => f.category == 'message'));
-    const emoji = reduce(flags.filter(f => f.category == 'emoji'));
-    const member = reduce(flags.filter(f => f.category == 'member'));
-    const other = reduce(flags.filter(f => f.category == 'other'));
-    const server = reduce(flags.filter(f => f.category == 'server'));
-    const role = reduce(flags.filter(f => f.category == 'role'));
-    return channel + message + emoji + member + other + server + role;
-  },
-
-  /**
-     * @param {Guild} guild Guild Object
-     * @returns {Promise<string[]>} Array of flag names
-     */
-  decodeLogEvents: async (guild) => {
-    const eventList = require('../jsons/events.json').events;
-    const decrypt = function(int, category) {
-      const filtered = eventList.filter(f => f[2] == category);
-      if (int == 0) return [];
-      if (int == 7) return filtered.map(f => f[0]);
-      if (int <= 3) return filtered.find(f => f[1] == int)[0];
-      if (int == 4) return filtered.filter(f => f[1] == 1 || f[1] == 2).map(f => f[0]);
-      if (int == 5) return filtered.filter(f => f[1] == 1 || f[1] == 3).map(f => f[0]);
-      if (int == 6) return filtered.filter(f => f[1] == 2 || f[1] == 3).map(f => f[0]);
-    };
-    const bytefield = await Utils.db.guildconfig.getLogFlags(guild.id);
-    if (!bytefield) return [];
-    const channel = decrypt(bytefield[0], 'channel');
-    const message = decrypt(bytefield[1], 'message');
-    const emoji = decrypt(bytefield[2], 'emoji');
-    const member = decrypt(bytefield[3], 'member');
-    const other = decrypt(bytefield[4], 'other');
-    const server = decrypt(bytefield[5], 'server');
-    const role = decrypt(bytefield[6], 'role');
-    return channel.concat(message, emoji, member, other, server, role);
-  },
   noop: () => null
 };
 

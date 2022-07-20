@@ -24,18 +24,6 @@ const models = {
     getAllConfigs: async () => {
       return await GuildConfig.find().exec();
     },
-    getInvite: async (guildId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        if (document) return document.invite;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    saveInvite: async (guildId, invite) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return await GuildConfig.findOneAndUpdate({ guildId }, { invite }, { new: true });
-      else throw new Error(`No guildconfig for guild ${guildId}`);
-    },
     getPrefix: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
@@ -48,70 +36,31 @@ const models = {
       if (await GuildConfig.exists({ guildId })) return await GuildConfig.findOneAndUpdate({ guildId }, { prefix }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
-    saveErrorChannel: async (guildId, channel) => {
+    saveChannel: async (guildId, channel, channelType) => {
       await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.error": channel }, { new: true });
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { [`channels.${channelType}`]: channel }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
-    getErrorChannel: async (guildId) => {
+    getChannel: async (guildId, channelType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
         const document = await GuildConfig.findOne({ guildId }).exec();
-        const channel = document?.channels.error;
+        const channel = document?.channels?.[channelType];
         if (channel) return channel;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
-    getEnabledCommand: async (guildId, index) => {
+    getRole: async (guildId, roleType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
         const document = await GuildConfig.findOne({ guildId }).exec();
-        const base = document?.commands;
-        if (base) {
-          const bits = converter.base64tobits(base);
-          if (bits[index] == 1) return true;
-          else return false;
-        }
+        const role = document?.roles?.[roleType];
+        if (role) return role;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
-    changeCommandState: async (guildId, index, state) => {
+    saveRole: async (guildId, role, roleType) => {
       await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const base = document.commands;
-        if (base) {
-          const bits = converter.base64tobits(base);
-          bits[index] = state;
-          const based = converter.bitstobase64(bits);
-          return GuildConfig.findOneAndUpdate({ guildId }, { commands: based }, { new: true });
-        }
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    removeBit: async (guildId, index) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const base = document.commands;
-        if (base) {
-          /** @type {string} */
-          let bits = document.commands;
-          bits = bits.slice(0, index) + bits.slice(index + 1);
-          const based = converter.bitstobase64(bits);
-          return GuildConfig.findOneAndUpdate({ guildId }, { commands: based }, { new: true });
-        }
-      }
-    },
-    saveBotLobby: async (guildId, channel) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.botLobby": channel }, { new: true });
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { [`roles.${roleType}`]: role }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
-    },
-    getBotLobby: async (guildId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const channel = document?.channels?.botLobby;
-        if (channel) return channel;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
     getStarBoards: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
@@ -121,13 +70,13 @@ const models = {
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
     /**
-         * @typedef StarBoard
-         * @property {string} channel
-         * @property {string[]} reactions
-         * @property {string[]} whitelist
-         * @property {number} toPost
-         * @param {StarBoard} theBoard
-         */
+     * @typedef StarBoard
+     * @property {string} channel
+     * @property {string[]} reactions
+     * @property {string[]} whitelist
+     * @property {number} toPost
+     * @param {StarBoard} theBoard
+     */
     saveStarBoard: async (guildId, theBoard) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
@@ -145,61 +94,16 @@ const models = {
         if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': channel }, { $pull: { channel } }, { new: true });
       }
     },
-    saveLogChannel: async (guildId, channel, flags) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.logChannel": { channel, flags } }, { new: true });
-      else throw new Error(`No guildconfig for guild ${guildId}`);
-    },
-    getLogChannel: async (guildId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const channel = document?.channels?.logChannel;
-        if (channel) return channel.channel;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    getLogFlags: async (guildId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const channel = document?.channels?.logChannel;
-        if (channel) return channel.flags;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    getMutedRole: async (guildId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) {
-        const document = await GuildConfig.findOne({ guildId }).exec();
-        const role = document?.roles?.muted;
-        if (role) return role;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    saveMutedRole: async (guildId, muted) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "roles.muted": muted }, { new: true });
-      else throw new Error(`No guildconfig for guild ${guildId}`);
-    },
     getLangFilter: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
         const document = GuildConfig.findOne({ guildId }).exec();
-        return document?.langFilter;
+        return document?.filter;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
-    saveLangFilter: async (guildId, filter) => {
+    saveLangFilter: async (guildId, status) => {
       await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { filter }, { new: true });
-      else throw new Error(`No guildconfig for guild ${guildId}`);
-    },
-    getLangLog: async (guildId) => {
-      if (await GuildConfig.exists({ guildId })) {
-        const document = GuildConfig.findOne({ guildId }).exec();
-        return document?.channels?.language;
-      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
-    },
-    saveLangLog: async (guildId, channelId) => {
-      await models.guildconfig.createConfig(guildId);
-      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { "channels.language": channelId }, { new: true });
+      if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { filter: status }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     }
   },

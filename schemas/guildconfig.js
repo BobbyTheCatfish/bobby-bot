@@ -11,11 +11,24 @@ const GuildConfigSchema = new mongoose.Schema({
     required: true,
     default: '!',
   },
+  filter: {
+    type: Boolean,
+    default: false
+  },
   roles: {
     type: Object,
     muted: {
       type: String
     },
+    trusted: {
+      type: String
+    },
+    trustedplus: {
+      type: String
+    },
+    untrusted: {
+      type: String
+    }
   },
   welcome: {
     type: Object,
@@ -43,10 +56,10 @@ const GuildConfigSchema = new mongoose.Schema({
   },
   channels: {
     type: Object,
-    // error: {
-    //   type: String,
-    // },
     botLobby: {
+      type: String,
+    },
+    modLogs: {
       type: String,
     },
     starboards: {
@@ -63,15 +76,6 @@ const GuildConfigSchema = new mongoose.Schema({
       toPost: {
         type: Number,
       },
-    },
-    modLogs: {
-      type: Object,
-      channel: {
-        type: String,
-      },
-      // flags: {
-      //   type: String,
-      // },
     },
   },
 });
