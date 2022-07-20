@@ -9,15 +9,6 @@ const Augur = require('augurbot'),
 
 const Module = new Augur.Module();
 const logChannel = null;
-// const errorChannel = async msg => msg.guild.channels.cache.get(await u.db.guildconfig.getErrorChannel(msg.guild.id));
-// function filter(text) {
-//   // eslint-disable-next-line no-useless-escape
-//   const noWhiteSpace = text.toLowerCase().replace(/[\.,\/#!$%\^&\*;:\{\}=\-_`~"'\(\)\?\|]/g, "").replace(/\s\s+/g, " ");
-//   const filtered = pf.scan(noWhiteSpace).filter(a => a.length > 0);
-//   if (filtered.length > 0 && (noWhiteSpace.length > 0)) {
-//     return filtered;
-//   }
-// }
 Module.addCommand({ name: "ban",
   syntax: "@User#1234 @User#5678 <reason>",
   description: "Bans people",
@@ -233,7 +224,7 @@ Module.addCommand({ name: "ban",
     const s = [];
     const err = [];
     const mutedUsers = msg.mentions.members.map(a => a);
-    const dbFetch = await u.db.guildconfig.getMutedRole(msg.guild.id);
+    const dbFetch = await u.db.guildconfig.getRole(msg.guild.id, 'muted');
     if (dbFetch == 'disabled' || !dbFetch) return u.reply(msg, `The mute command is disabled. Use \`/config\` to set it up.`, true);
     if (mutedUsers.length == 0) return u.reply(msg, `You need to specify who to mute`, true);
     const muteRole = msg.guild.roles.cache.get(dbFetch);
@@ -273,7 +264,7 @@ Module.addCommand({ name: "ban",
     const s = [];
     const err = [];
     const mutedUsers = msg.mentions.members.map(a => a);
-    const dbFetch = await u.db.guildconfig.getMutedRole(msg.guild.id);
+    const dbFetch = await u.db.guildconfig.getRole(msg.guild.id, 'muted');
     if (dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.");
     if (mutedUsers.length == 0) return msg.channel.send(`You need to specify who to mute`);
     const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
