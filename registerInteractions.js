@@ -1,7 +1,6 @@
 const config = require("./config/config.json"),
   path = require("path"),
-  axios = require("axios"),
-  { Collection } = require("discord.js");
+  axios = require("axios");
 
 /************************
  * BEGIN "CONFIG" BLOCK *
@@ -9,15 +8,15 @@ const config = require("./config/config.json"),
 const globalCommandFiles = [
   "avatar.json",
   // "config.json",
+  "get.json",
+  "rank.json",
   "welcome.json",
-  "rank.json"
 ];
 const guildCommandFiles = [
   {
     id: "406821751905976320",
     cmds: [
       "config.json",
-      "get.json"
     ]
   },
   {
@@ -27,12 +26,6 @@ const guildCommandFiles = [
     ]
   }
 ];
-const permissionData = new Collection();
-// permissionData.set(commandID, [{
-//   id: roleId,
-//   type: 1,
-//   permission: true
-// }]);
 
 /**********************
  * END "CONFIG" BLOCK *
@@ -123,16 +116,3 @@ axios({
   }
   console.log();
 }).catch(displayError);
-
-for (const commandId of permissionData.keys()) {
-  axios({
-    method: "put",
-    url: `https://discord.com/api/v8/applications/${applicationId}/guilds/${permissionData.get(commandId).guildId}/commands/${commandId}/permissions`,
-    headers: { Authorization: `Bot ${config.token}` },
-    data: { permissions: permissionData.get(commandId) }
-  }).then((response) => {
-    console.log("=====Permissions registered for 1 command=====");
-    console.log(response.data);
-    console.log();
-  }).catch(displayError);
-}

@@ -1,48 +1,63 @@
 const Augur = require('augurbot'),
-  u = require('../utils/utils');
+  u = require('../utils/utils'),
+  discord = require('discord.js'),
+  schedule = require('node-schedule');
 
 const Module = new Augur.Module();
-
-const starboards = async (msg) => await u.db.guildconfig.getStarBoards(msg.guild.id);
-
-const postToBoard = async (reaction, user, force = false) => {
-  const msg = reaction.message;
-  const guildBoards = await starboards(msg);
-  if (guildBoards?.length > 0) {
-    if (!guildBoards.includes({ channel: msg.channel.id })) {
-      for (const x of guildBoards) {
-        if (!x.reactions.includes(reaction.emoji.name) && !x.reactions.includes(reaction.emoji.id) && !(x.main && force)) continue;
-        else if (x.singleChannel && msg.channel.id != x.singleChannel && !force) continue;
-        if (reaction.count == x.toStar || force) {
-          const channel = msg.guild.channels.cache.get(x.channel);
-          const embed = u.embed().setDescription(msg.content);
-          if (msg.attachments.first()) embed.setImage(msg.attachments.first().url);
-          embed.addFields([
+/**
+ * @param {discord.MessageReaction} reaction
+ * @param {discord.Message} msg
+ */
+const time = 5 * 24 * 60 * 60 * 1000;
+const postToBoard = async (reaction, msg) => {
+  try {
+    const emoji = reaction.emoji.id ?? reaction.emoji.name;
+    if (!await u.db.guildconfig.getSBMessage(msg.guild.id, msg.id)) {
+      const guildBoards = await u.db.guildconfig.getStarBoards(msg.guild.id);
+      if (guildBoards?.length > 0 && !guildBoards.find(b => b.channel == msg.channel.id)) {
+        const correctBoard = guildBoards.find(b => b.reactions.includes(emoji) ?? b.whitelist == msg.channel.id);
+        if (correctBoard && correctBoard.toPost <= reaction.users.cache.size) {
+          const channel = msg.guild.channels.cache.get(correctBoard.channel);
+          const embed = u.embed().setDescription(msg.content)
+          .addFields([
             { name: 'Channel', value: `${msg.channel}` },
-            { name: 'Jump to post', value: msg.url }
-          ]).setTimestamp(msg.createdAt).setAuthor({ name: msg.member.displayName, iconURL: msg.author.avatarURL() }).setFooter(reaction.emoji.name);
+            { name: 'Jump to post', value: `[Original Message](${msg.url})` }
+          ])
+          .setTimestamp(msg.createdAt)
+          .setAuthor({ name: msg.member.displayName, iconURL: msg.member.avatarURL() })
+          .setFooter({ text: reaction.emoji.name });
+          if (msg.attachments.first()) embed.setImage(msg.attachments.first().url);
           if (channel) {
             channel.send({ embeds: [embed] });
-            // u.db.guildconfig.saveSBMessage(msg)
-          } else {u.errorHandler(`Starboard Send Error`, `Couldn't send to channel *${x.channel}* in guild *${msg.guild.name}*`);}
+            u.db.guildconfig.saveSBMessage(msg.guild.id, msg);
+          } else {u.errorHandler(new Error(`Starboard Send Error`), `Couldn't send to channel *${correctBoard.channel}* in guild *${msg.guild.name}*`);}
         }
       }
     }
+  } catch (error) {
+    console.log(error);
   }
 };
 
 Module.addEvent('messageReactionAdd', async (reaction, user) => {
-  if (!reaction.message?.author.bot) {
-    if (!user.bot) {
-      if (reaction.message.guild) {
-        if (reaction.message.createdTimestamp > (Date.now() - 3 * 24 * 60 * 60000)) {
-          const member = reaction.message.guild.members.cache.get(user.id);
-          if (member.permissions.has('MANAGE_GUILD') && reaction.emoji.name == '🌟') return await postToBoard(reaction, member, true);
-          else await postToBoard(reaction, user);
-        }
+  const msg = await reaction.message.fetch();
+  if (!msg?.author.bot && !user.bot && msg.guild && msg.createdTimestamp > (Date.now() - time)) {
+    await postToBoard(reaction, msg);
+  }
+})
+.addEvent('ready', async () => {
+  const rule = new schedule.RecurrenceRule();
+  rule.hour = 0;
+  rule.minute = 0;
+  schedule.scheduleJob(rule, async function() {
+    const msgs = await u.db.guildconfig.getAllSBMessages();
+    if (msgs.length > 0) {
+      for (const x of msgs) {
+        const remove = x.msgs.filter(m => m.createdTimestamp < Date.now() - time);
+        await u.db.guildconfig.cullSBMessages(x.guild, remove.map(r => r.id));
       }
     }
-  }
+  });
 });
 
 module.exports = Module;

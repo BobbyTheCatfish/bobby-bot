@@ -54,6 +54,15 @@ const GuildConfigSchema = new mongoose.Schema({
       type: String
     },
   },
+  starredMsgs: {
+    type: Array,
+    id: {
+      type: String
+    },
+    createdTimestamp: {
+      type: Number
+    }
+  },
   channels: {
     type: Object,
     botLobby: {

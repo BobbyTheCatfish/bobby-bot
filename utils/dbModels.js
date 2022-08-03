@@ -94,6 +94,31 @@ const models = {
         if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': channel }, { $pull: { channel } }, { new: true });
       }
     },
+    saveSBMessage: async (guildId, msg) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        return await GuildConfig.findOneAndUpdate({ guildId }, { $push: { 'starredMsgs': { id: msg.id, createdTimestamp: msg.createdTimestamp } } });
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    getSBMessage: async (guildId, messageId) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = GuildConfig.findOne({ guildId }).exec();
+        return document?.starredMsgs?.find(s => s.id == messageId);
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    getAllSBMessages: async () => {
+      const documents = await GuildConfig.find().exec();
+      return documents?.map(d => {return { msgs: d.starredMsgs, guild: d.guildId };}).filter(a => a.msgs.length > 0);
+    },
+    cullSBMessages: async (guildId, messageIds) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = await GuildConfig.findOne({ guildId });
+        const real = messageIds.filter(m => document?.starredMsgs.find(s => s.id == m));
+        if (real.length > 0) return GuildConfig.findOneAndUpdate({ guildId }, { $pull: { "starredMsgs": { "id": { $in: messageIds } } } }, { new: true });
+      }
+    },
     getLangFilter: async (guildId) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {

@@ -28,21 +28,25 @@ Module.addInteractionCommand({ name: 'config',
 
       async function channels() {
         const type = int.options.getString('type');
-        const newChannel = int.options.getChannel('channel');
+        let newChannel = int.options.getChannel('channel');
         if (type == 'botlobby') return await botLobby();
         else if (type == 'modlogs') return await modLogs();
 
         async function botLobby() {
+          if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
           const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'botLobby'));
+          if (currentChannel?.id == newChannel?.id) newChannel = "";
           const embed = u.embed().setTitle("Bot Lobby").setDescription(`Bot lobby updated!\nLarge bits of text will now be sent in ${newChannel ?? 'the channel the command is used in'}${currentChannel ? ` instead of ${currentChannel}.` : '.'}`);
-          const saved = await u.db.guildconfig.saveBotLobby(int.guild.id, newChannel?.id ?? '');
+          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'botLobby');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
         async function modLogs() {
+          if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
           const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'modLogs'));
+          if (currentChannel?.id == newChannel?.id) newChannel = '';
           const embed = u.embed().setTitle(`Mod Logs Channel ${newChannel ? "Saved" : "Disabled"}`).setDescription(`Mod logs will ${newChannel ? ` be sent in ${newChannel} ${currentChannel ? `instead of ${currentChannel}.` : ""}` : 'not be sent. This has also turned off the language filter and message reporting.'}`);
-          const saved = await u.db.guildconfig.saveLogChannel(int.guild.id, newChannel?.id ?? '');
+          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'modLogs');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
