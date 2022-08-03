@@ -1,5 +1,6 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
+  discord = require('discord.js'),
   mU = require('../utils/modUtils');
 const Module = new Augur.Module();
 const r = {
@@ -28,7 +29,69 @@ const modal = u.modal().addComponents([
   u.actionRow().addComponents(u.textInput({ customId: 'reason', label: 'Reason', style: 'SHORT' })),
   u.actionRow().addComponents(u.textInput({ customId: 'info', label: 'Additional Info', style: 'PARAGRAPH' }))
 ]);
+/** @param {discord.Message} msg*/
+async function filter(msg, auto = true) {
+  if (msg.content && msg.guild?.id == guild && !msg.author.bot && msg.channel.parent?.id != modCategory) {
+    const site = u.siteFilter(msg.content);
+    if (site) {
+      const matches = site.site;
+      const ruleName = site.category;
+      const logs = msg.guild.channels.cache.get(logChannel);
+      const mute = msg.guild.roles.cache.get(muted);
+      const flag = {
+        msg,
+        pingMods: false,
+        snitch: null,
+        flagReason: `Site Category \`${ruleName}\``,
+        muted: mute,
+        logs,
+        mods: msg.guild.roles.cache.get(mods),
+        muteChannel: msg.guild.channels.cache.get(muteChannel),
+        member: msg.member,
+        matches
+      };
+      await new mU().createFlag(flag);
+      if (msg.deletable) return await msg.delete().catch(() => u.noop());
+    }
+  }
 
+  if (auto && msg.channel.id == logChannel && msg.embeds.length > 0 && !msg.author.bot && !msg.author.system) {
+    const modMsg = msg.embeds[0];
+    if (modMsg.type == 'auto_moderation_message') {
+      msg.content = modMsg.description;
+      msg.url = modMsg.fields.find(f => f.name == 'flagged_message_id');
+      const matches = modMsg.fields.find(f => f.name == 'keyword_matched_content')?.value;
+      const ruleName = modMsg.fields.find(f => f.name == 'rule_name')?.value;
+      const harsh = u.harshFilter(msg.content);
+      const logs = msg.guild.channels.cache.get(logChannel);
+      const mute = msg.guild.roles.cache.get(muted);
+      const flag = {
+        msg,
+        pingMods: harsh,
+        snitch: null,
+        flagReason: `AutoMod Rule \`${ruleName}\``,
+        furtherInfo: `Rule: \`${modMsg.fields.find(f => f.name == 'keyword')?.value}\``,
+        muted: mute,
+        logs,
+        mods: msg.guild.roles.cache.get(mods),
+        muteChannel: msg.guild.channels.cache.get(muteChannel),
+        member: msg.member,
+        matches
+      };
+      await new mU().createFlag(flag);
+      if (msg.deletable) return await msg.delete().catch(() => u.noop());
+    }
+    if (!msg.author.bot && !msg.author.system && msg.embeds.length > 0) {
+      const plainText = msg.embeds.map(e => `${e.title ?? ""} ${e.description ?? ""} ${e.fields.map(f => `${f.name ?? ""} ${f.value ?? ""}`).join(' ')} ${e.author?.name ?? ""} ${e.footer?.text ?? ""}`).join(' ');
+      const harsh = u.harshFilter(plainText);
+      const links = u.siteFilter(plainText);
+      if (harsh || links) {
+        await msg.suppressEmbeds();
+        return await msg.reply({ content: "Looks like that link embed might have some language in it. Please be careful!" });
+      }
+    }
+  }
+}
 const { logChannel, muteChannel, muted, trusted, trustPlus, untrusted, mods, guild, modCategory } = r;
 Module.addInteractionCommand({ name: 'mod',
   commandId: '998632048057139304',
@@ -264,58 +327,10 @@ Module.addInteractionCommand({ name: 'mod',
 
 // AUTO MOD
 .addEvent('messageCreate', async (msg) => {
-  // links
-  if (msg.content && msg.guild?.id == guild && !msg.author.bot && msg.channel.parent?.id != modCategory) {
-    const site = u.siteFilter(msg.content);
-    if (site) {
-      const matches = site.site;
-      const ruleName = site.category;
-      const logs = msg.guild.channels.cache.get(logChannel);
-      const mute = msg.guild.roles.cache.get(muted);
-      const flag = {
-        msg,
-        pingMods: false,
-        snitch: null,
-        flagReason: `Language Category \`${ruleName}\``,
-        muted: mute,
-        logs,
-        mods: msg.guild.roles.cache.get(mods),
-        muteChannel: msg.guild.channels.cache.get(muteChannel),
-        member: msg.member,
-        matches
-      };
-      await new mU().createFlag(flag);
-      if (msg.deletable) return await msg.delete().catch(() => u.noop());
-    }
-  }
-
-  if (msg.channel.id == logChannel && msg.embeds.length > 0 && !msg.author.bot && !msg.author.system) {
-    const modMsg = msg.embeds[0];
-    if (modMsg.type == 'auto_moderation_message') {
-      msg.content = modMsg.description;
-      msg.url = modMsg.fields.find(f => f.name == 'flagged_message_id');
-      const matches = modMsg.fields.find(f => f.name == 'keyword_matched_content')?.value;
-      const ruleName = modMsg.fields.find(f => f.name == 'rule_name')?.value;
-      const harsh = u.harshFilter(msg.content);
-      const logs = msg.guild.channels.cache.get(logChannel);
-      const mute = msg.guild.roles.cache.get(muted);
-      const flag = {
-        msg,
-        pingMods: harsh,
-        snitch: null,
-        flagReason: `AutoMod Rule \`${ruleName}\``,
-        furtherInfo: `Rule: \`${modMsg.fields.find(f => f.name == 'keyword')?.value}\``,
-        muted: mute,
-        logs,
-        mods: msg.guild.roles.cache.get(mods),
-        muteChannel: msg.guild.channels.cache.get(muteChannel),
-        member: msg.member,
-        matches
-      };
-      await new mU().createFlag(flag);
-      if (msg.deletable) return await msg.delete().catch(() => u.noop());
-    }
-  }
+  await filter(msg);
+})
+.addEvent('messageEdit', async (old, msg) => {
+  await filter(msg, false);
 })
 
 // Nick/activity filtering
