@@ -1,5 +1,14 @@
 {
+    "git": "https://github.com/YOUR GITHUB REPO",
+    "applicationId": "",
     "color": "#00c8ff",
+    "apiKeys": {
+      "cat": "YOUR KEY",
+      "uberduck": {
+        "user": "YOUR USER",
+        "pass": "YOUR PASS"
+      }
+    },
     "db": {
       "model": "utils/dbModels.js",
       "db": "DB ADDRESS",
@@ -17,24 +26,42 @@
       "token": "ERROR WEBHOOK TOKEN (second part of URL)"
     },
     "events": [
+      "clickButton",
       "channelCreate",
+      "channelDelete",
+      "channelUpdate",
+      "channelPinsUpdate",
       "disconnect",
+      "emojiCreate",
+      "emojiDelete",
+      "emojiUpdate",
       "error",
+      "guildCreate",
       "guildBanAdd",
+      "guildBanRemove",
+      "guildIntegrationUpdate",
       "guildMemberAdd",
       "guildMemberRemove",
       "guildMemberUpdate",
-      "message",
+      "guildUpdate",
+      "interactionCreate",
+      "inviteCreate",
+      "inviteDelete",
+      "messageCreate",
+      "messageDeleteBulk",
       "messageReactionAdd",
       "messageReactionRemove",
       "messageUpdate",
       "presenceUpdate",
       "raw",
+      "rateLimit",
+      "roleCreate",
+      "roleDelete",
+      "roleUpdate",
       "voiceStateUpdate"
     ],
     "ownerId": "YOUR ID",
     "prefix": "!",
-    "streamApplications": "",
     "token": "BOT TOKEN HERE",
     "email": {
       "user": "BOT EMAIL ADDRESS",
