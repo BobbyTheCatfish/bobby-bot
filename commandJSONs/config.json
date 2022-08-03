@@ -17,8 +17,16 @@
               "value": "botlobby"
             },
             {
+              "name": "Mod Category",
+              "value": "modcategory"
+            },
+            {
               "name": "Mod Logs",
               "value": "modlogs"
+            },
+            {
+              "name": "Mute Channel",
+              "value": "muted"
             }
           ],
           "required": true
@@ -121,6 +129,10 @@
             {
               "name": "Untrusted",
               "value": "untrusted"
+            },
+            {
+              "name": "Mods",
+              "value": "mods"
             }
           ],
           "required": true

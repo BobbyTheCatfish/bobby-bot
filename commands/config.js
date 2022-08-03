@@ -29,8 +29,15 @@ Module.addInteractionCommand({ name: 'config',
       async function channels() {
         const type = int.options.getString('type');
         let newChannel = int.options.getChannel('channel');
+        switch (type) {
+        case "botlobby": return await botLobby();
+        case "modcategory": return await modCategory();
+        case "modogs": return await modLogs();
+        case "muted": return await muteChannel();
+        }
         if (type == 'botlobby') return await botLobby();
         else if (type == 'modlogs') return await modLogs();
+        else if (type == 'muted') return await muteChannel();
 
         async function botLobby() {
           if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
@@ -41,12 +48,30 @@ Module.addInteractionCommand({ name: 'config',
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
+        async function modCategory() {
+          if (!newChannel.type == 4) return int.reply({ content: "The channel needs to be a category!" });
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'modCategory'));
+          if (currentChannel?.id == newChannel?.id) newChannel = '';
+          const embed = u.embed().setTitle(`Mod Logs Channel ${newChannel ? "Saved" : "Disabled"}`).setDescription(`Mod channels will ${newChannel ? ` be identified by ${newChannel} ${currentChannel ? `instead of ${currentChannel}.` : ""}` : 'not be identified.'}`);
+          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'modCategory');
+          if (saved) return int.reply({ embeds: [embed], ephemeral: true });
+          else return int.reply({ content: "I wasn't able to save that. Please try again later." });
+        }
         async function modLogs() {
           if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
           const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'modLogs'));
           if (currentChannel?.id == newChannel?.id) newChannel = '';
           const embed = u.embed().setTitle(`Mod Logs Channel ${newChannel ? "Saved" : "Disabled"}`).setDescription(`Mod logs will ${newChannel ? ` be sent in ${newChannel} ${currentChannel ? `instead of ${currentChannel}.` : ""}` : 'not be sent. This has also turned off the language filter and message reporting.'}`);
           const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'modLogs');
+          if (saved) return int.reply({ embeds: [embed], ephemeral: true });
+          else return int.reply({ content: "I wasn't able to save that. Please try again later." });
+        }
+        async function muteChannel() {
+          if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'muteChannel'));
+          if (currentChannel?.id == newChannel?.id) newChannel = "";
+          const embed = u.embed().setTitle("Bot Lobby").setDescription(`Mute Channel updated!\n${newChannel ? `Users will be pinged in a thread in ${newChannel} upon mute` : "Users won't be pinged upon mute"}${currentChannel ? ` instead of in ${currentChannel}.` : '.'}`);
+          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'muteChannel');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
@@ -155,6 +180,7 @@ Module.addInteractionCommand({ name: 'config',
         case "trusted": return await trusted();
         case "trustedplus": return await trustplus();
         case "untrusted": return await untrusted();
+        case "mods": return await mods();
         }
         async function save(embed, roleType) {
           const currentRole = int.guild.channels.cache.get(await u.db.guildconfig.getRole(int.guild.id, roleType));
@@ -173,11 +199,15 @@ Module.addInteractionCommand({ name: 'config',
         }
         async function trustplus() {
           const embed = (r) => u.embed().setTitle("Trusted+ Role").setDescription(`Trusted+ role updated!\n${newRole ? `Users will recieve the ${newRole} role when commands such as \`/mod trustplus\` are used${r ? `, instead of ${r}.` : '.'}` : "Since no role was provided, this has disabled trust+ related commands."}`);
-          return await save(embed, 'trustedplus');
+          return await save(embed, 'trustPlus');
         }
         async function untrusted() {
           const embed = (r) => u.embed().setTitle("Unrusted Role").setDescription(`Untrusted role updated!\n${newRole ? `Users will recieve the ${newRole} role when commands such as \`/mod watch\` are used${r ? `, instead of ${r}.` : '.'}` : "Since no role was provided, this has disabled watching related commands."}`);
           return await save(embed, 'untrusted');
+        }
+        async function mods() {
+          const embed = (r) => u.embed().setTitle("Mod Role").setDescription(`Mod role updated!\n${newRole ? `Users with the ${newRole} role will be able to use mod commands${r ? `, instead of ${r}.` : '.'}` : "Since no role was provided, this has disabled some moderation related features."}`);
+          return await save(embed, 'mod');
         }
       }
       async function filter() {

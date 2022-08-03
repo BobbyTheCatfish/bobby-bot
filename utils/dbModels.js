@@ -7,6 +7,21 @@ const mongoose = require('mongoose');
 const config = require('../config/config.json');
 const converter = require('fast-b64');
 // const { Module } = require('augurbot');
+/**
+ * @typedef GuildChannels
+ * @prop {string} error
+ * @prop {string} botLobby
+ * @prop {string} modCategory
+ * @prop {string} muteChannel
+ * @prop {string} modLogs
+ *
+ * @typedef GuildRoles
+ * @prop {string} muted
+ * @prop {string} trusted
+ * @prop {string} trustPlus
+ * @prop {string} untrusted
+ * @prop {string} mods
+ */
 mongoose.connect(config.db.db, config.db.settings);
 const models = {
   guildconfig: {
@@ -36,11 +51,21 @@ const models = {
       if (await GuildConfig.exists({ guildId })) return await GuildConfig.findOneAndUpdate({ guildId }, { prefix }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
+    /**
+     * @param {string} guildId
+     * @param {string} channel
+     * @param {keyof GuildChannels} channelType
+     */
     saveChannel: async (guildId, channel, channelType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { [`channels.${channelType}`]: channel }, { new: true });
       else throw new Error(`No guildconfig for guild ${guildId}`);
     },
+    /**
+     * @param {string} guildId
+     * @param {keyof GuildChannels} channelType
+     * @returns {Promise<string>}
+     */
     getChannel: async (guildId, channelType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
@@ -49,6 +74,23 @@ const models = {
         if (channel) return channel;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
+    /**
+     * @param {string} guildId
+     * @returns {Promise<GuildChannels>}
+     */
+    getChannels: async (guildId) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = await GuildConfig.findOne({ guildId }).exec();
+        const channels = document?.channels;
+        if (channels) return channels;
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    /**
+     * @param {string} guildId
+     * @param {keyof GuildRoles} roleType
+     * @returns {Promise<string>}
+     */
     getRole: async (guildId, roleType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) {
@@ -57,6 +99,23 @@ const models = {
         if (role) return role;
       } else {throw new Error(`No guildconfig for guild ${guildId}`);}
     },
+    /**
+     * @param {string} guildId
+     * @returns {Promise<GuildRoles>}
+     */
+    getRoles: async (guildId) => {
+      await models.guildconfig.createConfig(guildId);
+      if (await GuildConfig.exists({ guildId })) {
+        const document = await GuildConfig.findOne({ guildId }).exec();
+        const role = document?.roles;
+        if (role) return role;
+      } else {throw new Error(`No guildconfig for guild ${guildId}`);}
+    },
+    /**
+     * @param {string} guildId
+     * @param {string} role
+     * @param {keyof GuildRoles} roleType
+     */
     saveRole: async (guildId, role, roleType) => {
       await models.guildconfig.createConfig(guildId);
       if (await GuildConfig.exists({ guildId })) return GuildConfig.findOneAndUpdate({ guildId }, { [`roles.${roleType}`]: role }, { new: true });

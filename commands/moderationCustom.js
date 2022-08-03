@@ -2,18 +2,19 @@ const Augur = require('augurbot'),
   u = require('../utils/utils'),
   discord = require('discord.js'),
   mU = require('../utils/modUtils');
+
+/*
+* 0: No filter
+* 1: Messages only
+* 2: Usernames & Nicks only
+* 3: Statuses only
+* 4: Messages & Usernames
+* 5: Messages & Statuses
+* 6: Usernames & Statuses
+* 7: All
+*/
+
 const Module = new Augur.Module();
-const r = {
-  guild: '408747484710436877',
-  logChannel: '987892109145169970',
-  modCategory: '728723188682457088',
-  muteChannel: '959875038423695491',
-  muted: '713820156844834836',
-  trusted: '988546556632399912',
-  trustPlus: '988549111957585950',
-  untrusted: '990387440017608704',
-  mods: '425039849540812800'
-};
 // testing server
 // const t = {
 //   guild: '406821751905976320',
@@ -31,95 +32,102 @@ const modal = u.modal().addComponents([
 ]);
 /** @param {discord.Message} msg*/
 async function filter(msg, auto = true) {
-  if (msg.content && msg.guild?.id == guild && !msg.author.bot && msg.channel.parent?.id != modCategory) {
-    const site = u.siteFilter(msg.content);
-    if (site) {
-      const matches = site.site;
-      const ruleName = site.category;
-      const logs = msg.guild.channels.cache.get(logChannel);
-      const mute = msg.guild.roles.cache.get(muted);
-      const flag = {
-        msg,
-        pingMods: false,
-        snitch: null,
-        flagReason: `Site Category \`${ruleName}\``,
-        muted: mute,
-        logs,
-        mods: msg.guild.roles.cache.get(mods),
-        muteChannel: msg.guild.channels.cache.get(muteChannel),
-        member: msg.member,
-        matches
-      };
-      await new mU().createFlag(flag);
-      if (msg.deletable) return await msg.delete().catch(() => u.noop());
+  if (msg.guild) {
+    const server = await getVars(msg);
+    const logs = msg.guild.channels.cache.get(server.modLogs);
+    const mute = msg.guild.roles.cache.get(server.muted);
+    if (msg.content && await u.db.guildconfig.getLangFilter(msg.guild?.id) && !msg.author.bot && msg.channel.parent?.id != server.modCategory) {
+      const site = u.siteFilter(msg.content);
+      if (site) {
+        const matches = site.site;
+        const ruleName = site.category;
+        const flag = {
+          msg,
+          pingMods: false,
+          snitch: null,
+          flagReason: `Site Category \`${ruleName}\``,
+          muted: mute,
+          logs,
+          mods: msg.guild.roles.cache.get(server.mods),
+          muteChannel: msg.guild.channels.cache.get(server.muteChannel),
+          member: msg.member,
+          matches
+        };
+        await new mU().createFlag(flag);
+        if (msg.deletable) return await msg.delete().catch(() => u.noop());
+      }
     }
-  }
 
-  if (auto && msg.channel.id == logChannel && msg.embeds.length > 0 && !msg.author.bot && !msg.author.system) {
-    const modMsg = msg.embeds[0];
-    if (modMsg.type == 'auto_moderation_message') {
-      msg.content = modMsg.description;
-      msg.url = modMsg.fields.find(f => f.name == 'flagged_message_id');
-      const matches = modMsg.fields.find(f => f.name == 'keyword_matched_content')?.value;
-      const ruleName = modMsg.fields.find(f => f.name == 'rule_name')?.value;
-      const harsh = u.harshFilter(msg.content);
-      const logs = msg.guild.channels.cache.get(logChannel);
-      const mute = msg.guild.roles.cache.get(muted);
-      const flag = {
-        msg,
-        pingMods: harsh,
-        snitch: null,
-        flagReason: `AutoMod Rule \`${ruleName}\``,
-        furtherInfo: `Rule: \`${modMsg.fields.find(f => f.name == 'keyword')?.value}\``,
-        muted: mute,
-        logs,
-        mods: msg.guild.roles.cache.get(mods),
-        muteChannel: msg.guild.channels.cache.get(muteChannel),
-        member: msg.member,
-        matches
-      };
-      await new mU().createFlag(flag);
-      if (msg.deletable) return await msg.delete().catch(() => u.noop());
-    }
-    if (!msg.author.bot && !msg.author.system && msg.embeds.length > 0) {
-      const plainText = msg.embeds.map(e => `${e.title ?? ""} ${e.description ?? ""} ${e.fields.map(f => `${f.name ?? ""} ${f.value ?? ""}`).join(' ')} ${e.author?.name ?? ""} ${e.footer?.text ?? ""}`).join(' ');
-      const harsh = u.harshFilter(plainText);
-      const links = u.siteFilter(plainText);
-      if (harsh || links) {
-        await msg.suppressEmbeds();
-        return await msg.reply({ content: "Looks like that link embed might have some language in it. Please be careful!" });
+    if (auto && msg.channel.id == server.modLogs && msg.embeds.length > 0 && !msg.author.bot && !msg.author.system) {
+      const modMsg = msg.embeds[0];
+      if (modMsg.type == 'auto_moderation_message') {
+        msg.content = modMsg.description;
+        msg.url = modMsg.fields.find(f => f.name == 'flagged_message_id');
+        const matches = modMsg.fields.find(f => f.name == 'keyword_matched_content')?.value;
+        const ruleName = modMsg.fields.find(f => f.name == 'rule_name')?.value;
+        const harsh = u.harshFilter(msg.content);
+        const flag = {
+          msg,
+          pingMods: harsh,
+          snitch: null,
+          flagReason: `AutoMod Rule \`${ruleName}\``,
+          furtherInfo: `Rule: \`${modMsg.fields.find(f => f.name == 'keyword')?.value}\``,
+          muted: mute,
+          logs,
+          mods: msg.guild.roles.cache.get(server.mods),
+          muteChannel: msg.guild.channels.cache.get(server.muteChannel),
+          member: msg.member,
+          matches
+        };
+        await new mU().createFlag(flag);
+        if (msg.deletable) return await msg.delete().catch(() => u.noop());
+      }
+      if (!msg.author.bot && !msg.author.system && msg.embeds.length > 0) {
+        const plainText = msg.embeds.map(e => `${e.title ?? ""} ${e.description ?? ""} ${e.fields.map(f => `${f.name ?? ""} ${f.value ?? ""}`).join(' ')} ${e.author?.name ?? ""} ${e.footer?.text ?? ""}`).join(' ');
+        const harsh = u.harshFilter(plainText);
+        const links = u.siteFilter(plainText);
+        if (harsh || links) {
+          await msg.suppressEmbeds();
+          return await msg.reply({ content: "Looks like that link embed might have some language in it. Please be careful!" });
+        }
       }
     }
   }
 }
-const { logChannel, muteChannel, muted, trusted, trustPlus, untrusted, mods, guild, modCategory } = r;
+async function getVars(int) {
+  const guild = int.guild.id;
+  const channels = await u.db.guildconfig.getChannels(guild);
+  const roles = await u.db.guildconfig.getRoles(guild);
+  return { ...channels, ...roles };
+}
 Module.addInteractionCommand({ name: 'mod',
   commandId: '998632048057139304',
   process: async (int) => {
     const command = int.options.getSubcommand();
-    const logs = int.client.channels.cache.get(logChannel);
-    const mutes = int.client.channels.cache.get(muteChannel);
+    const server = await getVars(int);
+    const logs = int.client.channels.cache.get(server.modLogs);
+    const mutes = int.client.channels.cache.get(server.muteChannel);
     const modUtil = new mU(int, logs);
     switch (command) {
-    case "ban": return modUtil.ban(untrusted);
+    case "ban": return modUtil.ban(server.untrusted);
     case "clear": return modUtil.clear();
     case "disconnect-vc": return modUtil.dcAll();
-    case "kick": return modUtil.kick(untrusted);
-    case "mute": return modUtil.mute(muted, mutes);
+    case "kick": return modUtil.kick(server.untrusted);
+    case "mute": return modUtil.mute(server.muted, mutes);
     case "mute-vc": return modUtil.muteVC();
     case "nick": return modUtil.rename();
     case "note": return modUtil.note();
-    case "unmute": return modUtil.mute(muted, mutes, true);
+    case "unmute": return modUtil.mute(server.muted, mutes, true);
     case "unmute-vc": return modUtil.muteVC(true);
-    case "untrust": return modUtil.trust(trusted, untrusted, true);
-    case "untrust-plus": return modUtil.trustPlus(trusted, untrusted, true);
+    case "untrust": return modUtil.trust(server.trusted, server.untrusted, true);
+    case "untrust-plus": return modUtil.trustPlus(server.trusted, server.untrusted, true);
     case "slowmode": return modUtil.slowmode();
     case "timeout": return modUtil.timeout();
-    case "trust": return modUtil.trust(trusted, untrusted);
-    case "trust-plus": return modUtil.trustPlus(trusted, trustPlus);
-    case "user-info": return modUtil.info(muted, trusted, trustPlus, untrusted);
+    case "trust": return modUtil.trust(server.trusted, server.untrusted);
+    case "trust-plus": return modUtil.trustPlus(server.trusted, server.trustPlus);
+    case "user-info": return modUtil.info(server.muted, server.trusted, server.trustPlus, server.untrusted);
     case "warn": return modUtil.warn();
-    case "watch": return modUtil.watch(untrusted);
+    case "watch": return modUtil.watch(server.untrusted);
     }
   }
 })
@@ -127,9 +135,10 @@ Module.addInteractionCommand({ name: 'mod',
   commandId: "998632048057139303",
   process: async (int) => {
     if (!int.isApplicationCommand()) return;
+    const server = await getVars(int);
     const target = int.targetMember;
-    const logs = int.guild.channels.cache.get(logChannel);
-    const mute = int.guild.channels.cache.get(muteChannel);
+    const logs = int.guild.channels.cache.get(server.modLogs);
+    const mute = int.guild.channels.cache.get(server.muteChannel);
     const options = [
       { label: "Mute", value: "mute", description: "Give the user the muted role", emoji: "🔇" },
       { label: "Unmute", value: "unmute", description: "Remove the user from the muted role", emoji: "🔊" },
@@ -152,17 +161,17 @@ Module.addInteractionCommand({ name: 'mod',
     if (response) {
       await int.editReply({ content: "Hang on a second...", components: [] });
       switch (response.values[0]) {
-      case 'mute': return await modUtils.mute(muted, mute, false, target);
+      case 'mute': return await modUtils.mute(server.muted, mute, false, target);
       case 'timeout': return await modUtils.timeout(target);
-      case 'trust': return await modUtils.trust(trusted, untrusted, false, target);
-      case 'trustplus': return await modUtils.trustPlus(trusted, trustPlus, false, target);
-      case 'watch': return await modUtils.watch(trusted, untrusted, target, false, false);
-      case 'unwatch': return await modUtils.watch(trusted, untrusted, target, true, false);
-      case 'untrust': return await modUtils.trust(trusted, untrusted, true, target);
-      case 'untrustplus': return await modUtils.trustPlus(trusted, trustPlus, true, target);
-      case 'unmute': return await modUtils.mute(muted, mute, true, target);
+      case 'trust': return await modUtils.trust(server.trusted, server.untrusted, false, target);
+      case 'trustplus': return await modUtils.trustPlus(server.trusted, server.trustPlus, false, target);
+      case 'watch': return await modUtils.watch(server.trusted, server.untrusted, target, false, false);
+      case 'unwatch': return await modUtils.watch(server.trusted, server.untrusted, target, true, false);
+      case 'untrust': return await modUtils.trust(server.trusted, server.untrusted, true, target);
+      case 'untrustplus': return await modUtils.trustPlus(server.trusted, server.trustPlus, true, target);
+      case 'unmute': return await modUtils.mute(server.muted, mute, true, target);
       case 'warn': return await modUtils.warn(5, target);
-      case 'info': return await modUtils.info(muted, trusted, trustPlus, untrusted, target);
+      case 'info': return await modUtils.info(server.muted, server.trusted, server.trustPlus, server.untrusted, target);
       }
     }
   }
@@ -171,8 +180,9 @@ Module.addInteractionCommand({ name: 'mod',
   commandId: "998632048057139301",
   process: async (int) => {
     const msg = int.targetMessage;
-    const logs = msg.guild.channels.cache.get(logChannel);
-    const mute = msg.guild.roles.cache.get(muted);
+    const server = await getVars(int);
+    const logs = msg.guild.channels.cache.get(server.modLogs);
+    const mute = msg.guild.roles.cache.get(server.muted);
     const mode = modal.setCustomId('report').setTitle("Report (Won't delete or mute)");
     await int.showModal(mode);
     const result = await int.awaitModalSubmit({ time: 5 * 60 * 1000 });
@@ -189,8 +199,8 @@ Module.addInteractionCommand({ name: 'mod',
       furtherInfo: info ?? null,
       muted: mute,
       logs,
-      mods: msg.guild.roles.cache.get(mods),
-      muteChannel: msg.guild.channels.cache.get(muteChannel),
+      mods: msg.guild.roles.cache.get(server.mods),
+      muteChannel: msg.guild.channels.cache.get(server.muteChannel),
       member: msg.member
     };
     await result.reply({ content: `Message flagged. Check ${logs} to see the flag`, ephemeral: true });
@@ -202,8 +212,9 @@ Module.addInteractionCommand({ name: 'mod',
   process: async (int) => {
     if (!int.isMessageContextMenu()) return;
     const msg = int.targetMessage;
-    const logs = msg.guild.channels.cache.get(logChannel);
-    const mute = msg.guild.roles.cache.get(muted);
+    const server = await getVars(int);
+    const logs = msg.guild.channels.cache.get(server.modLogs);
+    const mute = msg.guild.roles.cache.get(server.muted);
     const mode = modal.setCustomId('harshReport').setTitle("Harsh Report (Deletes and mutes)");
     await int.showModal(mode);
     const result = await int.awaitModalSubmit({ time: 5 * 60 * 1000 });
@@ -220,8 +231,8 @@ Module.addInteractionCommand({ name: 'mod',
       furtherInfo: info ?? null,
       muted: mute,
       logs,
-      mods: msg.guild.roles.cache.get(mods),
-      muteChannel: msg.guild.channels.cache.get(muteChannel),
+      mods: msg.guild.roles.cache.get(server.mods),
+      muteChannel: msg.guild.channels.cache.get(server.muteChannel),
       member: msg.member
     };
     await result.reply({ content: `Message flagged. Check ${logs} to see the flag`, ephemeral: true });
@@ -233,9 +244,10 @@ Module.addInteractionCommand({ name: 'mod',
   const ids = int.customId?.split('.') ?? [];
   const cmd = ids[0];
   const userId = ids[1];
-  if (!int.user.bot && int.isButton() && int.message.author.id == int.client.user.id && int.message.channel.id == logChannel) {
-    const user = int.guild.members.cache.get(int.customId.replace(/[^0-9]/g, ''));
-    const logs = int.client.channels.cache.get(logChannel);
+  const server = await getVars(int);
+  const logs = int.client.channels.cache.get(server.modLogs);
+  const user = int.guild.members.cache.get(userId);
+  if (!int.user.bot && int.isButton() && int.message.author.id == int.client.user.id && int.message.channel.id == server.modLogs) {
     const modUtil = new mU(int, logs);
     switch (cmd) {
     case 'mCClear': return await clear();
@@ -244,15 +256,13 @@ Module.addInteractionCommand({ name: 'mod',
     case 'mCMajor': return await verbal(20);
     case 'mCMute': return await mute();
     case 'mCTimeout': return await timeout();
-    case 'mCInfo': return await modUtil.info(muted, trusted, trustPlus, untrusted, user, int);
+    case 'mCInfo': return await modUtil.info(server.muted, server.trusted, server.trustPlus, server.untrusted, user, int);
     case 'mCLink': return await discuss();
     }
   }
   // p much the same as the regular functions in modUtils but it doesn't log the action
   async function clear() {
     const card = await int.channel.messages.fetch(int.message.id);
-    const logs = int.guild.channels.cache.get(logChannel);
-    const user = int.guild.members.cache.get(userId);
     const modUtil = new mU(int, logs);
     if (userId == int.user.id) return int.reply({ content: "You can't clear your own flag!", ephemeral: true });
 
@@ -260,16 +270,14 @@ Module.addInteractionCommand({ name: 'mod',
     let content = await modUtil.resolveFlag(user, user.id, int.member, card, "Cleared", int.label == "Unmute" ? additionalFields : []);
     if (card.hasThread) await card.thread.setArchived(true, 'Resolved').catch(() => u.noop());
     if (int.label == 'Unmute') {
-      if (!user.roles.cache.has(muted)) content += "\nThey weren't muted, but I've resolved it anyways.";
-      else await user.roles.remove(muted).catch(() => content += "\nI wasn't able to unmute them, but I've resolved it anyways. You'll have to unmute them manually");
+      if (!user.roles.cache.has(server.muted)) content += "\nThey weren't muted, but I've resolved it anyways.";
+      else await user.roles.remove(server.muted).catch(() => content += "\nI wasn't able to unmute them, but I've resolved it anyways. You'll have to unmute them manually");
     }
     await int.reply({ content, ephemeral: true });
   }
   async function verbal(points) {
     const card = await int.channel.messages.fetch(int.message.id);
     const infraction = await u.db.infraction.getByFlag(int.guild.id, int.message.id);
-    const logs = int.guild.channels.cache.get(logChannel);
-    const user = int.guild.members.cache.get(userId);
     let msg = '';
     switch (points) {
     case 10: msg = "‼️ The following message was found to be a minor violation of the rules of this server. It may be deleted at the discretion of the moderators.\nThis is only a warning, but further behavior like this may result in more strict punishments. Please contact a mod if you have any questions"; break;
@@ -288,15 +296,13 @@ Module.addInteractionCommand({ name: 'mod',
   }
   async function mute() {
     const card = await int.channel.messages.fetch(int.message.id);
-    const logs = int.guild.channels.cache.get(logChannel);
-    const user = int.guild.members.cache.get(userId);
     const modUtil = new mU(int, logs);
-    const muteC = int.client.channels.cache.get(muteChannel);
+    const muteC = int.client.channels.cache.get(server.muteChannel);
     let content = await modUtil.resolveFlag(user, user.id, int.member, card, "Muted", int.label == "Unmute");
     if (card.hasThread) await card.thread.setArchived(true, 'Resolved').catch(() => u.noop());
-    if (user.roles.cache.has(muted)) content += "\nThey were already muted, but I've resolved it anyways.";
-    else await user.roles.add(muted).catch(() => content += "\nI wasn't able to mute them, but I've resolved it anyways. You'll have to mute them manually");
-    if (user.roles.cache.has(muted)) {
+    if (user.roles.cache.has(server.muted)) content += "\nThey were already muted, but I've resolved it anyways.";
+    else await user.roles.add(server.muted).catch(() => content += "\nI wasn't able to mute them, but I've resolved it anyways. You'll have to mute them manually");
+    if (user.roles.cache.has(server.muted)) {
       await muteC.send(
         `${user}, you have been muted in ${int.guild.name}. `
       + 'Please review the rules channel. '
@@ -306,8 +312,6 @@ Module.addInteractionCommand({ name: 'mod',
   }
   async function timeout() {
     const card = await int.channel.messages.fetch(int.message.id);
-    const logs = int.guild.channels.cache.get(logChannel);
-    const user = int.guild.members.cache.get(userId);
     const modUtil = new mU(int, logs);
 
     let content = await modUtil.resolveFlag(user, user.id, int.member, card, "Timed Out");
@@ -335,26 +339,35 @@ Module.addInteractionCommand({ name: 'mod',
 
 // Nick/activity filtering
 .addEvent('userUpdate', async (oldUser, newUser) => {
-  if (!oldUser.bot && !oldUser.system && oldUser.guild.id == guild) {
+  if (!oldUser.bot && !oldUser.system) {
     if (oldUser.username != newUser.username) {
       if (u.harshFilter(newUser.username)) {
-        const g = oldUser.client.guilds.cache.get(guild);
-        const logs = oldUser.client.channels.cache.get(logChannel);
-        await new mU(null, logs).sendLog("Language In Username",
-          `${oldUser} (${newUser.username}) has possible language in their username.`,
-          [{ name: "Old Username", value: oldUser.username, inline: true }, { name: "New Username", value: newUser.username, inline: true }],
-          await g.members.fetch(newUser.id),
-          newUser.username
-        );
+        const userGuilds = newUser.client.guilds.cache.filter(g => g.members.cache.get(newUser.id));
+        for (const [id, guild] of userGuilds) {
+          const langFilter = u.db.guildconfig.getLangFilter(id);
+          if ([2, 4, 6, 7].includes(langFilter)) {
+            const g = oldUser.client.guilds.cache.get(guild);
+            const server = await getVars({ guild });
+            const logs = oldUser.client.channels.cache.get(server.modLogs);
+            await new mU(null, logs).sendLog("Language In Username",
+              `${oldUser} (${newUser.username}) has possible language in their username.`,
+              [{ name: "Old Username", value: oldUser.username, inline: true }, { name: "New Username", value: newUser.username, inline: true }],
+              await g.members.fetch(newUser.id),
+              newUser.username
+            );
+          }
+        }
       }
     }
   }
 })
 .addEvent('guildMemberUpdate', async (oldMember, newMember) => {
-  if (!oldMember.user.bot && !oldMember.user.system && newMember.guild.id == guild) {
-    if (oldMember.nickname != newMember.nickname) {
+  if (!oldMember.user.bot && !oldMember.user.system) {
+    const langFilter = await u.db.guildconfig.getLangFilter(newMember.guild.id);
+    if ([2, 4, 6, 7].includes(langFilter) && oldMember.nickname != newMember.nickname) {
       if (u.harshFilter(newMember.nickname)) {
-        const logs = oldMember.client.channels.cache.get(logChannel);
+        const server = await getVars({ guild: oldMember.guild });
+        const logs = oldMember.client.channels.cache.get(server.modLogs);
         await new mU(null, logs).sendLog("Language In Nickname",
           `${oldMember} (${newMember.nickname}) has possible language in their nickname.`,
           [{ name: "Old Nick", value: oldMember.nickname, inline: true }, { name: "New Nick", value: newMember.nickname, inline: true }],
@@ -366,20 +379,27 @@ Module.addInteractionCommand({ name: 'mod',
   }
 })
 .addEvent('presenceUpdate', async (oldPresence, newPresence) => {
-  if (!oldPresence || !newPresence) return;
-  if (!oldPresence?.user?.bot && !oldPresence?.user?.system && newPresence?.guild?.id == guild) {
+  if (!newPresence || (!newPresence && !oldPresence)) return;
+  if (!oldPresence?.user?.bot && !oldPresence?.user?.system) {
     if (newPresence.activities.map(a => a.name).toString() != oldPresence.activities.map(a => a.name).toString()) {
       const mapped = newPresence?.activities.map(a => a.name).join(' ') ?? '';
       const oldMapped = oldPresence?.activities.map(a => a.name).join(' ') ?? '';
       if (u.harshFilter(mapped)) {
-        const logs = oldPresence.client.channels.cache.get(logChannel);
-        const g = oldPresence.client.guilds.cache.get(guild);
-        await new mU(null, logs).sendLog("Language In Activity",
-          `${oldPresence} (${oldPresence.nickname}) has possible language in their nickname.`,
-          [{ name: "Old Activities ", value: oldMapped, inline: true }, { name: "New Nick", value: mapped, inline: true }],
-          await g.members.fetch(newPresence.user.id),
-          "See flag"
-        );
+        const userGuilds = newPresence.client.guilds.cache.filter(g => g.members.cache.get(newPresence.user.id));
+        for (const [id, guild] of userGuilds) {
+          const langFilter = await u.db.guildconfig.getLangFilter(id);
+          if ([3, 5, 6, 7].includes(langFilter)) {
+            const server = await getVars({ guild });
+            const logs = oldPresence.client.channels.cache.get(server.modLogs);
+            const g = oldPresence.client.guilds.cache.get(guild);
+            await new mU(null, logs).sendLog("Language In Activity",
+              `${oldPresence} (${oldPresence.nickname}) has possible language in their nickname.`,
+              [{ name: "Old Activities ", value: oldMapped, inline: true }, { name: "New Nick", value: mapped, inline: true }],
+              await g.members.fetch(newPresence.user.id),
+              "See flag"
+            );
+          }
+        }
       }
     }
   }

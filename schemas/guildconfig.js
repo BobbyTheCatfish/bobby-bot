@@ -12,22 +12,30 @@ const GuildConfigSchema = new mongoose.Schema({
     default: '!',
   },
   filter: {
-    type: Boolean,
-    default: false
+    type: Number,
+    default: 0
   },
   roles: {
     type: Object,
     muted: {
-      type: String
+      type: String,
+      default: "",
     },
     trusted: {
-      type: String
+      type: String,
+      default: "",
     },
-    trustedplus: {
-      type: String
+    trustPlus: {
+      type: String,
+      default: "",
     },
     untrusted: {
-      type: String
+      type: String,
+      default: "",
+    },
+    mods: {
+      type: String,
+      default: "",
     }
   },
   welcome: {
@@ -67,9 +75,15 @@ const GuildConfigSchema = new mongoose.Schema({
     type: Object,
     botLobby: {
       type: String,
+      default: "",
     },
     modLogs: {
       type: String,
+      default: "",
+    },
+    muteChannel: {
+      type: String,
+      default: "",
     },
     starboards: {
       type: Array,
