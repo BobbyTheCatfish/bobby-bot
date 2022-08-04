@@ -255,7 +255,7 @@ const Utils = {
   prefix: async (msg) => {
     try {
       if (msg.channel?.parent?.id == '813847559252344862') return '>';
-      else if (msg.guild) return await Utils.db.guildconfig.getPrefix(msg.guild.id);
+      else if (msg.guild) return await Utils.db.guildConfig.prefix.get(msg.guild.id);
       else return config.prefix;
     } catch (e) {
       Utils.errorHandler(e, msg.content);
@@ -335,7 +335,7 @@ const Utils = {
      */
   botSpam: async (msg) => {
     if (!msg.guild) return msg.channel;
-    const channel = await Utils.db.guildconfig.getChannel(msg.guild.id, 'botLobby');
+    const channel = await Utils.db.guildConfig.snowflakes.getChannel(msg.guild.id, 'botLobby');
     return msg.client.channels.cache.get(channel) ?? msg.channel;
   },
 

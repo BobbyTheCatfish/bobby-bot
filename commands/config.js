@@ -41,44 +41,44 @@ Module.addInteractionCommand({ name: 'config',
 
         async function botLobby() {
           if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
-          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'botLobby'));
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getChannel(int.guild.id, 'botLobby'));
           if (currentChannel?.id == newChannel?.id) newChannel = "";
           const embed = u.embed().setTitle("Bot Lobby").setDescription(`Bot lobby updated!\nLarge bits of text will now be sent in ${newChannel ?? 'the channel the command is used in'}${currentChannel ? ` instead of ${currentChannel}.` : '.'}`);
-          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'botLobby');
+          const saved = await u.db.guildConfig.snowflakes.saveChannel(int.guild.id, newChannel?.id ?? '', 'botLobby');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
         async function modCategory() {
           if (!newChannel.type == 4) return int.reply({ content: "The channel needs to be a category!" });
-          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'modCategory'));
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getChannel(int.guild.id, 'modCategory'));
           if (currentChannel?.id == newChannel?.id) newChannel = '';
           const embed = u.embed().setTitle(`Mod Logs Channel ${newChannel ? "Saved" : "Disabled"}`).setDescription(`Mod channels will ${newChannel ? ` be identified by ${newChannel} ${currentChannel ? `instead of ${currentChannel}.` : ""}` : 'not be identified.'}`);
-          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'modCategory');
+          const saved = await u.db.guildConfig.snowflakes.saveChannel(int.guild.id, newChannel?.id ?? '', 'modCategory');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
         async function modLogs() {
           if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
-          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'modLogs'));
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getChannel(int.guild.id, 'modLogs'));
           if (currentChannel?.id == newChannel?.id) newChannel = '';
           const embed = u.embed().setTitle(`Mod Logs Channel ${newChannel ? "Saved" : "Disabled"}`).setDescription(`Mod logs will ${newChannel ? ` be sent in ${newChannel} ${currentChannel ? `instead of ${currentChannel}.` : ""}` : 'not be sent. This has also turned off the language filter and message reporting.'}`);
-          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'modLogs');
+          const saved = await u.db.guildConfig.snowflakes.saveChannel(int.guild.id, newChannel?.id ?? '', 'modLogs');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
         async function muteChannel() {
           if (!newChannel?.isTextBased()) return int.reply({ content: "The channel needs to be text based!" });
-          const currentChannel = int.guild.channels.cache.get(await u.db.guildconfig.getChannel(int.guild.id, 'muteChannel'));
+          const currentChannel = int.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getChannel(int.guild.id, 'muteChannel'));
           if (currentChannel?.id == newChannel?.id) newChannel = "";
           const embed = u.embed().setTitle("Bot Lobby").setDescription(`Mute Channel updated!\n${newChannel ? `Users will be pinged in a thread in ${newChannel} upon mute` : "Users won't be pinged upon mute"}${currentChannel ? ` instead of in ${currentChannel}.` : '.'}`);
-          const saved = await u.db.guildconfig.saveChannel(int.guild.id, newChannel?.id ?? '', 'muteChannel');
+          const saved = await u.db.guildConfig.snowflakes.saveChannel(int.guild.id, newChannel?.id ?? '', 'muteChannel');
           if (saved) return int.reply({ embeds: [embed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
       }
       async function starboards() {
         await int.deferReply({ ephemeral: true });
-        const existingBoards = await u.db.guildconfig.getStarBoards(int.guild.id);
+        const existingBoards = await u.db.guildConfig.starboards.get(int.guild.id);
         const action = int.options.getString('action');
         const channel = int.options.getChannel('channel');
         const emoji = int.options.getString('emoji');
@@ -103,7 +103,7 @@ Module.addInteractionCommand({ name: 'config',
           const nonDup = mapped.filter(m => !existingEmoji.includes(m));
           if (duplicates.length > 0) return int.editReply(`The following emojis are already being used by another board!\n${duplicates.join(' ')}`);
           const board = { channel, reactions: nonDup, whitelist: priority, toPost: threshold };
-          if (await u.db.guildconfig.saveStarBoard(int.guild.id, board) == null) {
+          if (await u.db.guildConfig.starboards.save(int.guild.id, board) == null) {
             u.errorHandler("Starboard DB Save Error", int);
             return int.editReply({ embeds: [saveErrorEmbed] });
           }
@@ -127,7 +127,7 @@ Module.addInteractionCommand({ name: 'config',
             if (duplicates.length > 0) return int.editReply(`The following emojis are already being used by another board!\n${duplicates.join(' ')}`);
           }
           const board = { channel: change?.id ?? oldBoard.channel, reactions: finalEmoji, whitelist: priority != null ? priority : oldBoard.whitelist, toPost: threshold ?? oldBoard.toPost };
-          if (await u.db.guildconfig.saveStarBoard(int.guild.id, board) == null) {
+          if (await u.db.guildConfig.starboards.save(int.guild.id, board) == null) {
             u.errorHandler("Starboard DB Save Error", int);
             return int.editReply({ embeds: [saveErrorEmbed] });
           }
@@ -164,7 +164,7 @@ Module.addInteractionCommand({ name: 'config',
           }
           async function remove() {
             const embed = u.embed().setTitle("Starboard Removed").setDescription(`Starred posts will no longer be sent to <#${board.channel}>`);
-            if ((await u.db.guildconfig.removeStarBoard(int.guild.id, board.channel)) == null) {
+            if ((await u.db.guildConfig.starboards.delete(int.guild.id, board.channel)) == null) {
               u.errorHandler("Starboard DB Save Error", int);
               return await int.followUp({ embeds: [saveErrorEmbed] });
             }
@@ -183,9 +183,9 @@ Module.addInteractionCommand({ name: 'config',
         case "mods": return await mods();
         }
         async function save(embed, roleType) {
-          const currentRole = int.guild.channels.cache.get(await u.db.guildconfig.getRole(int.guild.id, roleType));
+          const currentRole = int.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getRole(int.guild.id, roleType));
           const newEmbed = embed(currentRole);
-          const saved = await u.db.guildconfig.saveRole(int.guild.id, newRole?.id ?? '', roleType);
+          const saved = await u.db.guildConfig.snowflakes.saveRole(int.guild.id, newRole?.id ?? '', roleType);
           if (saved) return int.reply({ embeds: [newEmbed], ephemeral: true });
           else return int.reply({ content: "I wasn't able to save that. Please try again later." });
         }
@@ -213,8 +213,8 @@ Module.addInteractionCommand({ name: 'config',
       async function filter() {
         await int.deferReply({ ephemeral: true });
         const status = int.options.getBoolean("status");
-        const oldFilter = await u.db.guildconfig.getLangFilter(int.guild.id);
-        if (await u.db.guildconfig.saveLangFilter(int.guild.id, status) == null) {
+        const oldFilter = await u.db.guildConfig.filter.get(int.guild.id);
+        if (await u.db.guildConfig.filter.save(int.guild.id, status) == null) {
           u.errorHandler("Filter DB Save Error", int);
           return int.editReply({ embeds: [saveErrorEmbed] });
         }

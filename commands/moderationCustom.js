@@ -36,7 +36,7 @@ async function filter(msg, auto = true) {
     const server = await getVars(msg);
     const logs = msg.guild.channels.cache.get(server.modLogs);
     const mute = msg.guild.roles.cache.get(server.muted);
-    if (msg.content && await u.db.guildconfig.getLangFilter(msg.guild?.id) && !msg.author.bot && msg.channel.parent?.id != server.modCategory) {
+    if (msg.content && await u.db.guildConfig.filter.get(msg.guild?.id) && !msg.author.bot && msg.channel.parent?.id != server.modCategory) {
       const site = u.siteFilter(msg.content);
       if (site) {
         const matches = site.site;
@@ -96,8 +96,8 @@ async function filter(msg, auto = true) {
 }
 async function getVars(int) {
   const guild = int.guild.id;
-  const channels = await u.db.guildconfig.getChannels(guild);
-  const roles = await u.db.guildconfig.getRoles(guild);
+  const channels = await u.db.guildConfig.snowflakes.getChannels(guild);
+  const roles = await u.db.guildConfig.snowflakes.getRoles(guild);
   return { ...channels, ...roles };
 }
 Module.addInteractionCommand({ name: 'mod',
@@ -344,7 +344,7 @@ Module.addInteractionCommand({ name: 'mod',
       if (u.harshFilter(newUser.username)) {
         const userGuilds = newUser.client.guilds.cache.filter(g => g.members.cache.get(newUser.id));
         for (const [id, guild] of userGuilds) {
-          const langFilter = u.db.guildconfig.getLangFilter(id);
+          const langFilter = u.db.guildConfig.filter.get(id);
           if ([2, 4, 6, 7].includes(langFilter)) {
             const g = oldUser.client.guilds.cache.get(guild);
             const server = await getVars({ guild });
@@ -363,7 +363,7 @@ Module.addInteractionCommand({ name: 'mod',
 })
 .addEvent('guildMemberUpdate', async (oldMember, newMember) => {
   if (!oldMember.user.bot && !oldMember.user.system) {
-    const langFilter = await u.db.guildconfig.getLangFilter(newMember.guild.id);
+    const langFilter = await u.db.guildConfig.filter.get(newMember.guild.id);
     if ([2, 4, 6, 7].includes(langFilter) && oldMember.nickname != newMember.nickname) {
       if (u.harshFilter(newMember.nickname)) {
         const server = await getVars({ guild: oldMember.guild });
@@ -379,15 +379,15 @@ Module.addInteractionCommand({ name: 'mod',
   }
 })
 .addEvent('presenceUpdate', async (oldPresence, newPresence) => {
-  if (!newPresence || (!newPresence && !oldPresence)) return;
+  if (!newPresence?.activities || (!newPresence?.activities && !oldPresence?.activities)) return;
   if (!oldPresence?.user?.bot && !oldPresence?.user?.system) {
-    if (newPresence.activities.map(a => a.name).toString() != oldPresence.activities.map(a => a.name).toString()) {
+    if (newPresence?.activities?.map(a => a.name).toString() != oldPresence?.activities?.map(a => a.name).toString()) {
       const mapped = newPresence?.activities.map(a => a.name).join(' ') ?? '';
       const oldMapped = oldPresence?.activities.map(a => a.name).join(' ') ?? '';
       if (u.harshFilter(mapped)) {
         const userGuilds = newPresence.client.guilds.cache.filter(g => g.members.cache.get(newPresence.user.id));
         for (const [id, guild] of userGuilds) {
-          const langFilter = await u.db.guildconfig.getLangFilter(id);
+          const langFilter = await u.db.guildConfig.filter.get(id);
           if ([3, 5, 6, 7].includes(langFilter)) {
             const server = await getVars({ guild });
             const logs = oldPresence.client.channels.cache.get(server.modLogs);

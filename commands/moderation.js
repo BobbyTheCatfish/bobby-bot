@@ -224,7 +224,7 @@ Module.addCommand({ name: "ban",
     const s = [];
     const err = [];
     const mutedUsers = msg.mentions.members.map(a => a);
-    const dbFetch = await u.db.guildconfig.getRole(msg.guild.id, 'muted');
+    const dbFetch = await u.db.guildConfig.snowflakes.getRole(msg.guild.id, 'muted');
     if (dbFetch == 'disabled' || !dbFetch) return u.reply(msg, `The mute command is disabled. Use \`/config\` to set it up.`, true);
     if (mutedUsers.length == 0) return u.reply(msg, `You need to specify who to mute`, true);
     const muteRole = msg.guild.roles.cache.get(dbFetch);
@@ -264,7 +264,7 @@ Module.addCommand({ name: "ban",
     const s = [];
     const err = [];
     const mutedUsers = msg.mentions.members.map(a => a);
-    const dbFetch = await u.db.guildconfig.getRole(msg.guild.id, 'muted');
+    const dbFetch = await u.db.guildConfig.snowflakes.getRole(msg.guild.id, 'muted');
     if (dbFetch == 'disabled') return msg.channel.send("The unmute command was disabled when using `!config` to remove the muted role.");
     if (mutedUsers.length == 0) return msg.channel.send(`You need to specify who to mute`);
     const muteRole = msg.guild.roles.cache.find(r => dbFetch ? r.id == dbFetch : r.name.toLowerCase() === "muted");
@@ -393,12 +393,12 @@ Module.addCommand({ name: "ban",
   onlyGuild: true,
   permissions: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
   process: async (msg, suffix) => {
-    const read = await u.db.guildconfig.getPrefix(msg.guild.id);
+    const read = await u.db.guildConfig.prefix.get(msg.guild.id);
     if (suffix == read) return msg.channel.send(`The prefix is already \`${suffix}\``);
     if (!suffix) return msg.channel.send(`The prefix is \`${read}\``).then(u.clean);
     if (suffix.length > 3) return msg.reply("you cannot have a prefix of more than 3 characters.").then(u.clean);
-    await u.db.guildconfig.savePrefix(msg.guild.id, suffix);
-    return msg.channel.send(`Changed the prefix to \`${await u.db.guildconfig.getPrefix(msg.guild.id)}\``).then(u.clean);
+    const newPrefix = await u.db.guildConfig.prefix.save(msg.guild.id, suffix);
+    return msg.channel.send(`Changed the prefix to \`${newPrefix.prefix}\``).then(u.clean);
   }
 })
 .addEvent('messageReactionAdd', /** @param {MessageReaction} reaction @param {User} user*/ async (reaction, user) => {
@@ -420,7 +420,7 @@ Module.addCommand({ name: "ban",
 //    try{
 //        if(!msg.guild || msg.author.bot) return
 //        hasLanguage = false
-//        let guildFilter = await u.db.guildconfig.langFilter(msg.guild?.id)
+//        let guildFilter = await u.db.guildConfig.filter.get(msg.guild?.id)
 //        if(guildFilter){
 //            let imgFiltered, msgFiltered
 //            if(guildFilter.includes('i')){
@@ -445,7 +445,7 @@ Module.addCommand({ name: "ban",
 //                let embed = u.embed().setTitle("Language Warning").setURL(msg.url).setDescription(msg.content).setColor('#a86632')
 //                if(msgFiltered) embed.addField('Detected in message', msgFiltered.join('\n'))
 //                if(imgFiltered) embed.addField('Detected in image', imgFiltered.join('\n'))
-//                msg.guild.channels.cache.get(await u.db.guildconfig.langLogChannel(msg.guild.id)).send({attachments: [msg.attachments.map(a => a.url)], embeds: [embed]})
+//                msg.guild.channels.cache.get(await u.db.guildConfig.snowflakes.getChannel(msg.guild.id, 'modLogs')).send({attachments: [msg.attachments.map(a => a.url)], embeds: [embed]})
 //                return msg.reply(hasLanguage).then(u.clean)
 //            }
 //    }

@@ -85,6 +85,10 @@ const GuildConfigSchema = new mongoose.Schema({
       type: String,
       default: "",
     },
+    modCategory: {
+      type: String,
+      default: ""
+    },
     starboards: {
       type: Array,
       channel: {

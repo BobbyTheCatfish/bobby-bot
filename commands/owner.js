@@ -445,17 +445,17 @@ Module.addCommand({ name: "pingeveryone",
   }
   for (const x of Module.client.guilds.cache.map(g => g.id)) {
     try {
-      const foundGuild = await u.db.guildconfig.getConfig(x);
-      if (!foundGuild) await u.db.guildconfig.createConfig(x, Module.client.commands);
+      const foundGuild = await u.db.guildConfig.config.get(x);
+      if (!foundGuild) await u.db.guildConfig.config.create(x);
     } catch (error) {
       u.errorHandler(error, 'Guild Config Create onReady');
     }
   }
 })
 .addEvent('guildCreate', async guild => {
-  const foundGuild = await u.db.guildconfig.getConfig(guild.id);
+  const foundGuild = await u.db.guildConfig.config.get(guild.id);
   try {
-    if (!foundGuild) await u.db.guildconfig.createConfig(guild.id, Module.client.commands);
+    if (!foundGuild) await u.db.guildConfig.config.create(guild.id);
   } catch (error) {
     u.errorHandler(error, 'Guild Join');
   }

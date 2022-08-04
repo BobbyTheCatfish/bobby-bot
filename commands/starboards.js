@@ -12,8 +12,8 @@ const time = 5 * 24 * 60 * 60 * 1000;
 const postToBoard = async (reaction, msg) => {
   try {
     const emoji = reaction.emoji.id ?? reaction.emoji.name;
-    if (!await u.db.guildconfig.getSBMessage(msg.guild.id, msg.id)) {
-      const guildBoards = await u.db.guildconfig.getStarBoards(msg.guild.id);
+    if (!await u.db.guildConfig.starboards.getMsg(msg.guild.id, msg.id)) {
+      const guildBoards = await u.db.guildConfig.starboards.get(msg.guild.id);
       if (guildBoards?.length > 0 && !guildBoards.find(b => b.channel == msg.channel.id)) {
         const correctBoard = guildBoards.find(b => b.reactions.includes(emoji) ?? b.whitelist == msg.channel.id);
         if (correctBoard && correctBoard.toPost <= reaction.users.cache.size) {
@@ -29,7 +29,7 @@ const postToBoard = async (reaction, msg) => {
           if (msg.attachments.first()) embed.setImage(msg.attachments.first().url);
           if (channel) {
             channel.send({ embeds: [embed] });
-            u.db.guildconfig.saveSBMessage(msg.guild.id, msg);
+            u.db.guildConfig.starboards.saveMsg(msg.guild.id, msg);
           } else {u.errorHandler(new Error(`Starboard Send Error`), `Couldn't send to channel *${correctBoard.channel}* in guild *${msg.guild.name}*`);}
         }
       }
@@ -50,11 +50,11 @@ Module.addEvent('messageReactionAdd', async (reaction, user) => {
   rule.hour = 0;
   rule.minute = 0;
   schedule.scheduleJob(rule, async function() {
-    const msgs = await u.db.guildconfig.getAllSBMessages();
+    const msgs = await u.db.guildConfig.starboards.getAllMsgs();
     if (msgs.length > 0) {
       for (const x of msgs) {
         const remove = x.msgs.filter(m => m.createdTimestamp < Date.now() - time);
-        await u.db.guildconfig.cullSBMessages(x.guild, remove.map(r => r.id));
+        await u.db.guildConfig.starboards.cullMsgs(x.guild, remove.map(r => r.id));
       }
     }
   });

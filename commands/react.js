@@ -65,14 +65,14 @@ Module.addEvent('messageCreate', async (msg) => {
         const confirmEmbed = u.embed().setTitle("You've gone global!").setDescription("You now have access to all the other global server's tags!");
         const cancelEmbed = u.embed().setTitle("Global tags left disabled");
         const decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed);
-        if (decision == true) return await u.db.tags.setGlobal(msg.guild.id, msg.guild.ownerId);
+        if (decision == true) return await u.db.tags.setGlobal(msg.guild.id, true);
         else return;
       } else {
         const promptEmbed = u.embed().setTitle("Are you sure you want to disable global tags?"),
           confirmEmbed = u.embed().setTitle("Global tags disabled"),
           cancelEmbed = u.embed().setTitle("Global tags left enabled"),
           decision = await u.confirmEmbed(msg, promptEmbed, confirmEmbed, cancelEmbed);
-        if (decision == true) return await u.db.tags.setLocal(msg.guild.id);
+        if (decision == true) return await u.db.tags.setLocal(msg.guild.id, false);
         else return;
       }
     } else if (await u.db.tags.globalStatus(msg.guild.id)) {
