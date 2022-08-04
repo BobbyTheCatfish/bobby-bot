@@ -95,20 +95,6 @@ Module
     return msg.channel.send('no.');
   }
 })
-.addCommand({ name: 'prefix',
-  description: `Changes the server prefix`,
-  category: 'Mod',
-  onlyGuild: true,
-  permissions: (msg) => msg.author.id == '337713155801350146' || (msg.member && msg.member.permissions.has("ADMINISTRATOR")),
-  process: async (msg, suffix) => {
-    const read = await u.db.guildConfig.prefix.get(msg.guild.id);
-    if (suffix == read) return msg.channel.send(`The prefix is already \`${suffix}\``);
-    if (!suffix) return msg.channel.send(`The prefix is \`${read}\``).then(u.clean);
-    if (suffix.length > 3) return msg.reply("you cannot have a prefix of more than 3 characters.").then(u.clean);
-    const newPrefix = await u.db.guildConfig.prefix.save(msg.guild.id, suffix);
-    return msg.channel.send(`Changed the prefix to \`${newPrefix.prefix}\``).then(u.clean);
-  }
-})
 .addEvent('messageReactionAdd', /** @param {MessageReaction} reaction @param {User} user*/ async (reaction, user) => {
   try {
     if (!reaction.message.guild) return;

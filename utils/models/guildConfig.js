@@ -92,7 +92,10 @@ const model = {
     },
     /** @returns {Promise<Schema>} */
     save: async (guildId, prefix) => {
-      if (await configCheck(guildId)) return await GuildConfig.findOneAndUpdate({ guildId }, { prefix }, { new: true });
+      if (await configCheck(guildId)) {
+        const newSchema = await GuildConfig.findOneAndUpdate({ guildId }, { prefix }, { new: true });
+        return newSchema.prefix;
+      }
     }
   },
   snowflakes: {

@@ -24,6 +24,7 @@ Module.addInteractionCommand({ name: 'config',
       case "starboards": return starboards();
       case "roles": return roles();
       case "filter": return filter();
+      case "prefix": return prefix();
       }
 
       async function channels() {
@@ -222,6 +223,16 @@ Module.addInteractionCommand({ name: 'config',
           .setDescription(`The filter is now ${status ? 'on' : 'off'} ${status == oldFilter ? "(Nothing changed)" : ""}`)
           .setFooter("The language filter looks at messages, usernames/nicknames, and statuses");
         return await int.editReply({ embeds: [embed] });
+      }
+      async function prefix() {
+        const input = int.options.getString('prefix');
+        const read = await u.db.guildConfig.prefix.get(int.guild.id);
+        await int.deferReply();
+        if (input == read) return int.reply(`The prefix is already \`${input}\``);
+        if (!input) return int.reply(`The prefix is \`${read}\``);
+        if (input.length > 3) return int.reply("you cannot have a prefix of more than 3 characters.");
+        const newPrefix = await u.db.guildConfig.prefix.save(int.guild.id, input);
+        return int.reply(`Changed the prefix to \`${newPrefix}\``);
       }
     } catch (error) {
       return u.errorHandler(error, int);
