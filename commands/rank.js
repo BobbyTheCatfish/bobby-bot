@@ -222,11 +222,11 @@ const Module = new Augur.Module()
 })
 .addEvent("messageCreate", async (msg) => {
   if (msg.guild && !msg.author.bot && !msg.author.system) {
-    const rankDoc = await u.db.ranks.getAllRanks(msg.guild.id);
+    const rankDoc = await u.db.ranks.getGuild(msg.guild.id);
     if (!rankDoc) return;
     if (!isActive(msg.guild.id, msg.member.id) &&
-    !rankDoc.users.find(user => user.userId == msg.author.id)?.excludeXP &&
-    !(rankDoc.exclude.channels.includes(msg.channel.id) || rankDoc.exclude.channels.includes(msg.channel.parent?.id)) &&
+    !rankDoc.users?.find(user => user.userId == msg.author.id)?.excludeXP &&
+    !(rankDoc.exclude?.channels.includes(msg.channel.id) || rankDoc.exclude.channels.includes(msg.channel.parent?.id)) &&
     !msg.webhookId && !await u.parse(msg) && !msg.author.bot &&
     !msg.member.roles.cache.hasAny(rankDoc.exclude.roles)) {
       console.log('ehe');

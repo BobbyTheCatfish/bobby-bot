@@ -134,7 +134,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addInteractionCommand({ name: "userMod",
   commandId: "998632048057139303",
   process: async (int) => {
-    if (!int.isApplicationCommand()) return;
+    if (!int.isUserContextMenuCommand()) return;
     const server = await getVars(int);
     const target = int.targetMember;
     const logs = int.guild.channels.cache.get(server.modLogs);
@@ -156,7 +156,7 @@ Module.addInteractionCommand({ name: 'mod',
     const prompt = u.actionRow().addComponents(menu);
     await int.reply({ components: [prompt], ephemeral: true });
     const intFilter = i => i.customId == int.id;
-    const response = await int.channel.awaitMessageComponent({ time: 5 * 60 * 1000, componentType: 'SELECT_MENU', filter: intFilter }).catch(() => u.noop());
+    const response = await int.channel.awaitMessageComponent({ time: 5 * 60 * 1000, componentType: 3, filter: intFilter }).catch(() => u.noop());
     const modUtils = new mU(int, logs);
     if (response) {
       await int.editReply({ content: "Hang on a second...", components: [] });
@@ -210,7 +210,7 @@ Module.addInteractionCommand({ name: 'mod',
 .addInteractionCommand({ name: "harshReport",
   commandId: "998632048057139302",
   process: async (int) => {
-    if (!int.isMessageContextMenu()) return;
+    if (!int.isMessageContextMenuCommand()) return;
     const msg = int.targetMessage;
     const server = await getVars(int);
     const logs = msg.guild.channels.cache.get(server.modLogs);

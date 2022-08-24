@@ -1,4 +1,4 @@
-const { Util, WebhookClient, ButtonBuilder, ActionRowBuilder, Message, SelectMenuBuilder, EmbedBuilder, Embed } = require("discord.js");
+const { escapeMarkdown, parseEmoji, WebhookClient, ButtonBuilder, ActionRowBuilder, Message, SelectMenuBuilder, EmbedBuilder, Embed } = require("discord.js");
 const { GuildMember, GuildChannel, GuildEmoji, Guild, BaseInteraction, CommandInteraction, ButtonStyle } = require('discord.js');
 const discord = require('discord.js');
 const config = require("../config/config.json");
@@ -7,6 +7,8 @@ const jimp = require('jimp');
 const errorLog = new WebhookClient({ id: config.error.id, token: config.error.token });
 const events = require('events');
 const db = require('./dbModels');
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 const lang = require('../jsons/badwords.json');
 const sites = require('../jsons/blockedsites.json');
 const em = new events.EventEmitter();
@@ -26,6 +28,9 @@ const Utils = {
   emit: (name, ...options) => em.emit(name, options),
 
   db,
+
+  lowdb: (filePath) => low(new FileSync(filePath)),
+
   /** @param {discord.ActionRowData} data */
   actionRow: (data) => new ActionRowBuilder(data),
   /** @param {discord.EmbedData} data */
@@ -64,60 +69,60 @@ const Utils = {
   },
 
   /**
-     * @param {error} error error
+     * @param {Error} error error
      * @param {Message|BaseInteraction|CommandInteraction} msg Message Object
      * @returns Handles the error (don't worry about it)
      */
   errorHandler: async (error, msg) => {
     try {
       if (!error || msg?.webhookId || (msg?.author?.bot && msg?.content == `I've run into an error. I've let my devs know.`)) return;
-      if (typeof error != Error) error = new Error(error);
+      if (!error || (error.name === "AbortError")) return;
+
       console.error(Date());
-      const embed = Utils.embed().setTitle(error.name);
-      if (msg instanceof Message) {
-        console.error(`${msg.author.username} in ${(msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM")}: ${msg.cleanContent}`);
-        msg.channel.send("I've run into an error. I've let my devs know.").then(Utils.clean);
+
+      const embed = Utils.embed().setTitle(error?.name?.toString() ?? "Error");
+
+      if (msg instanceof discord.Message) {
+        const loc = (msg.guild ? `${msg.guild?.name} > ${msg.channel?.name}` : "DM");
+        console.error(`${msg.author.username} in ${loc}: ${msg.cleanContent}`);
+
+        msg.channel.send("I've run into an error. I've let my devs know.")
+        .then(Utils.clean);
         embed.addFields([
-          { name: "User", value: msg.author?.username, inline: true },
-          { name: "Location", value: (msg.guild ? `${msg.guild.name} > ${(msg.channel).name}` : "a DM"), inline: true },
-          { name: "Command", value: (msg.cleanContent || "`undefined`"), inline: true }
+          { name: "User", value: msg.author.username, inline: true },
+          { name: "Location", value: loc, inline: true },
+          { name: "Command", value: msg.cleanContent || "`undefined`", inline: true }
         ]);
-      } if (msg instanceof CommandInteraction) {
-        msg.client.interactionFailed(msg, "ERROR");
-        const subcmd = `/${msg.commandName} ${msg.options.getSubcommand(false) ?? ''}`;
-        const options = msg.options.data.map(a => {return { name: a.name ?? "Unknown Name", value: a.value ?? 'Unkonwn Value' };});
-        const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
-        console.error(`${msg.user.username} in ${location}: ${subcmd} ${options.map(a => a.value).join(' ')}`);
+      } else if (msg?.type == discord.InteractionType) {
+        const loc = (msg.guild ? `${msg.guild?.name} > ${msg.channel?.name}` : "DM");
+        console.error(`Interaction by ${msg.user.username} in ${loc}`);
+
+        msg[((msg.deferred || msg.replied) ? "editReply" : "reply")]({ content: "I've run into an error. I've let my devs know.", ephemeral: true }).catch(Utils.noop);
         embed.addFields([
-          { name: "User", value: msg.user?.username ?? "Unknown", inline: true },
-          { name: "Location", value: location, inline: true },
-          { name: "Command", value: subcmd, inline: true }
-        ]).addFields(options);
-      } else if (msg instanceof BaseInteraction) {
-        const location = `${msg.guild ? `${msg.guild.name} > ${msg.channel?.name}` : 'a DM'}`;
-        console.error(`${msg.user.username} in ${location}: ${msg.type}: ${msg.valueOf()}`);
-        msg.client.interactionFailed(msg, "ERROR");
-        let { type } = msg;
-        if (msg.isMessageComponent()) type = msg.componentType;
-        embed.addFields([
-          { name: "User", value: msg.user.username, inline: true },
-          { name: "Location", value: location, inline: true },
-          { name: "Type", value: type, inline: true },
-          { name: "Full interaction", value: msg.valueOf(), inline: true },
+          { name: "User", value: msg.user?.username, inline: true },
+          { name: "Location", value: loc, inline: true }
         ]);
-        console.error(`${msg.user.username} in ${location}: ${type}: ${msg.valueOf()}`);
+
+        const descriptionLines = [msg.commandId || msg.customId || "`undefined`"];
+        const { command, data } = Utils.parseInteraction(msg);
+        descriptionLines.push(command);
+        for (const datum of data) {
+          descriptionLines.push(`${datum.name}: ${datum.value}`);
+        }
+        embed.addFields({ name: "Interaction", value: descriptionLines.join("\n") });
       } else if (typeof msg === "string") {
         console.error(msg);
-        embed.addFields([{ name: "Message", value: msg.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, '') }]);
+        embed.addFields({ name: "Message", value: msg });
       }
+
       console.trace(error);
 
       let stack = (error.stack ? error.stack : error.toString());
-      if (stack.length > 1024) stack = stack.slice(0, 1000);
+      if (stack.length > 4096) stack = stack.slice(0, 4000);
 
-      embed.addFields([{ name: "Error", value: stack.replace(/\/Users\/bobbythecatfish\/Downloads\//gi, '') }]);
+      embed.setDescription(stack);
       return errorLog.send({ embeds: [embed] });
-    } catch (e) {console.log(e);}
+    } catch (e) {console.log(e.stack ?? e);}
   },
 
   harshFilter: (str) => {
@@ -134,7 +139,7 @@ const Utils = {
      * @param {string} string
      */
   getEmoji: (string) => {
-    const parsed = discord.Util.parseEmoji(string);
+    const parsed = parseEmoji(string);
     if (!parsed?.id) return null;
     parsed.link = `https://cdn.discordapp.com/emojis/${parsed.id}.${parsed.animated ? 'gif' : 'png'}`;
     return parsed;
@@ -225,7 +230,7 @@ const Utils = {
       else return Utils.errorHandler(e, msg);
     }
   },
-  escape: (text, options = {}) => Util.escapeMarkdown(text, options),
+  escape: (text, options = {}) => escapeMarkdown(text, options),
 
   escapeText: (txt) => txt.replace(/(\*|_|`|~|\\|\|)/g, '\\$1'),
   rand: (array) => array[Math.floor(Math.random() * array.length)],
@@ -317,15 +322,23 @@ const Utils = {
   /**
      * @param {string} image Image URL
      * @param {boolean} size Determine if file size is > 7.5MB
-     * @returns {Promise<jimp>} is image or not
+     * @param {boolean} resize Whether or not to resize large images to 256p max
+     * @returns {Promise<jimp|null>} is image or not
      */
-  validImage: async (image, size) => {
+  validImage: async (image, size = true, resize = true) => {
     try {
       const img = await jimp.read(image);
       if (size && img.bitmap.data.byteLength >= 7500000) return null;
+
+      // resize large images so that the largest dimension is 256p
+      if (resize && img.getWidth() > 256 || img.getHeight() > 256) {
+        const w = img.getWidth(), h = img.getHeight();
+        const largest = Math.max(w, h);
+        img.resize(w == largest ? 256 : jimp.AUTO, w == largest ? jimp.AUTO : 256);
+      }
       return img;
     } catch {
-      return false;
+      return null;
     }
   },
 

@@ -106,7 +106,7 @@ Module
       u.emit('messagePin', reaction.message, member);
     }
   } catch (error) {
-    reaction.message.channel.send(`Coudln't pin that post because: ${error}`);
+    reaction.message.channel.send(`couldn't pin that post because: ${error}`);
     u.errorHandler(error, reaction.message.content);
   }
 });

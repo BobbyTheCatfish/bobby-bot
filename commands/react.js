@@ -7,9 +7,8 @@ Module.addEvent('messageCreate', async (msg) => {
     const { tags } = u.db;
     const parsed = await u.parse(msg);
     if (parsed && msg.guild) {
-      let read = await tags.getTag(msg.guildId, parsed.command.toLowerCase());
+      const read = await tags.getTag(msg.guildId, parsed.command.toLowerCase());
       const localTag = read ?? false;
-      if (await tags.globalStatus(msg.guildId)) read ??= await tags.getGlobalTag(parsed.command);
       if (read && !(!localTag && msg.client.commands.has(read.name))) {
         let replaceContent = read.text;
         if (replaceContent) {

@@ -33,7 +33,7 @@ Module.addInteractionCommand({ name: 'config',
         switch (type) {
         case "botlobby": return await botLobby();
         case "modcategory": return await modCategory();
-        case "modogs": return await modLogs();
+        case "modlogs": return await modLogs();
         case "muted": return await muteChannel();
         }
         if (type == 'botlobby') return await botLobby();
@@ -203,7 +203,7 @@ Module.addInteractionCommand({ name: 'config',
           return await save(embed, 'trustPlus');
         }
         async function untrusted() {
-          const embed = (r) => u.embed().setTitle("Unrusted Role").setDescription(`Untrusted role updated!\n${newRole ? `Users will recieve the ${newRole} role when commands such as \`/mod watch\` are used${r ? `, instead of ${r}.` : '.'}` : "Since no role was provided, this has disabled watching related commands."}`);
+          const embed = (r) => u.embed().setTitle("Untrusted Role").setDescription(`Untrusted role updated!\n${newRole ? `Users will recieve the ${newRole} role when commands such as \`/mod watch\` are used${r ? `, instead of ${r}.` : '.'}` : "Since no role was provided, this has disabled watching related commands."}`);
           return await save(embed, 'untrusted');
         }
         async function mods() {

@@ -1,70 +1,171 @@
-{
-  "name": "avatar",
-  "description": "Get someone's avatar and apply a filter to it",
-  "options": [
-    {
-      "type": 6,
-      "name": "user",
-      "description": "The user whose avatar you want to apply the filter to (defaults to yours)"
-    },
-    {
-      "type": 3,
-      "name": "filter",
-      "description": "A filter to apply to the avatar",
-      "choices": [
-        {
-          "name": "Amogus",
-          "value": "amongus"
-        },
-        {
-          "name": "Andy Warhol",
-          "value": "andywarhol"
-        },
-        {
-          "name": "Blur",
-          "value": "blur"
-        },
-        {
-          "name": "Blurple",
-          "value": "blurple"
-        },
-        {
-          "name": "Colorize",
-          "value": "colorme"
-        },
-        {
-          "name": "Deepfry",
-          "value": "deepfry"
-        },
-        {
-          "name": "Flex",
-          "value": "flex"
-        },
-        {
-          "name": "Grayscale",
-          "value": "grayscale"
-        },
-        {
-          "name": "Invert",
-          "value": "invert"
-        },
-        {
-          "name": "Metal",
-          "value": "metal"
-        },
-        {
-          "name": "Personal",
-          "value": "personal"
-        },
-        {
-          "name": "Petpet",
-          "value": "petpet"
-        },
-        {
-          "name": "Popart",
-          "value": "popart"
-        }
-      ]
-    }
-  ]
-}
+[
+  {
+    "name": "avatar",
+    "description": "Get someone's avatar and apply a filter to it",
+    "options": [
+      {
+        "type": 6,
+        "name": "user",
+        "description": "The user whose avatar you want to view or apply the filter to (defaults to yours)"
+      },
+      {
+        "type": 11,
+        "name": "file",
+        "description": "A file to apply a filter to"
+      },
+      {
+        "type": 3,
+        "name": "filter",
+        "description": "A filter to apply to the image",
+        "choices": [
+          {
+            "name": "Among Us",
+            "value": "amongus"
+          },
+          {
+            "name": "Andy Warhol",
+            "value": "andywarhol"
+          },
+          {
+            "name": "Blur",
+            "value": "blur"
+          },
+          {
+            "name": "Blurple",
+            "value": "blurple"
+          },
+          {
+            "name": "Colorize",
+            "value": "colorme"
+          },
+          {
+            "name": "Deepfry",
+            "value": "deepfry"
+          },
+          {
+            "name": "Flip Vertical",
+            "value": "flipy"
+          },
+          {
+            "name": "Flip Horizontal",
+            "value": "flipx"
+          },
+          {
+            "name": "Flip Both",
+            "value": "flipxy"
+          },
+          {
+            "name": "Flex",
+            "value": "flex"
+          },
+          {
+            "name": "Grayscale",
+            "value": "grayscale"
+          },
+          {
+            "name": "Invert",
+            "value": "invert"
+          },
+          {
+            "name": "Metal",
+            "value": "metal"
+          },
+          {
+            "name": "Personal",
+            "value": "personal"
+          },
+          {
+            "name": "Petpet",
+            "value": "petpet"
+          },
+          {
+            "name": "Popart",
+            "value": "popart"
+          },
+          {
+            "name": "Spin",
+            "value": "spin"
+          },
+          {
+            "name": "Fisheye Lens",
+            "value": "fisheye"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "animal",
+    "description": "Get a random picture of an animal/pet",
+    "options": [
+      {
+        "type": 3,
+        "name": "animal",
+        "description": "The animal to get a picture of",
+        "required": true,
+        "choices": [
+          {
+            "name": "Bird",
+            "value": "birb"
+          },
+          {
+            "name": "Cat",
+            "value": "cat"
+          },
+          {
+            "name": "Dog",
+            "value": "dog"
+          },
+          {
+            "name": "Fox",
+            "value": "fox"
+          },
+          {
+            "name": "Kangaroo",
+            "value": "kangaroo"
+          },
+          {
+            "name": "Koala",
+            "value": "koala"
+          },
+          {
+            "name": "Pikachu",
+            "value": "pikachu"
+          },
+          {
+            "name": "Panda",
+            "value": "panda"
+          },
+          {
+            "name": "Red Panda",
+            "value": "red_panda"
+          },
+          {
+            "name": "Raccoon",
+            "value": "raccoon"
+          },
+          {
+            "name": "Shiba",
+            "value": "shiba"
+          },
+          {
+            "name": "Whale",
+            "value": "whale"
+          },
+          {
+            "name": "Goose (cat)",
+            "value": "goose"
+          },
+          {
+            "name": "Luna (cat)",
+            "value": "luna"
+          },
+          {
+            "name": "Juan (chicken)",
+            "value": "juan"
+          }
+        ]
+      }
+    ]
+  }
+]

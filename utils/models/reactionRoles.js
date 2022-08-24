@@ -16,7 +16,8 @@ const rRoles = require('../../schemas/reactionRoles');
 
 const model = {
   /** @returns {Promise<Schema>} */
-  getByMessage: async (messageId) => {
+  getByMessage: async (messageId, existing) => {
+    if (existing?.length > 0) return existing.find(e => e.messageId == messageId);
     return await rRoles.findOne({ messageId })?.exec();
   },
   /** @returns {Promise<Schema[]>} */
@@ -24,7 +25,8 @@ const model = {
     return await rRoles.find()?.exec();
   },
   /** @returns {Promise<Schema>} */
-  getByGuild: async (guildId) => {
+  getByGuild: async (guildId, existing) => {
+    if (existing?.length > 0) return existing.find(e => e.guildId == guildId);
     return await rRoles.findOne({ guildId })?.exec();
   },
   /** @returns {Promise<Schema>} */
@@ -39,7 +41,8 @@ const model = {
     return document ? rRoles.findOneAndDelete({ messageId }) : null;
   },
   /** @returns {Promise<Schema>} */
-  getRemovable: async (messageId) => {
+  getRemovable: async (messageId, existing) => {
+    if (existing?.length > 0) return existing.filter(e => e.removeOnUnreact == true).find(e => e.messageId == messageId);
     const document = await rRoles.find({ removeOnUnreact: true })?.exec();
     return document.find(r => r.messageId == messageId);
   }

@@ -25,11 +25,12 @@ const Ranks = require('../../schemas/ranks');
  * @prop {number} rate
  */
 async function existsCheck(guildId, userId) {
-  await model.addGuild(guildId);
   if (userId) {
     await model.addUser(guildId, userId);
     if (!await Ranks.exists({ userId })) throw new Error(`No user rank schema for ${userId} in ${guildId}`);
+    else return true;
   }
+  await model.addGuild(guildId);
   if (await Ranks.exists({ guildId })) return true;
   else throw new Error(`No rank schema for guild ${guildId}`);
 }
@@ -62,10 +63,10 @@ const model = {
     }
   },
   /** @returns {Promise<user[]>} */
-  getAllRanks: async (guildId) => {
+  getGuild: async (guildId) => {
     if (await existsCheck(guildId)) {
       const document = await Ranks.findOne({ guildId })?.exec();
-      return document.users;
+      return document;
     }
   },
   /** @returns {Promise<Schema[]>} */

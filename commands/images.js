@@ -1,30 +1,30 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
   Jimp = require('jimp'),
+  discord = require('discord.js'),
   { GifFrame, GifUtil, GifCodec, BitmapImage } = require('gifwrap'),
   axios = require('axios'),
   schedule = require('node-schedule'),
   petPetGif = require('pet-pet-gif'),
-  low = require('lowdb'),
-  FileSync = require('lowdb/adapters/FileSync'),
-  fs = require('fs'),
-  ffmpegPath = require('@ffmpeg-installer/ffmpeg').path,
-  ffmpeg = require('fluent-ffmpeg'),
-  { getVideoDurationInSeconds } = require('get-video-duration'),
-  https = require('https'),
-  { Readable } = require('stream'),
-  readError = 'I ran into an error while getting the image. It might be too large.';
-function getTarget(msg, suffix) {
-  let target = msg.options?.getUser('target');
-  if (msg.attachments?.size > 0) target = msg.attachments.first()?.url;
-  target ??= msg.mentions?.users?.first()?.displayAvatarURL({ format: 'png', dynamic: true, size: 256 });
-  target ??= u.validUrl(suffix);
-  target ??= u.getEmoji(suffix)?.link;
-  target ??= (msg.author ?? msg.user)?.displayAvatarURL({ format: 'png', dynamic: true, size: 256 });
-  return target;
-}
+  fs = require('fs');
+
+/**
+ * @callback filterFunction
+ * @param {discord.CommandInteraction} int
+ * @param {Jimp} img
+ * @returns {Promise<void>}
+ *
+ * @callback process
+ * @param {number} x
+ * @param {number} y
+ * @param {Jimp} canvas
+ * @param {number} index
+ */
+
+const readError = 'I ran into an error while getting the image. It might be too large.';
+
 function petPic(pet, url, remove = true) {
-  const db = low(new FileSync('jsons/petpics.json'));
+  const db = u.lowdb('jsons/petpics.json');
   db.defaults({ luna: [], goose: [], juan: [] }).write();
   let reset = false;
   if (!url) {
@@ -36,102 +36,242 @@ function petPic(pet, url, remove = true) {
     }
     const pic = u.rand(db.get(pet).value());
     if (remove) db.get(pet).pull(pic).write();
-    return `${reset ? `We've gone through all the ${pet} pics! Starting over now...\n` : ''}${pic}`;
+    return (reset ? `We've gone through all the ${pet} pics! Starting over now...\n` : "") + pic;
   } else {return db.get(pet).push(url).write();}
 }
-ffmpeg.setFfmpegPath(ffmpegPath);
+
 const Module = new Augur.Module();
-Module.addCommand({ name: "amongus",
-  category: "Images",
-  process: async (msg, args) => {
-    const colors = ['black', 'blue', 'brown', 'cyan', 'green', 'lime', 'orange', 'pink', 'purple', 'red', 'white', 'yellow', 'maroon', 'rose', 'banana', 'gray', 'tan', 'coral'];
-    let color = (msg.options?.getString('option') ?? args?.toLowerCase().split(' ')[0])?.toLowerCase();
-    if (!colors.includes(color)) color = u.rand(colors);
-    try {
-      const target = getTarget(msg, args);
-      const avatar = await u.validImage(target);
-      if (!avatar) return msg.reply(readError);
-      const image = await Jimp.read(`media/amongians/${color}.png`);
-      const mask = await Jimp.read('media/amongians/mask.png');
-      const helmet = await Jimp.read('media/amongians/helmet.png');
-      /** @param {Jimp} avatar */
-      const filter = function(input, img = image) {
-        input.resize(370, Jimp.AUTO);
-        input.background(Jimp.cssColorToHex('white'));
-        input = new Jimp(799, 1080, 0x00000000).blit(input, 375, 130).mask(mask, 0, 0);
-        img.blit(input, 0, 0).blit(helmet, 0, 0);
-        // msg.channel.send({files: [await img.getBufferAsync(Jimp.MIME_PNG)]})
-        // img.getBuffer(Jimp.MIME_PNG, (err, buffer) =>{return buffer})
-        // return await img.getBufferAsync(Jimp.MIME_PNG)
-      };
-      const output = await filter(avatar).getBufferAsync(Jimp.MIME_PNG);
-      await msg.reply({ files: [output] });
-    } catch (error) {
-      console.log(error);
+
+/**
+ * Get the image from an interaction.
+ * @param {discord.CommandInteraction} int
+ * @param {number} size size of the image
+ * @returns {Promise<string>} image url
+ */
+async function targetImg(int, size = 256) {
+  if (int.options.getAttachment('file')) {
+    const url = int.options.getAttachment('file').url;
+    if (!await u.validImage(url)) return null;
+    else return url;
+  }
+  const target = (int.options[int.guild ? "getMember" : "getUser"]('user')) ?? int.user;
+  return target.displayAvatarURL({ extension: 'png', size, dynamic: true });
+}
+
+/**
+ * Apply a filter function with parameters. Useful for when there isn't much logic to it
+ * @param {discord.CommandInteraction} int
+ * @param {string} filter filter to apply
+ * @param {any[]} params array of params to pass into the filter function
+ */
+async function basicFilter(int, img, filter, params) {
+  if (params) img[filter](...params);
+  else img[filter]();
+  const output = await img.getBufferAsync(Jimp.MIME_PNG);
+  return int.editReply({ files: [output] });
+}
+
+/**
+ * For filters like andywarhol and popart, where the image gets pasted 4 times with a bit of space in-between.
+ * `run` will be called 4 times and provides an index
+ * @param {Jimp} img the base image
+ * @param {number} o offest (default 12)
+ * @param {process} run the process to run (x, y, canvas, index)
+ * @returns {Jimp}
+ */
+function fourCorners(img, o = 12, run) {
+  const width = img.getWidth(),
+    height = img.getHeight(),
+    canvas = new Jimp(width * 2 + (o * 3), height * 2 + (o * 3), 0xffffffff),
+    positions = [[o, o], [width + (o * 2), o], [o, height + (o * 2)], [width + (o * 2), height + (o * 2)]];
+
+  for (let i = 0; i < positions.length; i++) {
+    const p = positions[i];
+    run(p[0], p[1], canvas, i);
+  }
+  return canvas;
+}
+
+/** @type {filterFunction} */
+async function amongus(int, img) {
+  const colors = ['black', 'blue', 'brown', 'cyan', 'green', 'lime', 'orange', 'pink', 'purple', 'red', 'white', 'yellow', 'maroon', 'rose', 'banana', 'gray', 'tan', 'coral'];
+  let color = int.options.getString('option');
+  if (!colors.includes(color)) color = u.rand(colors);
+  const base = await Jimp.read(`media/amongians/${color}.png`);
+  const mask = await Jimp.read('media/amongians/mask.png');
+  const helmet = await Jimp.read('media/amongians/helmet.png');
+  img = base.clone().blit(img.resize(370, Jimp.AUTO), 375, 130).mask(mask, 0, 0);
+  const output = await base.blit(img, 0, 0)
+    .blit(helmet, 0, 0)
+    .getBufferAsync(Jimp.MIME_PNG);
+  await int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function andywarhol(int, img) {
+  const output = await fourCorners(img, 12, (x, y, c) => {
+    img.color([{ apply: 'spin', params: [60] }]);
+    c.blit(img, x, y);
+  }).getBufferAsync(Jimp.MIME_PNG);
+  return await int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function spin(int, img) {
+  let i = 0;
+  const deg = 30;
+  const gifFrames = [];
+  const scale = Math.min(img.getHeight(), img.getWidth());
+  img.crop(0, 0, scale, scale).circle();
+  do {
+    const newImage = img.clone().rotate((0 - deg) * i).autocrop();
+    const frame = new GifFrame(new BitmapImage(newImage.bitmap), { delayCentisecs: 3 });
+    GifUtil.quantizeSorokin(frame);
+    gifFrames.push(frame);
+    i++;
+  } while (i < (360 / deg));
+  const result = await GifCodec.prototype.encodeGif(gifFrames);
+  return int.editReply({ files: [{ attachment: result.buffer, name: 'output.gif' }] });
+}
+
+/** @type {filterFunction} */
+async function colorme(int, img) {
+  const color = Math.floor(Math.random() * 359);
+  const output = await img.color([{ apply: 'hue', params: [color] }]).getBufferAsync(Jimp.MIME_PNG);
+  return int.editReply({ content: `Hue: ${color}`, files: [output] });
+}
+
+/** @type {filterFunction} */
+async function deepfry(int, img) {
+  const output = await img.posterize(20)
+    .color([{ apply: 'saturate', params: [100] }])
+    .contrast(1)
+    .getBufferAsync(Jimp.MIME_PNG);
+  return int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function flex(int, img) {
+  const right = await Jimp.read("https://cdn.discordapp.com/attachments/789694239197626371/1011871628835168256/flexArm.png");
+  const left = right.clone().flip(true, Math.random() > 0.5);
+  const canvas = new Jimp(368, 128, 0x00000000);
+  right.flip(false, Math.random() > 0.5);
+  if (!img.hasAlpha()) img.circle();
+  img.resize(128, 128);
+  const output = await canvas.blit(left, 0, 4)
+    .blit(right, 248, 4)
+    .blit(img, 120, 0)
+    .getBufferAsync(Jimp.MIME_PNG);
+  return int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function metal(int, img) {
+  const right = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/1011871629288157194/metalHand.png');
+  const left = right.clone().flip(true, false);
+  const canvas = new Jimp(368, 128, 0x00000000);
+  if (!img.hasAlpha()) img.circle();
+  img.resize(128, 128);
+  const output = await canvas.blit(right, 0, 4)
+    .blit(left, 248, 4)
+    .blit(img, 120, 0)
+    .getBufferAsync(Jimp.MIME_PNG);
+  return int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function personal(int, img) {
+  const canvas = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/1011871629564985364/personalBase.png');
+  img.resize(350, 350);
+  if (!img.hasAlpha()) img.circle();
+  const output = await canvas.blit(img, 1050, 75).getBufferAsync(Jimp.MIME_PNG);
+  return await int.editReply({ files: [output] });
+}
+
+/** @type {filterFunction} */
+async function petpet(int) {
+  const gif = await petPetGif(await targetImg(int));
+  return await int.editReply({ files: [{ attachment: gif, name: 'petpet.gif' }] });
+}
+
+/** @type {filterFunction} */
+async function popart(int, img) {
+  const output = await fourCorners(img, 12, (x, y, c, i) => {
+    if (i == 0) img.color([{ apply: "desaturate", params: [100] }, { apply: 'saturate', params: [50] }]);
+    else img.color([{ apply: "spin", params: [i == 3 ? 120 : 60] }]);
+    c.blit(img, x, y);
+  }).getBufferAsync(Jimp.MIME_PNG);
+  return await int.editReply({ files: [output] });
+}
+
+/** @param {discord.CommandInteraction} int */
+async function avatar(int) {
+  const targetImage = await targetImg(int);
+  const targetUser = (int.options[int.guild ? "getMember" : "getUser"]('user')) ?? int.user;
+  const format = targetImage.includes('.gif') ? 'gif' : 'png';
+  const embed = u.embed().setTitle(targetUser.displayName ?? targetUser.username).setImage(`attachment://image.${format}`);
+  return int.editReply({ embeds: [embed], files: [{ attachment: targetImage, name: `image.${format}` }] });
+}
+
+Module
+.addInteractionCommand({ name: "avatar",
+  commandId: "970059354415976458",
+  process: async (interaction) => {
+    const file = interaction.options.getAttachment('file');
+    if (file && !interaction.options.getString('filter')) return interaction.reply({ content: "You need to specify a filter to apply if you're uploading a file", ephemeral: true });
+    if (file && file.size > 4000000) return interaction.reply({ content: "That file is too big for me to process! It needs to be under 4MB.", ephemeral: true });
+    await interaction.deferReply();
+
+    const img = await u.validImage(await targetImg(interaction));
+    if (!img && interaction.options.getString('filter')) return interaction.editReply({ content: readError }).then(u.clean);
+
+    switch (interaction.options.getString('filter')) {
+    case "amongus": return amongus(interaction, img);
+    case "andywarhol": return andywarhol(interaction, img);
+    case "colorme": return colorme(interaction, img);
+    case "deepfry": return deepfry(interaction, img);
+    case "flex": return flex(interaction, img);
+    case "metal": return metal(interaction, img);
+    case "personal": return personal(interaction, img);
+    case "petpet": return petpet(interaction, img);
+    case "popart": return popart(interaction, img);
+    case "spin": return spin(interaction, img);
+
+    // basic filters
+    case "fisheye": return basicFilter(interaction, img, 'fisheye');
+    case "invert": return basicFilter(interaction, img, 'invert');
+    case "blur": return basicFilter(interaction, img, 'blur', [5]);
+    case "rotate": return basicFilter(interaction, img, 'rotate', [Math.floor(Math.random() * 310) + 25]);
+    case "flipx": return basicFilter(interaction, img, 'flip', [true, false]);
+    case "flipy": return basicFilter(interaction, img, 'flip', [false, true]);
+    case "flipxy": return basicFilter(interaction, img, 'flip', [true, true]);
+    case "blurple": return basicFilter(interaction, img, 'color', [[{ apply: "desaturate", params: [100] }, { apply: "saturate", params: [47.7] }, { apply: "hue", params: [227] }]]);
+    case "grayscale": return basicFilter(interaction, img, 'color', [[{ apply: "desaturate", params: [100] }]]);
+
+    default: return avatar(interaction);
     }
   }
-})
-.addCommand({ name: "andywarhol",
-  category: "Images",
-  process: async (msg, args) => {
-    try {
-      const img = await u.validImage(getTarget(msg, args));
-      if (!img) return msg.reply(readError);
-      const canvas = new Jimp(536, 536, 0xffffffff);
-      const width = img.getWidth() + 10;
-      const height = img.getHeight() + 10;
-      const positions = [[6, height], [width, 6], [width, height], [6, 6]];
-      for (const p of positions) {
-        img.color([{ apply: "spin", params: [60] }]);
-        canvas.blit(img, p[0], p[1]);
-      }
-      const output = await canvas.getBufferAsync(Jimp.MIME_PNG);
-      return await msg.reply({ files: [output] });
-    } catch (error) {
-      u.errorHandler(error, msg);
+});
+Module
+.addInteractionCommand({ name: "animal",
+  commandId: "1011871239897354292",
+  process: async (int) => {
+    const randomApiAnimals = ['dog', 'cat', 'panda', 'fox', 'red_panda', 'koala', 'birb', 'raccoon', 'kangaroo', 'whale', 'pikachu'];
+    const otherAnimals = ['shiba', 'lizard'];
+    const animals = randomApiAnimals.concat(otherAnimals);
+    const animal = int.options.getString('animal');
+    await int.deferReply();
+    if (animals.includes(animal)) {
+      let image;
+      if (randomApiAnimals.includes(animal)) image = (await axios.get(`https://some-random-api.ml/img/${animal}`))?.data?.link;
+      else if (animal == otherAnimals[0]) image = (await axios.get('http://shibe.online/api/shibes')).data[0];
+      else if (animal == otherAnimals[1]) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url;
+      if (!image) return int.editReply("That's not one of the animals!").then(u.clean);
+      int.editReply(image);
+    } else if (["luna", "goose", "juan"].includes(animal)) {
+      const file = fs.readFileSync(`media/${animal}.txt`, 'utf8');
+      int.editReply(u.rand(file.split('\n')));
     }
-  }
-})
-.addCommand({ name: "avatar",
-  category: "Images",
-  process: async (msg) => {
-    const target = msg.options?.getUser('target') ?? msg.users?.mentions.first() ?? msg.user ?? msg.author;
-    return msg.reply(`\`${target.username}\`:`, { files: [target.displayAvatarURL({ format: 'png', dynamic: true, size: 1024 })] });
-  }
-})
-.addCommand({ name: "blur",
-  category: "Images",
-  process: async (msg, args) => {
-    try {
-      const deg = parseInt(msg.options?.getString('option') ?? args?.split(' ')?.[0], 10) || 5;
-      if (deg < 0 || deg > 10) return msg.reply("I need a value between 0 and 10");
-      const image = await u.validImage(getTarget(msg, args));
-      if (!image) return msg.reply(readError);
-      image.gaussian(deg);
-      const output = await image.getBufferAsync(Jimp.MIME_PNG);
-      msg.reply({ files: [output] });
-    } catch (error) {
-      u.errorHandler(error, msg);
-    }
-  }
-})
-.addCommand({ name: "blurple",
-  category: "Images",
-  process: async (msg, args) => {
-    const target = getTarget(msg, args);
-    const image = await u.validImage(target);
-    if (!image) return msg.reply(readError);
-    const filter = async function(input) {
-      input.color([
-        { apply: "desaturate", params: [100] },
-        { apply: "saturate", params: [47.7] },
-        { apply: "hue", params: [227] }
-      ]);
-      return await input.getBufferAsync(Jimp.MIME_PNG);
-    };
-    // if(target.includes('.gif')) output = await gifFilter(target, filter)
-    const output = await filter(image);
-    await msg.reply({ files: [output] });
   }
 })
 .addCommand({ name: "color",
@@ -151,221 +291,17 @@ Module.addCommand({ name: "amongus",
     } catch (error) {console.log(error);}
   }
 })
-.addCommand({ name: "colorme",
-  category: "Images",
-  process: async (msg, args) => {
-    let color = parseInt(msg.options?.getString('option') ?? args.split(' ')?.[0], 10);
-    const image = await u.validImage(getTarget(msg, args));
-    if (!image) return msg.reply(readError);
-    color = Math.floor(color || Math.random() * 359);
-    if (color > 360 || color < -360) return msg.reply("That's out of range! Try using a number between -360 and 360.");
-    image.color([{ apply: "hue", params: [color] }]);
-    const output = await image.getBufferAsync(Jimp.MIME_PNG);
-    return msg.reply({ content: `Hue: ${color}`, files: [output] });
-  }
-})
 .addCommand({ name: "crop",
   category: "Images",
-  process: async (msg, args) => {
-    const image = await u.validImage(getTarget(msg, args));
+  process: async (msg) => {
+    const message = msg.channel.messages.cache.filter(m => m.attachments?.size > 0).sort((a, b) => a.createdTimestamp - b.createdTimestamp).last();
+    const image = u.validImage(message.attachments.first());
     if (!image) return msg.reply(readError);
     image.autocrop({ cropOnlyFrames: false, cropSymmetric: false, tolerance: 0.01 });
     const output = await image.getBufferAsync(Jimp.MIME_PNG);
     return msg.reply({ files: [output] });
   }
 })
-.addCommand({ name: "flex",
-  category: "Images",
-  process: async (msg, args) => {
-    const avatar = await u.validImage(getTarget(msg, args));
-    if (!avatar) return msg.reply(readError);
-    const right = await Jimp.read("https://cdn.discordapp.com/attachments/488887953939103775/545672817354735636/509442648080121857.png");
-    const mask = await Jimp.read("./media/flexmask.png");
-    const canvas = new Jimp(368, 128, 0x00000000);
-    const left = right.clone().flip(true, Math.random() > 0.5);
-
-    right.flip(false, Math.random() > 0.5);
-    avatar.resize(128, 128).mask(mask, 0, 0);
-    canvas.blit(left, 0, 4).blit(right, 248, 4).blit(avatar, 120, 0);
-
-    const output = await canvas.getBufferAsync(Jimp.MIME_PNG);
-    return msg.reply({ files: [output] });
-  }
-})
-.addCommand({ name: "invert",
-  category: "Images",
-  process: async (msg, args) => {
-    const image = await u.validImage(getTarget(msg, args));
-    if (!image) return msg.reply(readError);
-    image.invert();
-    const output = await image.getBufferAsync(Jimp.MIME_PNG);
-    return await msg.reply({ files: [output] });
-  }
-})
-.addCommand({ name: "deepfry",
-  category: "Images",
-  process: async (msg, args) => {
-    const image = await u.validImage(getTarget(msg, args));
-    if (!image) return msg.reply(readError);
-    image.posterize(20);
-    image.color([{ apply: "saturate", params: [100] }]);
-    image.contrast(1);
-    const output = await image.getBufferAsync(Jimp.MIME_PNG);
-    return await msg.reply({ files: [output] });
-  }
-})
-.addCommand({ name: "personal",
-  category: "Images",
-  process: async (msg, args) => {
-    const image = await Jimp.read('https://cdn.discordapp.com/attachments/789694239197626371/808446253737181244/personal.png');
-    const target = await u.validImage(getTarget(msg, args));
-    const mask = await Jimp.read('media/flexmask.png');
-    target.resize(350, 350);
-    if (!target.hasAlpha()) target.mask(mask.resize(350, 350));
-    image.blit(target, 1050, 75);
-    return await msg.channel.send({ files: [await image.getBufferAsync(Jimp.MIME_PNG)] });
-  }
-})
-.addCommand({ name: 'petpet',
-  category: "Images",
-  process: async (msg, args) => {
-    const target = getTarget(msg, args);
-    if (!u.validImage(target)) return msg.channel.send(readError);
-    const gif = await petPetGif(target);
-    return msg.reply({ files: [{ attachment: gif, name: 'petpet.gif' }] });
-  }
-})
-.addCommand({ name: "mirror",
-  category: "Images",
-  process: async (msg, args) => {
-    const image = await u.validImage(getTarget(msg, args));
-    if (!image) return msg.reply(readError);
-    const dir = args?.split(' ')?.[0] ?? msg.options?.getString('option') ?? 'x';
-    if (['horizontal', 'h', 'hori', 'hor', 'left', 'right', 'l', 'r', 'x'].includes(dir.toLowerCase())) image.flip(true, false);
-    else if (['vertical', 'v', 'verti', 'vert', 'up', 'down', 'u', 'd', 'y'].includes(dir.toLowerCase())) image.flip(false, true);
-    else if (['both', 'xy', 'x y', 'all'].includes(dir.toLowerCase())) image.flip(true, true);
-    return msg.reply({ files: [await image.getBufferAsync(Jimp.MIME_PNG)] });
-  }
-})
-.addCommand({ name: "popart",
-  category: "Images",
-  process: async (msg, args) => {
-    try {
-      const img = await u.validImage(getTarget(msg, args));
-      if (!img) return msg.reply(readError);
-      const canvas = new Jimp(536, 536, 0xffffffff);
-      const width = img.getWidth() + 10;
-      const height = img.getHeight() + 10;
-      const positions = [[6, height], [width, 6], [width, height], [6, 6]];
-      let num = 60;
-      for (const p of positions) {
-        const index = positions.indexOf(p);
-        if (index == 0) img.color([{ apply: "desaturate", params: [100] }, { apply: 'saturate', params: [50] }]);
-        else if (index == 3) num = 120;
-        else img.color([{ apply: "spin", params: [num] }]);
-        canvas.blit(img, p[0], p[1]);
-      }
-      const output = await canvas.getBufferAsync(Jimp.MIME_PNG);
-      return await msg.reply({ files: [output] });
-    } catch (error) {
-      u.errorHandler(error, msg);
-    }
-  }
-})
-.addCommand({ name: "rotate",
-  category: "Images",
-  process: async (msg, args) => {
-    const deg = parseInt(msg.options?.getString('option') ?? args?.split(' ')?.[0], 10) || 5;
-    const image = await u.validImage(getTarget(msg, args));
-    if (!image) return msg.reply(readError);
-    image.rotate(-deg);
-    image.autocrop({ cropOnlyFrames: false, tolerance: 0, leaveBorder: 3 });
-    await msg.reply({ content: `\`Rotated ${deg}°\``, files: [await image.getBufferAsync(Jimp.MIME_PNG)] });
-  }
-})
-.addInteractionCommand({
-  commandId: "828084734134321162",
-  name: 'filter',
-  syntax: "filter source value",
-  category: "Images",
-  process: async (int) => {
-    const cmd = int.options.getSubcommand().replace(/flip/g, 'mirror').replace(/color/g, 'colorme');
-    return await int.client.commands.get(cmd).process(int);
-  }
-})
-.addCommand({ name: 'removetiktok',
-  process: async (msg, args) => {
-    try {
-      if (!msg.attachments.first()?.url.endsWith('.mp4') && !(u.validUrl(args) && args.endsWith('.mp4'))) return msg.channel.send("I need a video to remove the watermark from");
-      https.get(msg.attachments.first()?.url || args, async function(res) {
-        const data = [];
-        res.on('data', function(chunk) {
-          data.push(chunk);
-        }).on('end', async function() {
-          const video = ffmpeg(Readable.from(Buffer.concat(data)));
-          const duration = await getVideoDurationInSeconds(msg.attachments.first()?.url || args);
-          if (duration < 4) return msg.channel.send("That's not a tiktok video (its shorter than 4 seconds)").then(u.clean);
-          video.setDuration(duration - 4.01).format('webm').output(`${msg.id}.webm`)
-                    .on('start', async function() {
-                      msg.reply("Working on it... (may take a minute or two)");
-                    }).on('end', async function() {
-                      await msg.reply({ failIfNotExists: false, files: [`${msg.id}.webm`] });
-                      setTimeout(() => {
-                        fs.unlinkSync(`${msg.id}.webm`);
-                      }, 5000);
-                    }).on('error', function(err) {
-                      console.log(err);
-                    }).run();
-        });
-      });
-    } catch (e) {
-      return u.errorHandler(e, msg);
-    }
-  }
-})
-.addCommand({ name: 'animal',
-  category: 'Images',
-  process: async (msg, args) => {
-    const randomApiAnimals = ['Dog', 'Cat', 'Panda', 'Fox', 'Red Panda', 'Koala', 'Bird', 'Raccoon', 'Kangaroo', 'Whale', 'Pikachu'];
-    const otherAnimals = ['Shiba', 'Lizard'];
-    const animals = randomApiAnimals.concat(otherAnimals);
-    if (!args) return msg.channel.send({ embeds: [u.embed().setTitle('You can get random pictures of these animals:').setDescription(`\`\`\`${animals[0]}\n${animals.join("\n")}\n\`\`\``).setFooter(`Do ${await u.prefix(msg)}animal <animal> (eg: ${await u.prefix(msg)}animal bird)`)] });
-    const a = args.toLowerCase();
-    let image;
-    if (randomApiAnimals.includes(u.properCase(args))) image = (await axios.get(`https://some-random-api.ml/img/${a.replace(/bird/gi, 'birb').replace(/ /g, '_')}`)).data.link;
-    else if (a == otherAnimals[0].toLowerCase()) image = (await axios.get('http://shibe.online/api/shibes')).data[0];
-    else if (a == otherAnimals[1].toLowerCase()) image = (await axios.get('https://nekos.life/api/v2/img/lizard')).data.url;
-    if (!image) return msg.reply("That's not one of the animals!").then(u.clean);
-    msg.reply(image);
-  }
-}).addCommand({ name: "spin",
-  category: "Images",
-  process: async (msg, args) => {
-    try {
-      const image = await u.validImage(getTarget(msg, args));
-      if (!image) return msg.reply(readError);
-      let i = 0;
-      const deg = 30;
-      const gifFrames = [];
-      const mask = await Jimp.read('media/flexmask.png');
-      const scale = Math.min(image.getHeight(), image.getWidth());
-      mask.resize(scale, scale);
-      image.crop(0, 0, scale, scale).mask(mask, 0, 0);
-      do {
-        const newImage = image.clone().rotate((0 - deg) * i).autocrop();
-        const frame = new GifFrame(new BitmapImage(newImage.bitmap), { delayCentisecs: 3 });
-        GifUtil.quantizeSorokin(frame);
-        gifFrames.push(frame);
-        i++;
-      } while (i < (360 / deg));
-      const result = await GifCodec.prototype.encodeGif(gifFrames);
-      return msg.reply({ files: [{ attachment: result.buffer, name: 'output.gif' }] });
-    } catch (error) {
-      u.errorHandler(error, msg);
-    }
-  }
-})
-
 // luna, juan, and goose
 .addCommand({ name: 'addluna',
   category: 'Images',
@@ -419,33 +355,12 @@ Module.addCommand({ name: "amongus",
   onlyOwner: true,
   enabled: false,
   process: async (msg) => {
-    const db = low(new FileSync('jsons/petpics.json'));
+    const db = u.lowdb('jsons/petpics.json');
     db.defaults({ luna: [], goose: [] }).write();
     db.assign({ luna: fs.readFileSync('media/luna.txt', 'utf-8').split('\n') }).write();
     db.assign({ goose: fs.readFileSync('media/goose.txt', 'utf-8').split('\n') }).write();
     db.assign({ juan: fs.readFileSync('media/juan.txt', 'utf-8').split('\n') }).write();
     return msg.react('👍');
-  }
-})
-.addCommand({ name: 'luna',
-  category: 'Images',
-  process: async (msg) => {
-    const file = fs.readFileSync('media/luna.txt', 'utf8');
-    msg.channel.send(u.rand(file.split('\n')));
-  }
-})
-.addCommand({ name: 'goose',
-  category: 'Images',
-  process: async (msg) => {
-    const file = fs.readFileSync('media/goose.txt', 'utf8');
-    msg.channel.send(u.rand(file.split('\n')));
-  }
-})
-.addCommand({ name: 'juan',
-  category: 'Images',
-  process: async (msg) => {
-    const file = fs.readFileSync('media/juan.txt', 'utf8');
-    msg.channel.send(u.rand(file.split('\n')));
   }
 })
 .addCommand({ name: 'dailypic',
@@ -454,9 +369,9 @@ Module.addCommand({ name: "amongus",
   process: async (msg, args) => {
     console.log(args);
     if (!args) return msg.reply("Which picture do you need?");
-    if (!['goose', 'luna'].includes(args.toLowerCase())) return msg.reply("either goose or luna");
+    if (!['goose', 'luna', 'juan'].includes(args.toLowerCase())) return msg.reply("either goose, luna, or juan");
     const huddyChannel = msg.client.channels.cache.get('786033226850238525');
-    huddyChannel.send(`${args.toLowerCase() == 'goose' ? 'Daily Goose' : 'Nightly Luna'} Pic\n${petPic(args)}`);
+    huddyChannel.send(`${args.toLowerCase() == 'goose' ? 'Daily Goose' : args.toLowerCase() == 'luna' ? 'Nightly Luna' : "juan"} Pic\n${petPic(args.toLowerCase())}`);
   }
 })
 .addEvent('ready', () => {
@@ -486,41 +401,6 @@ Module.addCommand({ name: "amongus",
     huddyChannel.send(`Afternoon Juan Pic\n${pic}`);
   });
 
-})
-.addCommand({ name: 'duplicatepics',
-  onlyOwner: true,
-  process: async (msg, args) => {
-    const check = require('pixelmatch');
-    const PNG = require('pngjs').PNG;
-    const pet = args.split(' ')[0]?.toLowerCase();
-    const newURL = args.split(' ')[1];
-    if (!newURL) return msg.reply('need url');
-    if (!['luna', 'goose'].includes(pet)) return msg.reply('luna or goose');
-    const file = fs.readFileSync(`media/${pet}.txt`, 'utf8').split('\n');
-    if (file.includes(newURL)) return msg.reply(`That's a match!\n${newURL}`);
-    msg.reply('This might take a few minutes...');
-    const newPNG = await (await u.validImage(newURL)).getBufferAsync(Jimp.MIME_PNG);
-    const img1 = PNG.sync.read(newPNG);
-    const { height, width } = img1;
-    let i = 0;
-    let result;
-    do {
-      const x = file[i];
-      const png = await (await u.validImage(x))?.getBufferAsync(Jimp.MIME_PNG);
-      if (!png) u.reply(msg, `${x} not valid`);
-      const img2 = PNG.sync.read(png);
-      if (width == img2.width && height == img2.height) {
-        const diff = new PNG({ width, height });
-        const difference = check(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
-        if (difference <= 300) {
-          msg.reply(`Is this it? (Difference of ${difference} pixels)\n${x}`);
-          result = true;
-        }
-      }
-      i++;
-    } while (i < file.length && !result);
-    if (!result) return msg.reply("I didn't find any duplicates!");
-  }
 });
 
 module.exports = Module;

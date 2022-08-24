@@ -26,6 +26,10 @@ const model = {
   getTag: async (guildId, name) => {
     if (await checkExists(guildId)) {
       const document = await Tags.findOne({ guildId }).exec();
+      if (document.global) {
+        const global = await Tags.find({ global: true });
+        return global?.map(a => a.tags)?.flat()?.filter(t => t.name == name)?.sort((a, b) => a.time - b.time)[0];
+      }
       return document.tags?.find(t => t.name == name);
     }
   },

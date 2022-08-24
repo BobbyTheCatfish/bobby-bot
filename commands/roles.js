@@ -2,13 +2,15 @@ const Augur = require('augurbot'),
   u = require('../utils/utils'),
   emoji = require('emoji-aware').onlyEmoji,
   Module = new Augur.Module();
+let roles = [];
+
 Module.addCommand({ name: "inventory",
   onlyGuild: true,
   process: async (msg) => {
     const inventory = msg.guild.roles.cache.filter(r => msg.member.roles.cache.find(e => e.name.toLowerCase() + ' colors' == r.name.toLowerCase())).map(r => `<@&${r.id}>`).join("\n");
     const embed = u.embed().setAuthor({ name: msg.member.displayName, iconURL: msg.member.user.displayAvatarURL({ format: 'png' }) })
-      .setTitle("Equippable Color Inventory")
-      .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`).setFooter('Use !equip none to unequip any roles.');
+      .setTitle("Equipable Color Inventory")
+      .setDescription(`Equip a color role with \`!equip Role Name\` without the "Colors"\ne.g. \`!equip novice\`\n\n${inventory}`).setFooter('Use !equip none to remove any color roles.');
     if (!inventory) return msg.channel.send("You don't have any colors in your inventory!").then(u.clean);
     else return msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
@@ -76,9 +78,9 @@ Module.addCommand({ name: "inventory",
     const filter = r => yesNo.includes(r.emoji.name) && !r.me;
     const roleFilter = m => msg.guild.roles.cache.find(r => r.id == m.content || r.name.toLowerCase() == m.content.toLowerCase());
     const emojiFilter = m => emoji(m.content)[0] ? { id: null, name: emoji(m.content)[0] } : null || msg.guild.emojis.cache.find(e => e.id == m.content.replace(/[^0-9]]/g, '') || e.name.toLowerCase() == m.content.toLowerCase());
-    if (await u.db.reactionRoles.getByGuild(msg.guild.id)[0]) return msg.reply("Looks like there's already a reaction role thing set up! Modification and deletion coming soon.");
+    if (await u.db.reactionRoles.getByGuild(msg.guild.id, roles)) return msg.reply("Looks like there's already a reaction role thing set up! Modification and deletion coming soon.");
     const sendNSave = async () => {
-      const embed = u.embed().setTitle('Should the roles be removed when the user unreacts?');
+      const embed = u.embed().setTitle('Should the roles be removed when the user removes their reaction?');
       msg.author.send({ embeds: [embed] }).then(async m => {
         await msg.react(m, yesNo);
         await m.awaitReactions({ filter, max: 1, time, errors: ['time'] }).then(async collected => {
@@ -89,7 +91,8 @@ Module.addCommand({ name: "inventory",
           embed.setTitle(`Get your role${things.length > 1 ? 's' : ''}!`).setDescription(`React with the corresponding emoji to get the role!${removeOnUnreact ? '\nUnreact to get the role taken away.' : ''}\n${combine.join('\n')}`).setFooter('Remember that you have to use !equip <role name> to get the color!');
           msg.author.send(`Sending the message in ${msg.channel}`);
           msg.channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).then(async message => {
-            await u.db.reactionRoles.save(message, things, removeOnUnreact);
+            const saved = await u.db.reactionRoles.save(message, things, removeOnUnreact);
+            roles.push(saved);
             await msg.react(message, things.map(t => t.id || t.name));
             await message.pin();
           });
@@ -137,11 +140,11 @@ Module.addCommand({ name: "inventory",
 })
 .addEvent("messageReactionAdd", async (reaction, user) => {
   try {
-    const dbLookup = await u.db.reactionRoles.getReactionRole(reaction.message.id);
-    if (dbLookup[0]) {
+    const dbLookup = await u.db.reactionRoles.getByMessage(reaction.message.id, roles);
+    if (dbLookup) {
       const message = await reaction.message.fetch();
       const member = message.guild.members.cache.get(user.id);
-      const role = dbLookup[0].reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
+      const role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
       if (!role) reaction.users.remove(member.user);
       else if (!message.guild.roles.cache.get(role)) return;
       // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
@@ -151,7 +154,7 @@ Module.addCommand({ name: "inventory",
 })
 .addEvent("messageReactionRemove", async (reaction, user) => {
   try {
-    const dbLookup = await u.db.reactionRoles.getRemoveable(reaction.message.id);
+    const dbLookup = await u.db.reactionRoles.getRemovable(reaction.message.id, roles);
     if (dbLookup) {
       const message = await reaction.message.fetch();
       const member = message.guild.members.cache.get(user.id),
@@ -163,7 +166,11 @@ Module.addCommand({ name: "inventory",
   } catch (error) {u.errorHandler(error, 'Error on reaction role removal');}
 })
 .addEvent('ready', async () => {
-  const dbLookup = await u.db.reactionRoles.getAll();
-  for (const { messageId, channelId } of dbLookup) Module.client.channels.cache.get(channelId).messages.fetch(messageId);
-});
+  roles = await u.db.reactionRoles.getAll();
+})
+.setInit(data => {
+  if (data) roles = data;
+})
+.setUnload(() => roles);
+
 module.exports = Module;
