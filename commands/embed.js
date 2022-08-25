@@ -61,7 +61,7 @@ Module.addInteractionCommand({ name: "embed",
           await modalSubmit.deferReply();
           await modalSubmit.deleteReply();
         }
-        if (embed.data.fields?.lenth >= 20) {
+        if (embed.data.fields?.length >= 25) {
           buttons = buttons.components.filter(co => co.data.label != 'Add Field');
           return await loop("You've reached the limit of embed fields you can add.");
         }
