@@ -276,7 +276,7 @@ Module.addCommand({ name: 'play',
       try {
         do {
           https.get(url, async stream => {
-            const { mime } = await fileType.fromStream(stream);
+            const { mime } = await fileType.fileTypeFromStream(stream);
             result = mime?.includes('video') || mime?.includes('audio');
             computed = true;
           });
