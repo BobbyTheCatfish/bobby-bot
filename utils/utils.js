@@ -34,7 +34,13 @@ const Utils = {
   /** @param {discord.ActionRowData} data */
   actionRow: (data) => new ActionRowBuilder(data),
   /** @param {discord.EmbedData} data */
-  embed: (data) => new EmbedBuilder(data).setColor(config.color),
+  embed: (data) => {
+    if (data?.author) {
+      if (data.author instanceof discord.GuildMember) data.author = { name: data.author.displayName, iconURL: data.author.displayAvatarURL() };
+      else if (data.author instanceof discord.User) data.author = { name: data.author.displayName, iconURL: data.author.displayAvatarURL() };
+    }
+    return new EmbedBuilder(data).setColor(config.color);
+  },
   /** @param {discord.ButtonComponentData} data */
   button: (data) => new ButtonBuilder(data),
   /** @param {discord.SelectMenuComponentData} data */
@@ -43,7 +49,7 @@ const Utils = {
   collection: (data) => new discord.Collection(data),
   /** @param {discord.ModalComponentData} data */
   modal: (data) => new discord.ModalBuilder(data),
-  /** @param {discord.TextInputComponentOptions} data */
+  /** @param {discord.APITextInputComponent} data */
   textInput: (data) => new discord.TextInputBuilder(data),
   toEpoch: (date = new Date(), format = 'f') => `<t:${Math.floor(date.getTime() / 1000)}:${format}>`,
   /**

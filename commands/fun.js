@@ -1,6 +1,8 @@
 /* eslint-disable no-irregular-whitespace */
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
+  twemoji = require('@discordapp/twemoji'),
+  Jimp = require('jimp'),
   request = require('request');
 const Module = new Augur.Module();
 Module.addCommand({ name: "8ball",
@@ -74,37 +76,6 @@ Module.addCommand({ name: "8ball",
              　.  。　                     ඞ   。　    .      •
              •              ${args} was${impostor != 0 ? ' not' : ''} The Impostor    ⋆
             .             　 。　  ⋆                     .                     .`);
-  }
-})
-.addCommand({ name: "info",
-  category: "General",
-  process: async (msg) => {
-    const embed = u.embed()
-        .setTitle('About BobbyTheCatfish')
-        .setDescription(`***in the voice of my creator***\nHi! I'm BobbyTheCatfish. I've been building Bobby Bot as a side project to learn some coding skills. My 'main' focus is my YouTube channel, which is linked in this command, so take a look and maybe even subscribe!`)
-        .setThumbnail(msg.client.users.cache.get(Module.config.ownerId).avatarURL())
-        .setURL('https://www.youtube.com/channel/UCw8DLllFiJOmevgDznFiQZw');
-    msg.channel.send({ embeds: [embed] });
-  }
-})
-.addCommand({ name: "mewhen",
-  category: "Fun",
-  process: async (msg, args) => {
-    const words = args.toLowerCase().split(' ');
-    if (!args) return msg.channel.send("You need to provide some context!");
-    if (await u.hasLang(msg, args)) return;
-    words.forEach((k, i) => {
-      if (k == 'am') k = 'are';
-      else if (["i'm", "we're"].includes(k)) k = "they're";
-      else if (["i've", "we've"].includes(k)) k = "they've";
-      else if (['mine', 'ours'].includes(k)) k = 'theirs';
-      else if (['i', 'we'].includes(k)) k = 'they';
-      else if (['my', 'our'].includes(k)) k = 'their';
-      else if (k == 'me') k = 'them';
-      words[i] = k;
-    });
-    msg.delete();
-    return msg.channel.send(`${msg.member?.displayName ?? msg.author.username} when ${words.join(' ')}`, { files: ['media/mewhen.png'] });
   }
 })
 .addCommand({ name: "poll",
@@ -186,8 +157,6 @@ Module.addCommand({ name: "8ball",
   category: "Fun",
   process: async (msg, args) => {
     console.log('run');
-    const twemoji = require('@discordapp/twemoji');
-    const Jimp = require('jimp');
     function getUnicode(emoji) {
       const parse = JSON.stringify(twemoji.parse(emoji));
       return parse?.match(/https:\/\/twemoji\.maxcdn\.com\/v\/.*.png/)?.[0];
@@ -227,31 +196,13 @@ Module.addCommand({ name: "8ball",
     });
   }
 })
-.addCommand({ name: "shop",
-  category: "General",
-  process: async (msg) => {
-    msg.reply('https://teespring.com/stores/bobbys-gift-shop');
-  }
-})
-.addCommand({ name: "repo",
-  category: "Development",
-  process: async (msg) => {
-    msg.reply('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot');
-  }
-})
+.addCommand({ name: "repo", process: async (msg) => {
+  msg.reply('You can find my repository here: https://github.com/BobbyTheCatfish/bobby-bot');
+} })
 .addCommand({ name: 'talk', process: async (msg, args) => {
   const duck = require('uberduck.js');
   duck.setDetails(msg.client.config.uberduck.user, msg.client.config.uberduck.pass);
   const link = await duck.downloadSpeak(await duck.requestSpeak('wheatley', args));
   msg.reply({ files: [{ attachment: link, name: 'botspeak.mp3' }], failIfNotExists: false });
-} })
-.addEvent('messageCreate', msg => {
-  if (!msg.author.bot && !msg.author.system) {
-    const link = u.validUrl(msg.content);
-    const badLink = 'media.discordapp.net';
-    const vids = ['mp4', 'mov', 'avi', 'm4v'];
-    if (link && link.includes(badLink) && vids.includes(link.toLowerCase().slice(link.length - 3))) msg.reply(`\`${badLink}\` moment\n${link.replace(badLink, 'cdn.discordapp.com')}`);
-    if (msg.content.includes('<:dkHotFace:845140861846290452>') || msg.content.includes('<:theantiohgo:915407691923464233>')) msg.reply('https://tenor.com/view/modern-family-spray-squirt-annoyed-irritated-gif-4445288');
-  }
-});
+} });
 module.exports = Module;

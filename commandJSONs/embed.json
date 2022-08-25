@@ -1,0 +1,67 @@
+{
+  "name": "embed",
+  "description": "Create an embed and send it in a channel",
+  "options": [
+    {
+      "type": 7,
+      "name": "channel",
+      "description": "The channel to sent the embed in",
+      "required": true
+    },
+    {
+      "type": 3,
+      "name": "title",
+      "description": "The embed title"
+    },
+    {
+      "type": 3,
+      "name": "title-url",
+      "description": "A URL to put in the title (requires title)"
+    },
+    {
+      "type": 3,
+      "name": "description",
+      "description": "The embed's main text field"
+    },
+    {
+      "type": 6,
+      "name": "author",
+      "description": "A user to put in the author spot (alternative to author-name and author-image)"
+    },
+    {
+      "type": 3,
+      "name": "author-name",
+      "description": "The name to put in the author slot"
+    },
+    {
+      "type": 11,
+      "name": "author-image",
+      "description": "The image to put in the author slot"
+    },
+    {
+      "type": 3,
+      "name": "color",
+      "description": "The color of the embed"
+    },
+    {
+      "type": 3,
+      "name": "footer-text",
+      "description": "Text to put in the footer"
+    },
+    {
+      "type": 11,
+      "name": "footer-image",
+      "description": "The image to put in the footer (requires footer-text)"
+    },
+    {
+      "type": 11,
+      "name": "image",
+      "description": "An image to put below the description"
+    },
+    {
+      "type": 11,
+      "name": "thumbnail",
+      "description": "A smaller image that goes near the top of the embed"
+    }
+  ]
+}

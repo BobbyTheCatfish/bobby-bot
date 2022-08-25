@@ -11,6 +11,7 @@ const globalCommandFiles = [
   "get.json",
   "rank.json",
   "welcome.json",
+  "embed.json"
 ];
 const guildCommandFiles = [
   {

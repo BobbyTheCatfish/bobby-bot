@@ -140,28 +140,32 @@ Module.addCommand({ name: "inventory",
 })
 .addEvent("messageReactionAdd", async (reaction, user) => {
   try {
-    const dbLookup = await u.db.reactionRoles.getByMessage(reaction.message.id, roles);
-    if (dbLookup) {
-      const message = await reaction.message.fetch();
-      const member = message.guild.members.cache.get(user.id);
-      const role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
-      if (!role) reaction.users.remove(member.user);
-      else if (!message.guild.roles.cache.get(role)) return;
-      // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
-      else if (!member.roles.cache.get(role)) member.roles.add(role);
+    if (!user.bot) {
+      const dbLookup = await u.db.reactionRoles.getByMessage(reaction.message.id, roles);
+      if (dbLookup) {
+        const message = await reaction.message.fetch();
+        const member = message.guild.members.cache.get(user.id);
+        const role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
+        if (!role) reaction.users.remove(member.user);
+        else if (!message.guild.roles.cache.get(role)) return;
+        // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
+        else if (!member.roles.cache.get(role)) member.roles.add(role);
+      }
     }
   } catch (error) {u.errorHandler(error, 'Error on adding reaction role');}
 })
 .addEvent("messageReactionRemove", async (reaction, user) => {
   try {
-    const dbLookup = await u.db.reactionRoles.getRemovable(reaction.message.id, roles);
-    if (dbLookup) {
-      const message = await reaction.message.fetch();
-      const member = message.guild.members.cache.get(user.id),
-        role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
-      if (!message.guild.roles.cache.get(role)) return;
-      // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
-      else if (member.roles.cache.get(role)) member.roles.remove(member.guild.roles.cache.get(role));
+    if (!user.bot) {
+      const dbLookup = await u.db.reactionRoles.getRemovable(reaction.message.id, roles);
+      if (dbLookup) {
+        const message = await reaction.message.fetch();
+        const member = message.guild.members.cache.get(user.id),
+          role = dbLookup.reactions.find(r => reaction.emoji.id ? reaction.emoji.id == r.id : reaction.emoji.name == r.name)?.roleId;
+        if (!message.guild.roles.cache.get(role)) return;
+        // (await u.errorChannel(message)).send({ embeds: [u.embed().setTitle('Reaction Role Error').setDescription(`Looks like one of the roles on the reaction role message is no longer around!`)] });
+        else if (member.roles.cache.get(role)) member.roles.remove(member.guild.roles.cache.get(role));
+      }
     }
   } catch (error) {u.errorHandler(error, 'Error on reaction role removal');}
 })
