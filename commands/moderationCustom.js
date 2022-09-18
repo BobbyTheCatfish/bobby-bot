@@ -15,17 +15,7 @@ const Augur = require('augurbot'),
 */
 
 const Module = new Augur.Module();
-// testing server
-// const t = {
-//   guild: '406821751905976320',
-//   logChannel: '993929866451894333',
-//   muteChannel: '993929904892686436',
-//   muted: '989330053265522740',
-//   trusted: '990452331210506280',
-//   trustPlus: '990452365217906784',
-//   untrusted: '990452401821614120',
-//   mods: '470368495771844639'
-// };
+
 const modal = u.modal().addComponents([
   u.actionRow().addComponents(u.textInput({ customId: 'reason', label: 'Reason', style: 'SHORT' })),
   u.actionRow().addComponents(u.textInput({ customId: 'info', label: 'Additional Info', style: 'PARAGRAPH' }))
@@ -95,7 +85,7 @@ async function filter(msg, auto = true) {
   }
 }
 async function getVars(int) {
-  const guild = int.guild.id;
+  const guild = int.guild?.id;
   const channels = await u.db.guildConfig.snowflakes.getChannels(guild);
   const roles = await u.db.guildConfig.snowflakes.getRoles(guild);
   return { ...channels, ...roles };
@@ -125,6 +115,7 @@ Module.addInteractionCommand({ name: 'mod',
     case "timeout": return modUtil.timeout();
     case "trust": return modUtil.trust(server.trusted, server.untrusted);
     case "trust-plus": return modUtil.trustPlus(server.trusted, server.trustPlus);
+    case "trust-audit": return modUtil.trustAudit(server.trusted);
     case "user-info": return modUtil.info(server.muted, server.trusted, server.trustPlus, server.untrusted);
     case "warn": return modUtil.warn();
     case "watch": return modUtil.watch(server.untrusted);

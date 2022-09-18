@@ -30,6 +30,7 @@ const GuildConfig = require('../../schemas/guildconfig');
  *
  * @typedef {GuildChannels & {starboards: StarBoard[], botLobby: string}} AllChannels
  * @typedef {{id: string, createdTimestamp: number}} StarMsg
+ *
  * @typedef Schema
  * @prop {string} prefix
  * @prop {number} filter
@@ -41,11 +42,13 @@ const GuildConfig = require('../../schemas/guildconfig');
  * @prop {AllChannels} channels
  * @prop {GuildRoles} roles
  */
+
 async function configCheck(guildId) {
   await model.config.create(guildId);
   if (await GuildConfig.exists({ guildId })) return true;
   else throw new Error(`No guildconfig for guild ${guildId}`);
 }
+
 const model = {
   welcome: {
     /** @returns {Promise<Welcome>}*/
@@ -55,6 +58,7 @@ const model = {
         return document.welcome;
       }
     },
+
     /**
      * @param {Welcome} welcome
      * @returns {Promise<Welcome>}
@@ -62,14 +66,17 @@ const model = {
     save: async (guildId, welcome) => {
       if (await configCheck(guildId)) return GuildConfig.findOneAndUpdate({ guildId }, { welcome }, { new: true });
     },
+
     toggle: async (guildId, state = false) => {return GuildConfig.findOneAndUpdate({ guildId }, { 'welcome.enabled': state });},
   },
+
   config: {
     /** @returns {Promise<Schema>} */
     create: async (guildId) => {
       if (!await GuildConfig.exists({ guildId })) return GuildConfig.create({ guildId });
       else return null;
     },
+
     /** @returns {Promise<Schema>} */
     get: async (guildId) => {
       if (await configCheck(guildId)) {
@@ -77,11 +84,13 @@ const model = {
         return document;
       }
     },
+
     /** @returns {Promise<Schema[]>} */
     getAll: async () => {
       return await GuildConfig.find().exec();
     }
   },
+
   prefix: {
     /** @returns {Promise<string>} */
     get: async (guildId) => {
@@ -90,6 +99,7 @@ const model = {
         return document.prefix;
       }
     },
+
     /** @returns {Promise<Schema>} */
     save: async (guildId, prefix) => {
       if (await configCheck(guildId)) {
@@ -98,6 +108,7 @@ const model = {
       }
     }
   },
+
   snowflakes: {
     /**
      * @param {keyof GuildChannels} channelType
@@ -106,6 +117,7 @@ const model = {
     saveChannel: async (guildId, channel, channelType) => {
       if (await configCheck(guildId)) return GuildConfig.findOneAndUpdate({ guildId }, { [`channels.${channelType}`]: channel }, { new: true });
     },
+
     /**
      * @param {keyof GuildChannels} channelType
      * @returns {Promise<string>}
@@ -116,6 +128,7 @@ const model = {
         return document.channels?.[channelType];
       }
     },
+
     /**
      * @param {string} guildId
      * @returns {Promise<GuildChannels>}
@@ -135,6 +148,7 @@ const model = {
     saveRole: async (guildId, roleId, roleType) => {
       if (await configCheck(guildId)) return GuildConfig.findOneAndUpdate({ guildId }, { [`roles.${roleType}`]: roleId }, { new: true });
     },
+
     /**
      * @param {keyof GuildRoles} roleType
      * @returns {Promise<string>}
@@ -145,6 +159,7 @@ const model = {
         return document.roles?.[roleType];
       }
     },
+
     /** @returns {Promise<GuildRoles>}*/
     getRoles: async (guildId) => {
       if (await configCheck(guildId)) {
@@ -153,6 +168,7 @@ const model = {
       }
     },
   },
+
   starboards: {
     /** @returns {Promise<StarBoard[]>} */
     get: async (guildId) => {
@@ -161,6 +177,7 @@ const model = {
         return document.channels?.starboards;
       }
     },
+
     /**
      * @param {StarBoard} theBoard
      * @returns {Promise<Schema>}
@@ -173,6 +190,7 @@ const model = {
         else return GuildConfig.updateOne({ guildId }, { $push: { 'channels.starboards': theBoard } });
       }
     },
+
     /** @returns {Promise<Schema>} */
     delete: async (guildId, channelId) => {
       if (await configCheck(guildId)) {
@@ -181,10 +199,12 @@ const model = {
         if (board) return GuildConfig.findOneAndUpdate({ guildId, 'channels.starboards.channel': channelId }, { $pull: { channel: channelId } }, { new: true });
       }
     },
+
     /** @returns {Promise<Schema>} */
     saveMsg: async (guildId, msg) => {
       if (await configCheck(guildId)) return await GuildConfig.findOneAndUpdate({ guildId }, { $push: { 'starredMsgs': { id: msg.id, createdTimestamp: msg.createdTimestamp } } });
     },
+
     /** @returns {Promise<StarMsg>} */
     getMsg: async (guildId, messageId) => {
       if (await configCheck(guildId)) {
@@ -192,11 +212,13 @@ const model = {
         return document.starredMsgs?.find(s => s.id == messageId);
       }
     },
+
     /** @returns {Promise<StarMsg[]>} */
     getAllMsgs: async () => {
       const documents = await GuildConfig.find().exec();
       return documents?.map(d => {return { msgs: d.starredMsgs, guild: d.guildId };}).filter(a => a.msgs.length > 0);
     },
+
     /** @returns {Promise<Schema>} */
     cullMsgs: async (guildId, messageIds) => {
       if (await configCheck(guildId)) {
@@ -206,6 +228,7 @@ const model = {
       }
     }
   },
+
   filter: {
     /** @returns {Promise<Number>} */
     get: async (guildId) => {
@@ -214,6 +237,7 @@ const model = {
         return document.filter;
       }
     },
+
     /** @returns {Promise<Schema>} */
     save: async (guildId, status) => {
       if (await configCheck(guildId)) return GuildConfig.findOneAndUpdate({ guildId }, { filter: status }, { new: true });

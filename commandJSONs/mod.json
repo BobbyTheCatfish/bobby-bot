@@ -255,6 +255,11 @@
       },
       {
         "type": 1,
+        "name": "trust-audit",
+        "description": "Get a list of members that don't have the trusted role"
+      },
+      {
+        "type": 1,
         "name": "user-info",
         "description": "Get detailed information on a user",
         "options": [

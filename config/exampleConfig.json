@@ -61,6 +61,9 @@
       "voiceStateUpdate"
     ],
     "ownerId": "YOUR ID",
+    "adminIds": [
+      "YOUR ID AND ANYONE ELSE'S"
+    ],
     "prefix": "!",
     "token": "BOT TOKEN HERE",
     "email": {

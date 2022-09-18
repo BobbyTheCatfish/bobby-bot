@@ -1,46 +1,31 @@
 const { escapeMarkdown, parseEmoji, WebhookClient, ButtonBuilder, ActionRowBuilder, Message, SelectMenuBuilder, EmbedBuilder, Embed } = require("discord.js");
-const { GuildMember, GuildChannel, GuildEmoji, Guild, BaseInteraction, CommandInteraction, ButtonStyle } = require('discord.js');
+const { GuildChannel, BaseInteraction, CommandInteraction, ButtonStyle } = require('discord.js');
 const discord = require('discord.js');
 const config = require("../config/config.json");
 const validUrl = require('valid-url');
 const jimp = require('jimp');
 const errorLog = new WebhookClient({ id: config.error.id, token: config.error.token });
-const events = require('events');
 const db = require('./dbModels');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 const lang = require('../jsons/badwords.json');
 const sites = require('../jsons/blockedsites.json');
-const em = new events.EventEmitter();
+
 const Utils = {
-  /**
-     * @param {string} name The type of mod action
-     * Options should ideally be in this order (you can also add more)
-     * @param {GuildMember} executor
-     * @param {GuildMember[]|GuildChannel|GuildEmoji|Guild} targets
-     * @param {string} reason
-     * @param {string|number} statistic
-     * @param {any[]} succeeded
-     * @param {any[]} failed
-     * @param {Embed} embed
-     * @returns {em} Emits a modEvent
-     */
-  emit: (name, ...options) => em.emit(name, options),
-
   db,
-
   lowdb: (filePath) => low(new FileSync(filePath)),
 
-  /** @param {discord.ActionRowData} data */
-  actionRow: (data) => new ActionRowBuilder(data),
   /** @param {discord.EmbedData} data */
   embed: (data) => {
     if (data?.author) {
       if (data.author instanceof discord.GuildMember) data.author = { name: data.author.displayName, iconURL: data.author.displayAvatarURL() };
       else if (data.author instanceof discord.User) data.author = { name: data.author.displayName, iconURL: data.author.displayAvatarURL() };
     }
-    return new EmbedBuilder(data).setColor(config.color);
+    return new EmbedBuilder(data).setColor(data?.color ?? config.color).setTimestamp(data?.timestamp ?? new Date());
   },
+
+  /** @param {discord.ActionRowData} data */
+  actionRow: (data) => new ActionRowBuilder(data),
   /** @param {discord.ButtonComponentData} data */
   button: (data) => new ButtonBuilder(data),
   /** @param {discord.SelectMenuComponentData} data */
@@ -51,13 +36,15 @@ const Utils = {
   modal: (data) => new discord.ModalBuilder(data),
   /** @param {discord.APITextInputComponent} data */
   textInput: (data) => new discord.TextInputBuilder(data),
+
   toEpoch: (date = new Date(), format = 'f') => `<t:${Math.floor(date.getTime() / 1000)}:${format}>`,
+
   /**
-     * Deletes 1 or more messages
-     * @param {Message|Message[]} message Message Object(s)
-     * @param {number} t Time in ms
-     * @returns Message
-     */
+   * Deletes 1 or more messages
+   * @param {Message|Message[]} message Message Object(s)
+   * @param {number} t Time in ms
+   * @returns Message
+   */
   clean: async (message, t = 20000) => {
     if (message.length > 1) {
       setTimeout(() => {
@@ -75,10 +62,10 @@ const Utils = {
   },
 
   /**
-     * @param {Error} error error
-     * @param {Message|BaseInteraction|CommandInteraction} msg Message Object
-     * @returns Handles the error (don't worry about it)
-     */
+   * @param {Error} error error
+   * @param {Message|BaseInteraction|CommandInteraction} msg Message Object
+   * @returns Handles the error (don't worry about it)
+   */
   errorHandler: async (error, msg) => {
     try {
       if (!error || msg?.webhookId || (msg?.author?.bot && msg?.content == `I've run into an error. I've let my devs know.`)) return;
@@ -134,6 +121,7 @@ const Utils = {
   harshFilter: (str) => {
     return lang.find(l => str.includes(l));
   },
+
   siteFilter: (str) => {
     for (const category in sites) {
       const site = sites[category].find(c => str.includes(c));
@@ -142,8 +130,8 @@ const Utils = {
   },
 
   /**
-     * @param {string} string
-     */
+   * @param {string} string
+   */
   getEmoji: (string) => {
     const parsed = parseEmoji(string);
     if (!parsed?.id) return null;
@@ -152,14 +140,14 @@ const Utils = {
   },
 
   /**
-     * @param {Message} message Message Object
-     * @param {Embed}promptEmbed Initial embed to send
-     * @param {Embed}confirmEmbed Embed to send if the user reacts with ✅
-     * @param {Embed}cancelEmbed Embed to send if the user reacts with 🛑
-     * @param {Embed}timeoutEmbed Embed to send if the user runs out of time
-     * @param {number} time Time in ms
-     * @returns boolean/null
-     */
+   * @param {Message} message Message Object
+   * @param {Embed}promptEmbed Initial embed to send
+   * @param {Embed}confirmEmbed Embed to send if the user reacts with ✅
+   * @param {Embed}cancelEmbed Embed to send if the user reacts with 🛑
+   * @param {Embed}timeoutEmbed Embed to send if the user runs out of time
+   * @param {number} time Time in ms
+   * @returns {boolean|null}
+   */
   confirmEmbed: async (message, promptEmbed, confirmEmbed, cancelEmbed, timeoutEmbed, time = 300000) => {
     if (!timeoutEmbed) timeoutEmbed = Utils.embed().setTitle('Timed out').setDescription('You ran out of time!');
     const confirmButton = Utils.button().setStyle(ButtonStyle.Success).setLabel('Confirm').setCustomId('confirm');
@@ -174,6 +162,7 @@ const Utils = {
     int.reply({ embeds: [status ? confirmEmbed : cancelEmbed], components: [] });
     return status;
   },
+
   /**
    * @param {discord.CommandInteraction} int MAKE SURE IT'S BEEN REPLIED TO OR DEFERRED
    * @param {string} description
@@ -197,19 +186,21 @@ const Utils = {
     await res.reply({ content: status ? "Confirmed" : "Canceled", components: [], ephemeral: true });
     return status;
   },
+
   blocked: (member, logs, extra) => logs.send({ embeds: [
     Utils.embed().setAuthor({ name: member.displayName, iconURL: member.displayAvatarURL() })
       .setDescription(extra ?? null)
       .setColor(0x00ffff)
       .setTitle(`${member.displayName} has me blocked. *sadface*`)
   ] }),
+
   /**
-     *
-     * @param {Message} msg
-     * @param {Message|BaseInteraction} initMessage
-     * @param {discord.MessageActionRow[]} actionRows
-     * @returns {Promise<discord.MessageComponentInteraction>}
-     */
+   *
+   * @param {Message} msg
+   * @param {Message|BaseInteraction} initMessage
+   * @param {discord.MessageActionRow[]} actionRows
+   * @returns {Promise<discord.MessageComponentInteraction>}
+   */
   awaitButton: async (msg, initMessage, time = 5000 * 60) => {
     const filter = m => m.user.id == (initMessage.user ?? initMessage.author)?.id;
     try {
@@ -220,6 +211,7 @@ const Utils = {
       else return Utils.errorHandler(e, msg);
     }
   },
+
   /**
    *
    * @param {BaseInteraction} msg
@@ -236,33 +228,15 @@ const Utils = {
       else return Utils.errorHandler(e, msg);
     }
   },
-  escape: (text, options = {}) => escapeMarkdown(text, options),
 
+  escape: (text, options = {}) => escapeMarkdown(text, options),
   escapeText: (txt) => txt.replace(/(\*|_|`|~|\\|\|)/g, '\\$1'),
   rand: (array) => array[Math.floor(Math.random() * array.length)],
 
   /**
-     * @deprecated
-     * @param {string} str String to find mentions in
-     * @returns {{targets: GuildMember[], reason: string}} Guild members
-     */
-  parseTargets: (msg, str) => {
-    const regex = /(<@!?\d+>)/g;
-    const list = str.split(regex).filter(a => !['', ' '].includes(a));
-    const targets = [];
-    for (const x of list) {
-      if (!x.match(regex)) break;
-      else targets.push(x);
-    }
-    const reason = list.slice(targets.length).join('');
-    targets.map(a => msg.guild.members.cache.get(a));
-    return { targets, reason };
-  },
-
-  /**
-     * @param {Message} msg Message Object
-     * @returns {Promise<string>} Prefix
-     */
+   * @param {Message} msg Message Object
+   * @returns {Promise<string>} Prefix
+   */
   prefix: async (msg) => {
     try {
       if (msg.channel?.parent?.id == '813847559252344862') return '>';
@@ -275,9 +249,9 @@ const Utils = {
   },
 
   /**
-     * @param {Message} msg Message Object
-     * @returns {Promise<{command: string, suffix: string, params: []}>} Parsed message content
-     */
+   * @param {Message} msg Message Object
+   * @returns {Promise<{command: string, suffix: string, params: []}>} Parsed message content
+   */
   parse: async (msg) => {
     try {
       const prefix = await Utils.prefix(msg),
@@ -302,10 +276,10 @@ const Utils = {
   },
 
   /**
-     * @param {string} txt Text to put into proper case
-     * @param {boolean} replace Replace _ with spaces
-     * @returns {string} Proper case string
-     */
+   * @param {string} txt Text to put into proper case
+   * @param {boolean} replace Replace _ with spaces
+   * @returns {string} Proper case string
+   */
   properCase: (txt, replace = false) => {
     if (!txt) return txt;
     if (replace) txt = txt.replace(/_/g, ' ');
@@ -313,11 +287,11 @@ const Utils = {
   },
 
   /**
-     * @param {Message} msg Message to reply to
-     * @param {string} content What to reply with
-     * @param {boolean} clean Use u.clean or not
-     * @param {boolean} mention Mention the user
-     */
+   * @param {Message} msg Message to reply to
+   * @param {string} content What to reply with
+   * @param {boolean} clean Use u.clean or not
+   * @param {boolean} mention Mention the user
+   */
   reply: async (msg, content, clean = false, mention = false,) => {
     if (!msg) return Utils.errorHandler(new Error('u.reply needs a message object'), `Reply content: ${content}`);
     else msg.reply({ content, allowedMentions: { repliedUser: mention }, failIfNotExists: false }).then(m => {if (clean) Utils.clean(m);});
@@ -326,11 +300,11 @@ const Utils = {
   validUrl: (txt) => validUrl.isWebUri(txt),
 
   /**
-     * @param {string} image Image URL
-     * @param {boolean} size Determine if file size is > 7.5MB
-     * @param {boolean} resize Whether or not to resize large images to 256p max
-     * @returns {Promise<jimp|null>} is image or not
-     */
+   * @param {string} image Image URL
+   * @param {boolean} size Determine if file size is > 7.5MB
+   * @param {boolean} resize Whether or not to resize large images to 256p max
+   * @returns {Promise<jimp|null>} is image or not
+   */
   validImage: async (image, size = true, resize = true) => {
     try {
       const img = await jimp.read(image);
@@ -349,9 +323,9 @@ const Utils = {
   },
 
   /**
-     * @param {Message} msg Message Object
-     * @returns {Promise<GuildChannel>} Botspam or current channel
-     */
+   * @param {Message} msg Message Object
+   * @returns {Promise<GuildChannel>} Botspam or current channel
+   */
   botSpam: async (msg) => {
     if (!msg.guild) return msg.channel;
     const channel = await Utils.db.guildConfig.snowflakes.getChannel(msg.guild.id, 'botLobby');

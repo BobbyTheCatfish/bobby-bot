@@ -94,9 +94,7 @@ function fourCorners(img, o = 12, run) {
 
 /** @type {filterFunction} */
 async function amongus(int, img) {
-  const colors = ['black', 'blue', 'brown', 'cyan', 'green', 'lime', 'orange', 'pink', 'purple', 'red', 'white', 'yellow', 'maroon', 'rose', 'banana', 'gray', 'tan', 'coral'];
-  let color = int.options.getString('option');
-  if (!colors.includes(color)) color = u.rand(colors);
+  const color = u.rand(['black', 'blue', 'brown', 'cyan', 'green', 'lime', 'orange', 'pink', 'purple', 'red', 'white', 'yellow', 'maroon', 'rose', 'banana', 'gray', 'tan', 'coral']);
   const base = await Jimp.read(`media/amongians/${color}.png`);
   const mask = await Jimp.read('media/amongians/mask.png');
   const helmet = await Jimp.read('media/amongians/helmet.png');
@@ -375,28 +373,22 @@ Module
   }
 })
 .addEvent('ready', () => {
-  const rule = new schedule.RecurrenceRule();
-  rule.hour = 10;
-  rule.minute = 0;
   const huddyChannel = Module.client.channels.cache.get('786033226850238525');
   const atomicChannel = Module.client.channels.cache.get('897568610531295232');
-  schedule.scheduleJob(rule, function() {
+
+  schedule.scheduleJob({ hour: 10, minute: 0 }, function() {
     const pic = petPic('goose');
     huddyChannel.send(`Daily Goose Pic\n${pic}`);
     atomicChannel.send(`Daily Goose Pic\n${pic}`);
   });
-  const rule2 = new schedule.RecurrenceRule();
-  rule2.hour = 22;
-  rule2.minute = 0;
-  schedule.scheduleJob(rule2, function() {
+
+  schedule.scheduleJob({ hour: 22, minute: 0 }, function() {
     const pic = petPic('luna');
     huddyChannel.send(`Nightly Luna Pic\n${pic}`);
     atomicChannel.send(`Nightly Luna Pic\n${pic}`);
   });
-  const rule3 = new schedule.RecurrenceRule();
-  rule3.hour = 16;
-  rule3.minute = 0;
-  schedule.scheduleJob(rule3, function() {
+
+  schedule.scheduleJob({ hour: 16, minute: 0 }, function() {
     const pic = petPic('juan');
     huddyChannel.send(`Afternoon Juan Pic\n${pic}`);
   });

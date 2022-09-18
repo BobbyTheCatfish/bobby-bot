@@ -5,5 +5,6 @@ const infraction = require('./models/infraction');
 const ranks = require('./models/ranks');
 const reactionRoles = require("./models/reactionRoles");
 const tags = require('./models/tags');
+
 mongoose.connect(config.db.db, config.db.settings);
 module.exports = { guildConfig, infraction, ranks, tags, reactionRoles };

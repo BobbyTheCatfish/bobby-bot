@@ -1,7 +1,7 @@
 const Augur = require("augurbot"),
   Rank = require("../utils/RankInfo"),
   u = require("../utils/utils");
-const active = u.collection();
+let active = u.collection();
 
 const sf = {
   ldsg: '406821751905976320',
@@ -15,7 +15,7 @@ const isActive = (guildId, userId) => active.get(guildId)?.includes(userId);
 const Module = new Augur.Module()
 .setInit(async (talking) => {
   if (talking) {
-    for (const user of talking) active.set(user);
+    active = talking;
   } else {
     const ranks = await u.db.ranks.getAllDocuments();
     for (const guild of ranks) active.set(guild.guildId, []);
@@ -39,7 +39,9 @@ const Module = new Augur.Module()
     async function leaderboard() {
       try {
         const scope = int.options.getString('timeframe') || 'xp';
-        const ranks = await u.db.ranks.getAllRanks(int.guild.id);
+        const ranks = (await u.db.ranks.getGuild(int.guild.id));
+        if (!ranks) return int.reply({ content: "Looks like this server doesn't have a leaderboard set up.", ephemeral: true });
+        if (!ranks.enabled) return int.reply({ content: "Looks like the leaderboard is disabled", ephemeral: true });
         const users = ranks?.users;
         const top10 = Rank.getTop(users, 10, scope);
         if (top10.length < 1) return int.reply({ content: "Looks like there isn't anyone participating!", ephemeral: true });
@@ -57,7 +59,9 @@ const Module = new Augur.Module()
         let response = null;
 
         const memberInfo = await u.db.ranks.getRank(int.guild.id, member.id);
-        const allRanks = await u.db.ranks.getAllRanks(int.guild.id);
+        const allRanks = await u.db.ranks.getGuild(int.guild.id);
+        if (!allRanks) return int.reply({ content: "Looks like this server doesn't have a leaderboard set up.", ephemeral: true });
+        if (!allRanks.enabled) return int.reply({ content: "Looks like the leaderboard is disabled.", ephemeral: true });
         const stillInRanks = allRanks.users.filter(user => int.guild.members.cache.get(user.userId));
         if (memberInfo.excludeXP || member.user.bot) {
           if (int.member.permissions.any(['MODERATE_MEMBERS', 'MANAGE_ROLES'])) {
@@ -94,11 +98,14 @@ const Module = new Augur.Module()
     async function trackxp() {
       const choice = int.options.getBoolean('choice');
       const opted = await u.db.ranks.opt(int.guild.id, int.user.id, choice);
-      if (!opted) return int.reply({ content: "This server doesn't have a leaderboard set up.", ephemeral: true });
+      if (!opted) return int.reply({ content: "Looks like this server doesn't have a leaderboard set up.", ephemeral: true });
       else return int.reply({ content: `You should ${choice ? 'now' : 'no longer'} get XP from your messages.`, ephemeral: true });
     }
     async function xp() {
       try {
+        const guild = await u.db.ranks.getGuild(int.guild.id);
+        if (!guild) return int.reply({ content: "Looks like this server doesn't have a leaderboard set up.", ephemeral: true });
+        if (!guild.enabled) return int.reply({ content: "Looks like the leaderboard is disabled.", ephemeral: true });
         if (!int.member.permissions.has(["MANAGE_GUILD"])) return int.reply({ content: "You need the `Manage Server` permission to use this command.", ephemeral: true });
         const num = int.options.getInteger('xp');
         const user = int.options.getMember('user');
@@ -122,7 +129,7 @@ const Module = new Augur.Module()
         // add in a confirmation at some point
         if (!int.member.permissions.has(["MANAGE_GUILD"])) return int.reply({ content: "You need the `Manage Server` permission to use this command.", ephemeral: true });
         const members = await int.guild.members.fetch({ cache: false });
-        const ranks = await u.db.ranks.getAllRanks(int.guild.id);
+        const ranks = await u.db.ranks.getGuild(int.guild.id);
         if (!ranks) return int.reply("You don't have a leaderboard set up.");
         const users = ranks.users.filter(user => members.has(user.userId));
         const medals = ["🥇", "🥈", "🥉"];
@@ -149,7 +156,7 @@ const Module = new Augur.Module()
         const level = int.options.getInteger('reward-level');
         const rate = int.options.getInteger('xp-rate');
         const see = int.options.getBoolean('view');
-        let doc = await u.db.ranks.getAllRanks(int.guild.id);
+        let doc = await u.db.ranks.getGuild(int.guild.id);
         if (!doc && enable == null && !see) return int.reply({ content: "Looks like the leaderboard hasn't been configured yet. You can do that with `/rank config enable: true`", ephemeral: true });
         if (see) {
           const embed = u.embed().setTitle("Leaderboard Settings").addFields([
@@ -222,8 +229,8 @@ const Module = new Augur.Module()
 })
 .addEvent("messageCreate", async (msg) => {
   if (msg.guild && !msg.author.bot && !msg.author.system) {
-    const rankDoc = await u.db.ranks.getGuild(msg.guild.id);
-    if (!rankDoc) return;
+    const rankDoc = await u.db.ranks.getGuild(msg.guild.id, false);
+    if (!rankDoc?.enabled) return;
     if (!isActive(msg.guild.id, msg.member.id) &&
     !rankDoc.users?.find(user => user.userId == msg.author.id)?.excludeXP &&
     !(rankDoc.exclude?.channels.includes(msg.channel.id) || rankDoc.exclude.channels.includes(msg.channel.parent?.id)) &&

@@ -20,18 +20,21 @@ const Infractions = require("../../schemas/infractions");
  * @prop {string} guildId
  * @prop {infraction[]} infractions
  */
+
 const model = {
   /** @returns {Promise<Schema>} */
   addGuild: async (guildId) => {
     if (!await Infractions.exists({ guildId })) return Infractions.create({ guildId, infractions: [] });
     else return null;
   },
+
   /** @returns {Promise<infraction>} */
   getByFlag: async (guildId, flag) => {
     await model.addGuild(guildId);
     const document = await Infractions.findOne({ guildId }).exec();
     return document?.infractions.find(d => d.flag == flag);
   },
+
   /** @returns {Promise<Summary>} */
   getSummary: async (guildId, discordId, time = 90) => {
     const since = new Date(Date.now() - (time * 24 * 60 * 60 * 1000));
@@ -48,11 +51,13 @@ const model = {
       detail: records
     };
   },
+
   /** @returns {Promise<infraction[]>} */
   remove: async (guildId, flag) => {
     const newDoc = Infractions.findOneAndUpdate({ guildId, 'infractions.$.flag': flag }, { $pull: { flag } }, { new: true }).exec();
     return newDoc?.infractions;
   },
+
   /** @returns {Promise<infraction[]>} */
   save: async (guildId, infraction) => {
     infraction.timestamp = new Date();
@@ -60,6 +65,7 @@ const model = {
     const newDoc = await Infractions.findOneAndUpdate({ guildId }, { $push: { 'infractions': infraction } }, { new: true })?.exec();
     return newDoc?.infractions;
   },
+
   /** @returns {Promise<infraction[]>} */
   update: async (guildId, flag, infraction) => {
     await model.addGuild(guildId);

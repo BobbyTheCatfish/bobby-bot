@@ -20,26 +20,31 @@ const model = {
     if (existing?.length > 0) return existing.find(e => e.messageId == messageId);
     return await rRoles.findOne({ messageId })?.exec();
   },
+
   /** @returns {Promise<Schema[]>} */
   getAll: async () => {
     return await rRoles.find()?.exec();
   },
+
   /** @returns {Promise<Schema>} */
   getByGuild: async (guildId, existing) => {
     if (existing?.length > 0) return existing.find(e => e.guildId == guildId);
     return await rRoles.findOne({ guildId })?.exec();
   },
+
   /** @returns {Promise<Schema>} */
   save: async (msg, reactions, removeOnUnreact) => {
     const document = rRoles.findOne({ guildId: msg.guild.id })?.exec();
     if (document) return rRoles.findOneAndUpdate({ guildId: msg.guild.id }, { messageId: msg.id, channelId: msg.channel.id, reactions, removeOnUnreact }, { new: true });
     return rRoles.create({ guildId: msg.guild.id, channelId: msg.channel.id, messageId: msg.id, reactions, removeOnUnreact });
   },
+
   /** @returns {Promise<null>} */
   delete: async (messageId) => {
     const document = await rRoles.find({ messageId })?.exec();
     return document ? rRoles.findOneAndDelete({ messageId }) : null;
   },
+
   /** @returns {Promise<Schema>} */
   getRemovable: async (messageId, existing) => {
     if (existing?.length > 0) return existing.filter(e => e.removeOnUnreact == true).find(e => e.messageId == messageId);

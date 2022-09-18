@@ -1,9 +1,7 @@
 const Augur = require('augurbot'),
   u = require('../utils/utils'),
-  low = require('lowdb'),
-  FileSync = require('lowdb/adapters/FileSync'),
   Module = new Augur.Module();
-let db = low(new FileSync('jsons/battleship.json'));
+let db = u.lowdb('jsons/battleship.json');
 
 // The generateBoard function below is a slightly modified version of Alden Bradford's, which you can find here: https://www.math.purdue.edu/~bradfoa/personal_projects/battleship/. All credit to Alden Bradford.
 function generateBoard() {
@@ -301,7 +299,7 @@ Module.addCommand({ name: "playing",
 .addCommand({ name: "tictactoe",
   aliases: ['t'],
   process: async (msg, suffix) => {
-    db = low(new FileSync('jsons/tictactoe.json'));
+    db = u.lowdb('jsons/tictactoe.json');
     db.defaults({ Games: [] }).write();
     const findEntry = db.get('Games').find({ 'p1': msg.author.id } || { 'p2': msg.author.id });
     /** @param {Array<string>} board*/

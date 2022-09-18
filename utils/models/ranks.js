@@ -1,5 +1,5 @@
 const Ranks = require('../../schemas/ranks');
-
+const discord = require('discord.js');
 /**
  * @typedef exclude
  * @prop {string[]} channels
@@ -24,16 +24,21 @@ const Ranks = require('../../schemas/ranks');
  * @prop {boolean} enabled
  * @prop {number} rate
  */
-async function existsCheck(guildId, userId) {
+
+async function existsCheck(guildId, userId, create = false) {
   if (userId) {
     await model.addUser(guildId, userId);
     if (!await Ranks.exists({ userId })) throw new Error(`No user rank schema for ${userId} in ${guildId}`);
     else return true;
   }
-  await model.addGuild(guildId);
+  if (create) {
+    await model.addGuild(guildId);
+  }
   if (await Ranks.exists({ guildId })) return true;
-  else throw new Error(`No rank schema for guild ${guildId}`);
+  else if (create) throw new Error(`No rank schema for guild ${guildId}`);
+  else return null;
 }
+
 const model = {
   /** @returns {Promise<Schema?>} */
   addGuild: async (guildId) => {
@@ -41,6 +46,7 @@ const model = {
     if (!await Ranks.exists({ guildId })) return await Ranks.create(defaultRank);
     else return null;
   },
+
   /** @returns {Promise<Schema?>} */
   addUser: async (guildId, userId) => {
     if (await existsCheck(guildId)) {
@@ -55,6 +61,7 @@ const model = {
       else return null;
     }
   },
+
   /** @returns {Promise<Schema>} */
   getRank: async (guildId, userId) => {
     if (await existsCheck(guildId, userId)) {
@@ -62,17 +69,20 @@ const model = {
       return document.users.find(u => u.userId == userId);
     }
   },
+
   /** @returns {Promise<user[]>} */
-  getGuild: async (guildId) => {
-    if (await existsCheck(guildId)) {
+  getGuild: async (guildId, create = false) => {
+    if (await existsCheck(guildId, create)) {
       const document = await Ranks.findOne({ guildId })?.exec();
       return document;
     }
   },
+
   /** @returns {Promise<Schema[]>} */
   getAllDocuments: async () => {
     return await Ranks.find()?.exec();
   },
+
   /** @returns {Promise<Schema?>} */
   gStatusToggle: async (guildId, status = true) => {
     if (!status || await existsCheck(guildId)) {
@@ -80,6 +90,13 @@ const model = {
       return await Ranks.findOneAndUpdate({ guildId }, { enabled: status }, { new: true })?.exec();
     }
   },
+
+  /**
+   * @param {discord.Collection<string, string[]>} active guildId, userId[]
+   * @param {number} xp
+   * @param {number} lifeXP
+   * @returns
+   */
   addXP: async (active, xp, lifeXP) => {
     const guilds = [];
     xp ??= Math.floor(Math.random() * 11) + 15;
@@ -93,7 +110,7 @@ const model = {
     let i = 0;
     do {
       const guild = guilds[i];
-      if (guild.users.length > 0 && await existsCheck(guild.guild)) {
+      if (guild.users.length > 0 && await existsCheck(guild.guild, false)) {
         await model.addUser(guild.guild, guild.users);
         await Ranks.findOneAndUpdate({ guildId: guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.posts': 1 } }).exec();
         await Ranks.findOneAndUpdate({ guildId: guild.guild, 'users.userId': { $in: guild.users } }, { $inc: { 'users.$.xp': xp, 'users.$.lifeXP': lifeXP } }).exec();
@@ -105,18 +122,22 @@ const model = {
     } while (i < guilds.length);
     return response;
   },
+
   /** @returns {Promise<Schema>} */
   updateRank: async (guildId, userId, xp, lifeXP, posts) => {
     if (await existsCheck(guildId, userId)) return await Ranks.findOneAndUpdate({ guildId, 'users.userId': userId }, { $set: { 'users.$': { xp, lifeXP, posts } } }, { new: true })?.exec();
   },
+
   /** @returns {Promise<Schema>} */
   resetRanks: async (guildId) => {
     if (await existsCheck(guildId)) return Ranks.findOneAndUpdate({ guildId }, { $set: { 'users.$[].xp': 0 } }, { new: true });
   },
+
   /** @returns {Promise<Schema>} */
   opt: async (guildId, userId, excludeXP) => {
     if (await existsCheck(guildId, userId)) return await Ranks.findOneAndUpdate({ guildId, 'users.userId': userId }, { $set: { 'users.$.excludeXP': excludeXP } }, { new: true })?.exec();
   },
+
   /** @returns {Promise<Schema>} */
   configGuild: async (guildId, newDoc) => {
     if (await existsCheck(guildId)) return await Ranks.findOneAndUpdate({ guildId }, newDoc, { new: true })?.exec();

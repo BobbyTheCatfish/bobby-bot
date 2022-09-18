@@ -2,6 +2,7 @@ const Discord = require("discord.js"),
   u = require("../utils/utils"),
   { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const slowmodes = new Map();
+
 const modActions = (id, mute) => [
   new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`mCClear${id}`).setEmoji("✅").setLabel(mute ? "Unmute" : "False Alarm").setStyle(ButtonStyle.Success),
@@ -22,14 +23,18 @@ function compareRoles(mod, target) {
   const targetHigh = target.roles.cache.sort((a, b) => b.comparePositionTo(a)).first();
   return (modHigh.comparePositionTo(targetHigh) > 0);
 }
+
 const colors = { low: '0x00ff00', med: '0x#ffff00', high: '0xff0000' };
+
 const logEmbed = (int, target, color) => u.embed()
   .addFields([
     { name: "User", value: `${target}\n(${target.user.tag})`, inline: true },
     { name: "Mod", value: int?.member?.toString() ?? "Auto", inline: true },
     { name: "Joined At", value: u.toEpoch(target.joinedAt, 'f'), inline: true }
   ]).setColor(colors[color]).setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() });
+
 const infractionField = (embed, summary) => embed.addFields([{ name: `Infraction Summary (${summary.time} Day(s))`, value: `Infractions: ${summary.count}\nPoints: ${summary.points}` }]);
+
 class ModCommon {
   /**
    * @param {Discord.ChatInputCommandInteraction} interaction
@@ -41,6 +46,7 @@ class ModCommon {
     /** @type {Discord.TextChannel} */
     this.logs = logs;
   }
+
   /**
    * @param {string} title
    * @param {string} description
@@ -61,6 +67,7 @@ class ModCommon {
       .addFields(fields ?? []);
     this.logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
+
   /**
    * @param {string} untrusted
    * @param {Discord.GuildMember} target
@@ -109,6 +116,7 @@ class ModCommon {
       }
     } catch (error) { u.errorHandler(error, interaction); }
   }
+
   async clear(deleteCount) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -129,6 +137,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   /**
    * Generate and send a warning card in #mod-logs
    * @typedef flagInfo
@@ -217,6 +226,7 @@ class ModCommon {
       await u.db.infraction.save(logs.guild.id, infraction);
     }
   }
+
   async resolveFlag(user, userId, mod, msg, action, additionalFields = []) {
     const embed = u.embed().setAuthor({ name: mod.displayName, iconURL: mod.displayAvatarURL() })
       .setTitle("Mod Card Resolved")
@@ -236,6 +246,7 @@ class ModCommon {
     if (new Date().getTime() - msg.createdTimestamp > 60 * 60 * 1000) await this.logs.send({ embeds: [embed], allowedMentions: { parse: [] } });
     return `Flag ${action}`;
   }
+
   async dcAll(mod, manager) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -272,6 +283,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   /**
    * @param {Discord.GuildMember} member
    * @param {number} time days
@@ -295,6 +307,7 @@ class ModCommon {
       .setDescription(text)
       .setColor(0x00ff00);
   }
+
   async kick(untrusted, target, reason, testing = false) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -338,6 +351,7 @@ class ModCommon {
       }
     } catch (error) { u.errorHandler(error, interaction); }
   }
+
   /**
    * @param {string} muted
    * @param {Discord.TextChannel} muteChannel
@@ -380,6 +394,7 @@ class ModCommon {
       await interaction.editReply({ content: `${unmute ? 'Unm' : 'M'}uted ${target}.` });
     } catch (error) { u.errorHandler(error, interaction); }
   }
+
   async muteVC(unmute = false) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -404,6 +419,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   async note(target, note) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -427,6 +443,7 @@ class ModCommon {
       await interaction.reply({ content: `Note added for user ${target}.`, ephemeral: true });
     } catch (error) { u.errorHandler(error, interaction); }
   }
+
   async rename(target, name) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -462,6 +479,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   async slowmode() {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -529,6 +547,7 @@ class ModCommon {
       }
     } catch (error) { u.errorHandler(error, interaction); }
   }
+
   async timeout(target) {
     const interaction = this.interaction;
     const logs = this.logs;
@@ -556,6 +575,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   /**
    * @param {string} trusted
    * @param {string} untrusted
@@ -588,6 +608,7 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   /**
    * @param {string} trusted
    * @param {string} trustplus
@@ -615,6 +636,14 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
+  async trustAudit(trusted) {
+    const interaction = this.interaction;
+    if (!trusted) return interaction.reply("This server doesn't have trusted set up").then(u.clean);
+    const members = interaction.guild.members.cache.filter(m => !m.roles.cache.has(trusted) && !m.user.bot);
+    return interaction.reply({ embeds: [u.embed().setTitle(`There are ${members.size} member(s) without trusted`).setDescription(members.map(m => m.toString()).join("\n") || null)], allowedMentions: { parse: [] }, ephemeral: true });
+  }
+
   async info(muted, trusted, trustPlus, untrusted, target, int) {
     const interaction = int ?? this.interaction;
     try {
@@ -644,9 +673,11 @@ class ModCommon {
       u.errorHandler(error, interaction);
     }
   }
+
   async warn(points, target) {
     return (points, target);
   }
+
   async watch(trusted, untrusted, target, undo, remove) {
     const interaction = this.interaction;
     const logs = this.logs;

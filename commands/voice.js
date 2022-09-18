@@ -5,8 +5,6 @@ const Module = new Augur.Module;
 const { promisify } = require('util');
 const ytdl = require('youtube-dl-exec').raw;
 const { getInfo } = require('ytdl-core');
-const fileType = require('file-type');
-const https = require('https');
 const { Message } = require('discord.js');
 const {
   createAudioResource,
@@ -47,7 +45,7 @@ function leaveInFive(guildId, channel, time = 300000) {
 let pendingRemoval = [];
 const subscriptions = new Map();
 
-// Cool things called classes that i dont use that often
+// Cool things called classes that i don't use that often
 class MusicSubscription {
 
   constructor(voiceConnection, textChannel) {
@@ -167,60 +165,41 @@ class MusicSubscription {
 }
 class Track {
 
-  constructor({ url, title, onStart, onFinish, onError, type }) {
+  constructor({ url, title, onStart, onFinish, onError }) {
     this.url = url;
     this.title = title;
     this.onStart = onStart,
     this.onFinish = onFinish,
-    this.onError = onError,
-    this.type = type;
+    this.onError = onError;
   }
 
   async createAudioResource() {
-    if (this.type == 'yt') {
-      return new Promise((resolve, reject) => {
-        const process = ytdl(this.url,
-          {
-            o: '-',
-            q: '',
-            f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
-            r: '100K',
-          },
-          { stdio: ['ignore', 'pipe', 'ignore'] },
-        );
-        if (!process.stdout) {
-          reject(new Error('No stdout'));
-          return;
-        }
-        const stream = process.stdout;
-        const onError = error => {
-          if (!process.killed) process.kill();
-          stream.resume();
-          reject(error);
-        };
-        process.once('spawn', async () => {
-          demuxProbe(stream).then(probe => resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })))
-        .catch(onError);
-        })
+    return new Promise((resolve, reject) => {
+      const process = ytdl(this.url,
+        {
+          o: '-',
+          q: '',
+          f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
+          r: '100K',
+        },
+        { stdio: ['ignore', 'pipe', 'ignore'] },
+      );
+      if (!process.stdout) {
+        reject(new Error('No stdout'));
+        return;
+      }
+      const stream = process.stdout;
+      const onError = error => {
+        if (!process.killed) process.kill();
+        stream.resume();
+        reject(error);
+      };
+      process.once('spawn', async () => {
+        demuxProbe(stream).then(probe => resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })))
       .catch(onError);
-      });
-    } else {
-      try {
-        const stream = new Promise((resolve) => {
-          https.get(this.url, str => {
-            resolve(str);
-          });
-        });
-
-        try {
-          const str = await stream;
-          const probe = await demuxProbe(str);
-          return createAudioResource(probe.stream, { metadata: this, inputType: probe.type });
-        } catch (e) {
-          console.log(e);
-        }
-      } catch (e) {console.log(e, 123);}
-    }
+      })
+    .catch(onError);
+    });
   }
 
   /**
@@ -230,7 +209,7 @@ class Track {
      * @param deets Info
      * @returns The created Track
      */
-  async from(url, methods, deets, type) {
+  async from(url, methods, deets) {
     const wrappedMethods = {
       onStart() {
         wrappedMethods.onStart = noop;
@@ -250,7 +229,6 @@ class Track {
       title: deets?.videoDetails?.title ?? 'Unknown',
       url,
       ...methods,
-      type
     });
   }
 }
@@ -265,28 +243,6 @@ Module.addCommand({ name: 'play',
   process: async (msg, url) => {
     url = msg.attachments.first()?.url || url;
     let subscription = subscriptions.get(msg.guild.id);
-    let type;
-    // check if valid url and what type of input is given
-    try {
-      await getInfo(url);
-      type = 'yt';
-    } catch {
-      let result = false;
-      let computed = false;
-      try {
-        do {
-          https.get(url, async stream => {
-            const { mime } = await fileType.fileTypeFromStream(stream);
-            result = mime?.includes('video') || mime?.includes('audio');
-            computed = true;
-          });
-        } while (computed == false);
-      } catch (e) {
-        result = false;
-      }
-      if (result == true) type = 'file';
-    }
-    if (!type) return u.reply(msg, 'You need to provide a valid youtube url');
 
     // anti-theft
     if (subscription && !inChannel(msg.guild.id, msg.member.voice.channelId)) {
@@ -322,14 +278,9 @@ Module.addCommand({ name: 'play',
       console.log(e);
       return u.errorHandler(new Error(`Failed to join vc ${msg.member.voice.channel.id} within 20 seconds`), msg);
     }
-    function getTitle() {
-      if (msg.attachments.first()) return msg.attachments.first().name;
-      else return url.replace(/.*\d{18}\/\d{18}\//g, '').replace(/_/g, ' ');
-    }
     // create track
-    let info;
-    if (type == 'yt') info = await getInfo(url);
-    else info = { videoDetails: { title: getTitle(), author: { name: msg.member.displayName, thumbnails: [{ url: msg.author.displayAvatarURL() }] }, publishDate: null }, thumbnails: [] };
+    const info = await getInfo(url).catch(u.noop);
+    if (!info) return u.reply(msg, "I need a valid YouTube url!");
     const { author, publishDate, thumbnails, title } = info.videoDetails;
     const track = await Track.prototype.from(url, {
       onStart() {
@@ -356,7 +307,7 @@ Module.addCommand({ name: 'play',
         u.errorHandler(new Error(error), msg);
         return console.log(error);
       }
-    }, info, type);
+    }, info);
     subscription.enqueue(track);
     // don't bother on the first track
     if (subscription.queue.length > 0) u.reply(msg, `${track.title} was added to the queue`);
@@ -464,81 +415,6 @@ Module.addCommand({ name: 'play',
       }
     }
   }
-})
-
-// splat
-.addEvent('voiceStateUpdate', /** * @param {VoiceState} oldState * @param {VoiceState} newState*/ async (oldState, newState) => {
-  if (oldState.member.user.bot) return;
-  if (newState.channel?.members.size < 2) return;
-  let subscription = subscriptions.get(oldState.guild.id);
-  if (!subscription && ['408747484710436877', '779497076564164620', '371022006726164480'].includes(oldState.guild.id)) {
-    if (!oldState.channel && newState.channel) {
-      const channel = newState.channel;
-      subscription = new MusicSubscription(
-        joinVoiceChannel({
-          channelId: channel.id,
-          guildId: channel.guild.id,
-          adapterCreator: channel.guild.voiceAdapterCreator
-        }), channel.id
-      );
-      subscription.voiceConnection.on('error', u.errorHandler);
-      subscriptions.set(newState.guild.id, subscription);
-      try {
-        await entersState(subscription.voiceConnection, VoiceConnectionStatus.Ready, 20e3);
-      } catch {return console.log('err while joining');}
-
-      let url = 'https://cdn.discordapp.com/attachments/789694239197626371/897536459941228584/heheheheh.mp4';
-      if (oldState.guild.id == '371022006726164480') url = 'https://cdn.discordapp.com/attachments/511896528470802442/979232273553567745/user_joined.mp3';
-      const track = await Track.prototype.from(url, {
-        onStart() {
-          null;
-        },
-        onFinish() {
-          subscriptions.delete(newState.guild.id);
-          subscription.voiceConnection.destroy();
-        },
-        onError(error) {return console.log(error);}
-      }, null, 'file');
-      setTimeout(() => {
-        subscription.enqueue(track);
-      }, 1000);
-    }
-  }
-})
-.addCommand({ name: 'talk2', process: async (msg, args) => {
-  const duck = require('uberduck.js');
-  duck.setDetails(msg.client.config.apiKeys.uberduck.user, msg.client.config.apiKeys.uberduck.pass);
-  const uuid = await duck.requestSpeak('jeremy-clarkson', args);
-  console.log(uuid);
-  const url = await duck.getLink(uuid);
-  if (msg.member?.voice?.channel) {
-    const channel = msg.member.voice.channel;
-    const subscription = new MusicSubscription(
-      joinVoiceChannel({
-        channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator
-      }), channel.id
-    );
-    subscription.voiceConnection.on('error', u.errorHandler);
-    subscriptions.set(msg.guild.id, subscription);
-    try {
-      await entersState(subscription.voiceConnection, VoiceConnectionStatus.Ready, 20e3);
-    } catch {return console.log('err while joining');}
-    const track = await Track.prototype.from(url, {
-      onStart() {
-        null;
-      },
-      onFinish() {
-        subscriptions.delete(msg.guild.id);
-        subscription.voiceConnection.destroy();
-      },
-      onError(error) {return console.log(error);}
-    }, null, 'file');
-    setTimeout(() => {
-      subscription.enqueue(track);
-    }, 1000);
-  } else {msg.reply({ files: [{ attachment: url, name: 'botspeak.mp3' }], failIfNotExists: false });}
-} });
+});
 
 module.exports = Module;

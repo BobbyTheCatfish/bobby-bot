@@ -14,19 +14,19 @@
           "choices": [
             {
               "name": "Bot Spam",
-              "value": "botlobby"
+              "value": "botLobby"
             },
             {
               "name": "Mod Category",
-              "value": "modcategory"
+              "value": "modCategory"
             },
             {
               "name": "Mod Logs",
-              "value": "modlogs"
+              "value": "modLogs"
             },
             {
               "name": "Mute Channel",
-              "value": "muted"
+              "value": "muteChannel"
             }
           ],
           "required": true

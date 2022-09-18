@@ -24,7 +24,8 @@ const guildCommandFiles = [
   {
     id: "408747484710436877",
     cmds: [
-      "mod.json"
+      "mod.json",
+      "owner.json"
     ]
   }
 ];

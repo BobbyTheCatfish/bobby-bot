@@ -27,6 +27,7 @@ const Rank = {
     "I need to congratulate both of us because I knew you'd be successful!",
     "There's a time for everything, and right now is the time to say congratulations to you."
   ],
+
   levelPhrase: (name, lvl) => [
     `Welcome to ${name} Chat **Level ${lvl}**!`,
     `**Level ${lvl}** in ${name} is yours.`,
@@ -34,22 +35,27 @@ const Rank = {
     `${name} Chat **Level ${lvl}** belongs to you.`,
     `Do something nice with **Level ${lvl}** in ${name}.`
   ],
+
   level: function(xp, s = scale) {
     xp = parseInt(xp, 10);
     return 1 + Math.floor((Math.sqrt(1 + (8 * xp) / s)) / 2);
   },
+
   minXp: function(level, s = scale) {
     level = parseInt(level, 10);
     return Math.floor(s * (Math.pow(2 * (level - 1), 2) - 1) / 8);
   },
+
   getRank: function(ranks, id) {
     const users = ranks.sort((a, b) => b.xp - a.xp);
     return users.findIndex(u => u.userId == id) + 1;
   },
+
   getLifeRank: function(ranks, id) {
     const users = ranks.sort((a, b) => b.lifeXP - a.lifeXP);
     return users.findIndex(u => u.userId == id) + 1;
   },
+
   getTop: function(ranks = [], limit = ranks.length, scope = 'xp') {
     if (!['xp', 'lifeXP'].includes(scope)) scope = 'xp';
     const users = ranks.sort((a, b) => b[scope] - a[scope]);

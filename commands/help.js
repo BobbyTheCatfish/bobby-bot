@@ -3,7 +3,7 @@ const Augur = require("augurbot"),
 
 const Module = new Augur.Module()
 .addCommand({ name: "help",
-  description: "Get a list of available commands or more indepth info about a single command.",
+  description: "Get a list of available commands or more in-depth info about a single command.",
   syntax: "[command name]",
   aliases: ["commands"],
   process: async (msg, suffix) => {
