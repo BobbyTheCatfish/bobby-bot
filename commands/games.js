@@ -1,7 +1,10 @@
 const Augur = require('augurbot'),
+  // fastB64 = require('fast-b64'),
   u = require('../utils/utils'),
   Module = new Augur.Module();
-let db = u.lowdb('jsons/battleship.json');
+let db = u.db.games;
+
+// const emptyBoard = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 // The generateBoard function below is a slightly modified version of Alden Bradford's, which you can find here: https://www.math.purdue.edu/~bradfoa/personal_projects/battleship/. All credit to Alden Bradford.
 function generateBoard() {
@@ -131,8 +134,82 @@ function generateBoard() {
   const board = new Board();
   board.placeShips();
   if (board.failed) return null;
-  return board.appearance().replace(/[^a-e~\n]/g, '').replace(/~/g, '0').split('\n').splice(1);
+  return board.appearance().replace(/[^a-e~]/g, '').replace(/[a-e]/g, '1').replace(/~/g, '0');
 }
+
+// const cmdId = "";
+// async function invite(int, opponent) {
+//   opponent.send({ content: `${int.user} has challenged you to a game of battleship! Should you choose to accept, run this command in ${int.guild.name}.\n</battleship:${cmdId}> user:\\${int.user}` });
+//   int.reply({ content: `I sent an invitation to ${opponent} and I'll let you know if/when they accepted it.\nNote that you'll have half an hour to make your move once the game has begun. Failure to do so will delete the game.` });
+//   await db.waiting.save(int.user.id, opponent.id);
+// }
+//
+// function visualizeBoard(hash) {
+//   const prefixes = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'],
+//     final = [],
+//     board = fastB64.base64tobits(hash).match(/.{10}/g);
+//
+//   for (let i = 0; i < board.length; i++) {
+//     const x = board[i];
+//     final.push(`${prefixes[i]} ${x.split('').join(' ').replace(/0/g, '🟦').replace(/[a-e]/g, '⬜').replace(/2/g, '💥').replace(/3/g, '🟥')}`);
+//   }
+//
+//   final.push('🆚 🇦 🇧 🇨 🇩 🇪 🇫 🇬 🇭 🇮 🇯');
+//   return final.join('\n');
+// }
+//
+// function boardEmbeds(game) {
+//   const p1 = [
+//     u.embed().setTitle("Your Board").setDescription(visualizeBoard(game.p1Hash)),
+//     u.embed().setTitle(`Opponent's Board`).setDescription(visualizeBoard(game.p1GuessHash))
+//   ];
+//   const p2 = [
+//     u.embed().setTitle("Your Board").setDescription(visualizeBoard(game.p2Hash)),
+//     u.embed().setTitle(`Opponent's Board`).setDescription(visualizeBoard(game.p2GuessHash))
+//   ];
+//   return { p1, p2 };
+// }
+//
+// async function startMatch(int, opponent) {
+//   if (!opponent) {
+//     const queued = await db.waiting.popRandom(int.user.id);
+//     opponent = await int.client.members.fetch(queued.id).catch(() => u.noop());
+//   } else {
+//     await db.waiting.popOpponent(int.user.id, opponent.id);
+//   }
+//   const game = await db.games.start({
+//     player1: int.user.id,
+//     player2: opponent.id,
+//     turn: u.rand([1, 2]),
+//     p1Hash: fastB64.bitstobase64(generateBoard()),
+//     p1GuessHash: fastB64.bitstobase64(emptyBoard),
+//     p2Hash: fastB64.bitstobase64(generateBoard()),
+//     p2GuessHash: fastB64.bitstobase64(emptyBoard)
+//   });
+//   const embeds = boardEmbeds(game);
+//   const p1embeds = [u.embed().setTitle(`Seige against Commander ${opponent} has begun!`)].concat(embeds.p1);
+//   const p2embeds = [u.embed().setTitle(`Seige against Commander ${int.user} has begun!`)].concat(embeds.p2);
+//   int.user.send({ embeds: p1embeds });
+//   opponent.send({ embeds: p2embeds });
+// }
+
+// Module.addInteractionCommand({ name: 'battleship',
+//   process: async (int) => {
+//     const opponent = int.options.getMember('opponent');
+//     const waiting = await db.waiting.getAll();
+//     const alreadyWaiting = waiting.find(w => w.id == int.user.id);
+//     if (alreadyWaiting) return int.reply({ content: `You're already in queue to play${alreadyWaiting.opponent ? ` against <@${opponent}>` : ""}!` });
+//     if (waiting.length > 0) {
+//       if (opponent) {
+//         const waitingOpponent = waiting.find(w => w.id == opponent.id && w.opponent == int.user.id);
+//         if (waitingOpponent) startMatch(int, opponent);
+//         else invite(int, opponent);
+//       }
+//     }
+//   }
+// });
+
+
 Module.addCommand({ name: "playing",
   onlyGuild: true,
   category: "Games",
@@ -187,6 +264,7 @@ Module.addCommand({ name: "playing",
     // 1 - Ship ⬜
     // 2 - Ship Hit 💥
     // 3 - Miss 🟥
+    // 4 - Split
     db.defaults({ Games: [] }).write();
     function replace(board) {
       const prefixes = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'],
